@@ -8,17 +8,428 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-enum Role {
-  ADMIN
-}
-
 model Usuario {
   id           String   @id @default(cuid())
   nombre       String
   email        String   @unique
   passwordHash String
-  role         Role     @default(ADMIN)
   activo       Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+
+model Marca {
+  id       String     @id @default(cuid())
+  nombre   String     @unique
+  activa   Boolean    @default(true)
+  productos Producto[]
+}
+
+model Categoria {
+  id       String     @id @default(cuid())
+  nombre   String     @unique
+  activa   Boolean    @default(true)
+  productos Producto[]
+}
+
+enum MonedaPrecio {
+  ARS
+  USD
+}
+
+model Producto {
+  id                 String   @id @default(cuid())
+  nombre             String
+  codigoBarras       String?  @unique
+  ubicacionDeposito  String?
+  fotoUrl            String?
+
+  marca              Marca?     @relation(fields: [marcaId], references: [id])
+  marcaId            String?
+  categoria          Categoria? @relation(fields: [categoriaId], references: [id])
+  categoriaId        String?
+
+  stockActual        Int      @default(0)
+  stockMinimo        Int      @default(0)
+  destacado          Boolean  @default(false)
+
+  // Precios — moneda configurable por producto (no todos se cargan en USD)
+  monedaPrecio       MonedaPrecio @default(USD)
+  precioCosto        Float
+  precioVenta        Float        // precio minorista
+  margenMinorista    Float?       // % informativo, no siempre se persiste calculado
+  precioMayorista    Float?
+  margenMayorista    Float?
+  precioOferta       Float?
+
+  // Decants
+  seVendePorDecant     Boolean @default(false)
+  overrideDecant5ml    Float?  // si está cargado, pisa el cálculo de la fórmula global
+  overrideDecant10ml   Float?
+
+  activo             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  itemsVenta         ItemVenta[]
+  itemsCompra        ItemCompra[]
+  historialPrecios   HistorialPrecio[]
+
+  @@index([nombre])
+  @@index([codigoBarras])
+}
+
+enum CampoPrecio {
+  COSTO
+  MINORISTA
+  MAYORISTA
+  OVERRIDE_5ML
+  OVERRIDE_10ML
+}
+
+enum OrigenCambioPrecio {
+  MANUAL
+  RECALCULO_DECANT
+  ACTUALIZACION_MASIVA
+}
+
+
+model HistorialPrecio {
+  id             String              @id @default(cuid())
+  producto       Producto            @relation(fields: [productoId], references: [id])
+  productoId     String
+  campo          CampoPrecio
+  valorAnterior  Float?
+  valorNuevo     Float
+  origen         OrigenCambioPrecio
+  usuario        Usuario?            @relation(fields: [usuarioId], references: [id])
+  usuarioId      String?
+  detalle        String?
+  fecha          DateTime            @default(now())
+
+  @@index([productoId])
+  @@index([fecha])
+}
+
+
+model Cliente {
+  id          String   @id @default(cuid())
+  nombre      String
+  apellido    String?
+  telefono    String?
+  email       String?
+  direccion   String?
+  localidad   String?
+  esMayorista Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  ventas       Venta[]
+  presupuestos Presupuesto[]
+
+  @@index([nombre])
+}
+
+
+enum EstadoPago {
+  PAGADA
+  A_CUENTA
+  ANULADA
+  CANCELADA
+}
+
+enum Presentacion {
+  FRASCO
+  DECANT_5ML
+  DECANT_10ML
+}
+
+enum TipoPrecioVenta {
+  MINORISTA
+  MAYORISTA
+}
+
+model Venta {
+  id         String   @id @default(cuid())
+  cliente    Cliente? @relation(fields: [clienteId], references: [id])
+  clienteId  String?
+
+  fecha           DateTime @default(now())
+  cotizacionUsada Float
+
+  descuentoMonto      Float?
+  descuentoPorcentaje Float?
+
+  totalUSD    Float
+  totalARS    Float
+  montoPagado Float   @default(0) // relevante cuando estadoPago = A_CUENTA
+
+  estadoPago EstadoPago @default(PAGADA)
+
+  // Logística (banderas independientes, no un estado lineal)
+  armado    Boolean @default(false)
+  enviado   Boolean @default(false)
+  retirado  Boolean @default(false)
+  impreso   Boolean @default(false)
+
+  items           ItemVenta[]
+  pagos           PagoVenta[]
+  movimientosCaja MovimientoCaja[]
+
+  @@index([clienteId])
+  @@index([fecha])
+}
+
+model ItemVenta {
+  id        String @id @default(cuid())
+  venta     Venta  @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  ventaId   String
+
+  // Nullable: contempla el botón "Varios / Muestra" (ítem libre sin producto de catálogo)
+  producto         Producto? @relation(fields: [productoId], references: [id])
+  productoId       String?
+  descripcionLibre String?
+
+  presentacion       Presentacion @default(FRASCO)
+  abrioFrascoCerrado Boolean      @default(false) // true si un decant se vendió abriendo stock de frasco
+
+  tipoPrecio        TipoPrecioVenta @default(MINORISTA)
+  cantidad          Int
+  precioUnitarioUSD Float
+
+  @@index([ventaId])
+  @@index([productoId])
+}
+
+
+model PagoVenta {
+  id       String @id @default(cuid())
+  venta    Venta  @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  ventaId  String
+  cuenta   Cuenta @relation(fields: [cuentaId], references: [id])
+  cuentaId String
+  monto    Float
+
+  @@index([ventaId])
+}
+
+
+enum EstadoPresupuesto {
+  BORRADOR
+  VENCIDO
+  CONVERTIDO
+}
+
+model Presupuesto {
+  id        String   @id @default(cuid())
+  cliente   Cliente? @relation(fields: [clienteId], references: [id])
+  clienteId String?
+
+  fecha            DateTime @default(now())
+  vigenciaDias     Int      @default(15)
+  fechaVencimiento DateTime
+
+  observaciones       String?
+  descuentoMonto      Float?
+  descuentoPorcentaje Float?
+  total               Float
+
+  estado EstadoPresupuesto @default(BORRADOR)
+
+  items PresupuestoItem[]
+}
+
+model PresupuestoItem {
+  id             String          @id @default(cuid())
+  presupuesto    Presupuesto     @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+  presupuestoId  String
+  productoId     String?
+  descripcion    String
+  presentacion   Presentacion    @default(FRASCO)
+  tipoPrecio     TipoPrecioVenta @default(MINORISTA)
+  cantidad       Int
+  precioUnitario Float
+
+  @@index([presupuestoId])
+}
+
+
+model Proveedor {
+  id              String   @id @default(cuid())
+  nombre          String
+  personaContacto String?
+  telefono        String?
+  email           String?
+  deudaInicial    Float    @default(0)
+  notas           String?
+  createdAt       DateTime @default(now())
+
+  compras Compra[]
+  gastos  Gasto[]
+
+  @@index([nombre])
+}
+
+enum TipoPagoCompra {
+  CUENTA
+  EFECTIVO
+  TRANSFERENCIA
+}
+
+model Compra {
+  id          String     @id @default(cuid())
+  proveedor   Proveedor? @relation(fields: [proveedorId], references: [id])
+  proveedorId String?
+
+  tipoPago   TipoPagoCompra @default(CUENTA)
+  total      Float
+  confirmada Boolean        @default(false)
+  pagada     Boolean        @default(false)
+  recibida   Boolean        @default(false)
+  cancelada  Boolean        @default(false)
+  fecha      DateTime       @default(now())
+
+  items           ItemCompra[]
+  movimientosCaja MovimientoCaja[]
+
+  @@index([proveedorId])
+  @@index([fecha])
+}
+
+model ItemCompra {
+  id            String   @id @default(cuid())
+  compra        Compra   @relation(fields: [compraId], references: [id], onDelete: Cascade)
+  compraId      String
+  producto      Producto @relation(fields: [productoId], references: [id])
+  productoId    String
+  cantidad      Int
+  costoUnitario Float
+
+  @@index([compraId])
+  @@index([productoId])
+}
+
+enum TipoCuenta {
+  EFECTIVO_ARS
+  EFECTIVO_USD
+  BANCO_ARS
+  BANCO_USD
+}
+
+model Cuenta {
+  id       String     @id @default(cuid())
+  nombre   String
+  tipo     TipoCuenta
+  titular  String?
+  banco    String?
+  alias    String?
+  cbu      String?
+  color    String?
+  favorita Boolean    @default(false)
+
+  saldoInicial          Float  @default(0)
+  saldoActual           Float  @default(0)
+  limiteMensualIngresos Float?
+
+  activa    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  movimientos MovimientoCaja[]
+  pagosVenta  PagoVenta[]
+
+  @@index([nombre])
+}
+
+enum TipoMovimientoCaja {
+  INGRESO
+  EGRESO
+}
+
+enum ConceptoMovimientoCaja {
+  VENTA_COBRADA
+  PAGO_DEUDA_CLIENTE
+  PAGO_A_PROVEEDOR
+  GASTO
+  OTRO
+}
+
+
+model MovimientoCaja {
+  id              String                 @id @default(cuid())
+  cuenta          Cuenta                 @relation(fields: [cuentaId], references: [id])
+  cuentaId        String
+  tipo            TipoMovimientoCaja
+  concepto        ConceptoMovimientoCaja
+  monto           Float
+  saldoResultante Float
+  fecha           DateTime               @default(now())
+
+  venta    Venta?  @relation(fields: [ventaId], references: [id])
+  ventaId  String?
+  gasto    Gasto?  @relation(fields: [gastoId], references: [id])
+  gastoId  String?
+  compra   Compra? @relation(fields: [compraId], references: [id])
+  compraId String?
+
+  @@index([cuentaId])
+  @@index([fecha])
+}
+
+model CategoriaGasto {
+  id     String  @id @default(cuid())
+  nombre String  @unique
+  gastos Gasto[]
+}
+
+enum EstadoPagoGasto {
+  PENDIENTE
+  PAGADO
+}
+
+model Gasto {
+  id            String          @id @default(cuid())
+  monto         Float
+  concepto      String
+  categoria     CategoriaGasto? @relation(fields: [categoriaId], references: [id])
+  categoriaId   String?
+  proveedor     Proveedor?      @relation(fields: [proveedorId], references: [id])
+  proveedorId   String?
+  observaciones String?
+  estadoPago    EstadoPagoGasto @default(PENDIENTE)
+  fecha         DateTime        @default(now())
+
+  movimientosCaja MovimientoCaja[]
+
+  @@index([fecha])
+  @@index([categoriaId])
+}
+
+
+model Configuracion {
+  id              String  @id @default(cuid())
+  nombreNegocio   String
+  logoUrl         String?
+  instagram       String?
+  telefono        String?
+  email           String?
+  direccion       String?
+  remitenteNombre String?
+  remitenteDni    String?
+
+  cotizacionUSD Float
+
+  // Compras
+  costoPromedioPonderado Boolean @default(true)
+
+  // Productos
+  margenGananciaGlobal   Boolean @default(false)
+  margenMinoristaDefault Float?
+  margenMayoristaDefault Float?
+
+  // Fórmula de decants
+  costoEnvaseDecantARS      Float?
+  multiplicadorInsumoDecant Float?
+  sinGananciaEnDecants      Boolean @default(false)
+
+  updatedAt DateTime @updatedAt
 }

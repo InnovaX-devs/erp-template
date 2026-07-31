@@ -5,11 +5,47 @@
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@theme {
+  --color-ink: #211D22;
+  --color-ink-light: #2E2830;
+  --color-ink-border: #3A333C;
+
+  --color-ivory: #FAF6F0;
+  --color-ivory-dim: #F1EBE1;
+
+  --color-amber: #C17F3E;
+  --color-amber-soft: #E4C29B;
+  --color-amber-dark: #9C6530;
+
+  --color-clay: #B24A3D;
+  --color-clay-soft: #F3DCD8;
+
+  --color-sage: #4C6B52;
+  --color-sage-soft: #DCE6DD;
+
+  --font-display: var(--font-fraunces);
+  --font-body: var(--font-inter);
+}
+
+@layer base {
+  body {
+    @apply bg-ivory text-ink font-body;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-amber);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--color-ink-border);
+    border-radius: 9999px;
+  }
 }
 
 @media (prefers-color-scheme: dark) {

@@ -398,7 +398,6 @@ model Configuracion {
   id              String  @id @default(cuid())
   nombreNegocio   String
   logoUrl         String?
-  instagram       String?
   telefono        String?
   email           String?
   direccion       String?
@@ -418,7 +417,6 @@ model Configuracion {
   // Fórmula de decants
   costoEnvaseDecantARS      Float?
   multiplicadorInsumoDecant Float?
-  sinGananciaEnDecants      Boolean @default(false)
 
   updatedAt DateTime @updatedAt
 }

@@ -9,27 +9,26 @@ datasource db {
 }
 
 model Usuario {
-  id           String   @id @default(cuid())
-  nombre       String
-  email        String   @unique
-  passwordHash String
-  activo       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id               String            @id @default(cuid())
+  nombre           String
+  email            String            @unique
+  passwordHash     String
+  activo           Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
-
 model Marca {
-  id       String     @id @default(cuid())
-  nombre   String     @unique
-  activa   Boolean    @default(true)
+  id        String     @id @default(cuid())
+  nombre    String     @unique
+  activa    Boolean    @default(true)
   productos Producto[]
 }
 
 model Categoria {
-  id       String     @id @default(cuid())
-  nombre   String     @unique
-  activa   Boolean    @default(true)
+  id        String     @id @default(cuid())
+  nombre    String     @unique
+  activa    Boolean    @default(true)
   productos Producto[]
 }
 
@@ -39,42 +38,42 @@ enum MonedaPrecio {
 }
 
 model Producto {
-  id                 String   @id @default(cuid())
-  nombre             String
-  codigoBarras       String?  @unique
-  ubicacionDeposito  String?
-  fotoUrl            String?
+  id                String  @id @default(cuid())
+  nombre            String
+  codigoBarras      String? @unique
+  ubicacionDeposito String?
+  fotoUrl           String?
 
-  marca              Marca?     @relation(fields: [marcaId], references: [id])
-  marcaId            String?
-  categoria          Categoria? @relation(fields: [categoriaId], references: [id])
-  categoriaId        String?
+  marca       Marca?     @relation(fields: [marcaId], references: [id])
+  marcaId     String?
+  categoria   Categoria? @relation(fields: [categoriaId], references: [id])
+  categoriaId String?
 
-  stockActual        Int      @default(0)
-  stockMinimo        Int      @default(0)
-  destacado          Boolean  @default(false)
+  stockActual Int     @default(0)
+  stockMinimo Int     @default(0)
+  destacado   Boolean @default(false)
 
   // Precios — moneda configurable por producto (no todos se cargan en USD)
-  monedaPrecio       MonedaPrecio @default(USD)
-  precioCosto        Float
-  precioVenta        Float        // precio minorista
-  margenMinorista    Float?       // % informativo, no siempre se persiste calculado
-  precioMayorista    Float?
-  margenMayorista    Float?
-  precioOferta       Float?
+  monedaPrecio    MonedaPrecio @default(USD)
+  precioCosto     Float
+  precioVenta     Float // precio minorista
+  margenMinorista Float? // % informativo, no siempre se persiste calculado
+  precioMayorista Float?
+  margenMayorista Float?
+  precioOferta    Float?
 
   // Decants
-  seVendePorDecant     Boolean @default(false)
-  overrideDecant5ml    Float?  // si está cargado, pisa el cálculo de la fórmula global
-  overrideDecant10ml   Float?
+  seVendePorDecant   Boolean @default(false)
+  overrideDecant5ml  Float? // si está cargado, pisa el cálculo de la fórmula global
+  overrideDecant10ml Float?
 
-  activo             Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  itemsVenta         ItemVenta[]
-  itemsCompra        ItemCompra[]
-  historialPrecios   HistorialPrecio[]
+  itemsVenta       ItemVenta[]
+  itemsCompra      ItemCompra[]
+  historialPrecios HistorialPrecio[]
 
   @@index([nombre])
   @@index([codigoBarras])
@@ -94,24 +93,20 @@ enum OrigenCambioPrecio {
   ACTUALIZACION_MASIVA
 }
 
-
 model HistorialPrecio {
-  id             String              @id @default(cuid())
-  producto       Producto            @relation(fields: [productoId], references: [id])
-  productoId     String
-  campo          CampoPrecio
-  valorAnterior  Float?
-  valorNuevo     Float
-  origen         OrigenCambioPrecio
-  usuario        Usuario?            @relation(fields: [usuarioId], references: [id])
-  usuarioId      String?
-  detalle        String?
-  fecha          DateTime            @default(now())
+  id            String             @id @default(cuid())
+  producto      Producto           @relation(fields: [productoId], references: [id])
+  productoId    String
+  campo         CampoPrecio
+  valorAnterior Float?
+  valorNuevo    Float
+  origen        OrigenCambioPrecio
+  detalle       String?
+  fecha         DateTime           @default(now())
 
   @@index([productoId])
   @@index([fecha])
 }
-
 
 model Cliente {
   id          String   @id @default(cuid())
@@ -129,7 +124,6 @@ model Cliente {
 
   @@index([nombre])
 }
-
 
 enum EstadoPago {
   PAGADA
@@ -150,9 +144,9 @@ enum TipoPrecioVenta {
 }
 
 model Venta {
-  id         String   @id @default(cuid())
-  cliente    Cliente? @relation(fields: [clienteId], references: [id])
-  clienteId  String?
+  id        String   @id @default(cuid())
+  cliente   Cliente? @relation(fields: [clienteId], references: [id])
+  clienteId String?
 
   fecha           DateTime @default(now())
   cotizacionUsada Float
@@ -162,15 +156,15 @@ model Venta {
 
   totalUSD    Float
   totalARS    Float
-  montoPagado Float   @default(0) // relevante cuando estadoPago = A_CUENTA
+  montoPagado Float @default(0) // relevante cuando estadoPago = A_CUENTA
 
   estadoPago EstadoPago @default(PAGADA)
 
   // Logística (banderas independientes, no un estado lineal)
-  armado    Boolean @default(false)
-  enviado   Boolean @default(false)
-  retirado  Boolean @default(false)
-  impreso   Boolean @default(false)
+  armado   Boolean @default(false)
+  enviado  Boolean @default(false)
+  retirado Boolean @default(false)
+  impreso  Boolean @default(false)
 
   items           ItemVenta[]
   pagos           PagoVenta[]
@@ -181,9 +175,9 @@ model Venta {
 }
 
 model ItemVenta {
-  id        String @id @default(cuid())
-  venta     Venta  @relation(fields: [ventaId], references: [id], onDelete: Cascade)
-  ventaId   String
+  id      String @id @default(cuid())
+  venta   Venta  @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  ventaId String
 
   // Nullable: contempla el botón "Varios / Muestra" (ítem libre sin producto de catálogo)
   producto         Producto? @relation(fields: [productoId], references: [id])
@@ -201,7 +195,6 @@ model ItemVenta {
   @@index([productoId])
 }
 
-
 model PagoVenta {
   id       String @id @default(cuid())
   venta    Venta  @relation(fields: [ventaId], references: [id], onDelete: Cascade)
@@ -212,7 +205,6 @@ model PagoVenta {
 
   @@index([ventaId])
 }
-
 
 enum EstadoPresupuesto {
   BORRADOR
@@ -252,7 +244,6 @@ model PresupuestoItem {
 
   @@index([presupuestoId])
 }
-
 
 model Proveedor {
   id              String   @id @default(cuid())
@@ -353,7 +344,6 @@ enum ConceptoMovimientoCaja {
   OTRO
 }
 
-
 model MovimientoCaja {
   id              String                 @id @default(cuid())
   cuenta          Cuenta                 @relation(fields: [cuentaId], references: [id])
@@ -403,7 +393,6 @@ model Gasto {
   @@index([fecha])
   @@index([categoriaId])
 }
-
 
 model Configuracion {
   id              String  @id @default(cuid())

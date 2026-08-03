@@ -39,7 +39,6 @@ export default function LoginPage() {
           <LoginForm />
         </div>
       </div>
->>>>>>> Issue3
     </div>
   );
 }

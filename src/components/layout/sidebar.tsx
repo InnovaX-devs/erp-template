@@ -32,7 +32,7 @@ export function Sidebar() {
                 "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
                 isActive
                   ? "bg-white/[0.06] text-ivory"
-                  : "text-ivory/60 hover:bg-white/[0.04] hover:text-ivory/90"
+                  : "text-text-dim hover:bg-surface-hover hover:text-text"
               )}
             >
               <span

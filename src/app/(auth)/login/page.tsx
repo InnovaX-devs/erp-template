@@ -1,9 +1,13 @@
 import { LoginForm } from "@/components/auth/login-form";
 import { AromaLine } from "@/components/ui/aroma-line";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 export default function LoginPage() {
   return (
     <div className="flex min-h-dvh flex-col md:flex-row">
+      <div className="absolute right-6 top-6 z-10">
+        <ThemeToggle />
+      </div>
       {/* Panel de marca */}
       <div className="relative flex flex-col justify-between bg-ink px-8 py-10 text-ivory md:w-[42%] md:px-14 md:py-16">
         <span className="font-display text-2xl tracking-wide">Esencia</span>

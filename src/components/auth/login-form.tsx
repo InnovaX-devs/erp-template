@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import type React from "react";
+
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -10,7 +12,7 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setIsLoading(true);
@@ -88,7 +90,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={isLoading}
-        className="flex w-full items-center justify-center gap-2 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-ivory transition-colors hover:bg-ink-light disabled:opacity-60"
+        className="className=flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
       >
         {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
         {isLoading ? "Ingresando..." : "Ingresar"}

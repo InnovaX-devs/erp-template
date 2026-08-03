@@ -1,18 +1,24 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "@/components/theme/theme-provider";
 import "./globals.css";
 
-const fraunces = Fraunces({
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-  variable: "--font-fraunces",
-  weight: ["400", "500", "600"],
-  style: ["normal", "italic"],
+  variable: "--font-space-grotesk",
+  weight: ["500", "600", "700"],
 });
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -26,21 +32,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${fraunces.variable} ${inter.variable}`}>
+    <html
+      lang="es"
+      suppressHydrationWarning
+      className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}
+    >
       <body>
-        {children}
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            classNames: {
-              toast:
-                "!bg-ink !text-ivory !border !border-white/10 !rounded-lg !shadow-lg",
-              title: "!text-sm !font-medium",
-              error: "!border-clay/40",
-              success: "!border-sage/40",
-            },
-          }}
-        />
+        <ThemeProvider>
+          {children}
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              classNames: {
+                toast:
+                  "!bg-surface !text-text !border !border-border !rounded-xl !shadow-2xl",
+                title: "!text-sm !font-medium",
+                error: "!border-danger/40",
+                success: "!border-success/40",
+              },
+            }}
+          />
+        </ThemeProvider>
       </body>
     </html>
   );

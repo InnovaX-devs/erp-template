@@ -1,28 +1,38 @@
 "use client";
-
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { NAV_ITEMS } from "@/lib/nav-items";
 import { AromaLine } from "@/components/ui/aroma-line";
 
-export function Sidebar() {
+export function Sidebar({ logoUrl }: { logoUrl: string | null }) {
   const pathname = usePathname();
-
   return (
     <aside className="hidden md:flex w-64 shrink-0 flex-col bg-ink text-ivory">
-      <div className="px-6 pt-8 pb-6">
-        <span className="font-display text-2xl tracking-wide">Esencia</span>
+      <div className="flex flex-col items-center px-6 pt-8 pb-6 text-center">
+        <div className="mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-amber">
+          {logoUrl ? (
+            <Image
+              src={logoUrl}
+              alt="Logo KJ Importados"
+              width={64}
+              height={64}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <span className="font-display text-lg tracking-wide text-amber">KJ</span>
+          )}
+        </div>
+        <span className="font-display text-lg tracking-wide">KJ Importados</span>
         <p className="mt-1 text-xs uppercase tracking-[0.2em] text-ivory/50">
-          Panel administrativo
+          Perfumería de Lujo
         </p>
       </div>
-
       <nav className="flex-1 px-3 space-y-1" aria-label="Navegación principal">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
           const Icon = item.icon;
-
           return (
             <Link
               key={item.href}
@@ -48,10 +58,9 @@ export function Sidebar() {
           );
         })}
       </nav>
-
       <div className="px-6 py-6">
         <AromaLine className="w-full text-amber/60" />
-        <p className="mt-3 text-[11px] text-ivory/35">Esencia · v0.1</p>
+        <p className="mt-3 text-[11px] text-ivory/35">KJ Importados · v0.1</p>
       </div>
     </aside>
   );

@@ -7,17 +7,19 @@
   --surface: #FFFFFF;
   --surface-hover: #F1F3F6;
   --border: #E4E7EC;
-
   --primary: #4F46E5;
   --primary-soft: #6366F1;
   --accent: #0891B2;
-
   --text: #0F1222;
   --text-dim: #5B6472;
-
   --success: #059669;
   --danger: #E11D48;
   --warning: #D97706;
+  --ink: #0B1330;
+  --ivory: #FDFBF6;
+  --amber: #D4A94A;
+  --clay: #C4634A;
+  --clay-soft: #FBEDE8;
 }
 
 .dark {
@@ -25,17 +27,19 @@
   --surface: #121722;
   --surface-hover: #171D2B;
   --border: #232A3A;
-
   --primary: #6366F1;
   --primary-soft: #A5B4FC;
   --accent: #22D3EE;
-
   --text: #E7EAF3;
   --text-dim: #8A93A6;
-
   --success: #10B981;
   --danger: #F43F5E;
   --warning: #F59E0B;
+  --ink: #060A1A;
+  --ivory: #F5F1E8;
+  --amber: #E4BC6B;
+  --clay: #E0806A;
+  --clay-soft: #2A1815;
 }
 
 @theme inline {
@@ -43,18 +47,19 @@
   --color-surface: var(--surface);
   --color-surface-hover: var(--surface-hover);
   --color-border: var(--border);
-
   --color-primary: var(--primary);
   --color-primary-soft: var(--primary-soft);
   --color-accent: var(--accent);
-
   --color-text: var(--text);
   --color-text-dim: var(--text-dim);
-
   --color-success: var(--success);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
-
+  --color-ink: var(--ink);
+  --color-ivory: var(--ivory);
+  --color-amber: var(--amber);
+  --color-clay: var(--clay);
+  --color-clay-soft: var(--clay-soft);
   --font-display: var(--font-space-grotesk);
   --font-body: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);

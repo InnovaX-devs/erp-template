@@ -2,10 +2,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   experimental: {
-<<<<<<< HEAD
     serverActions: {
       bodySizeLimit: "5mb",
     },
+    typedRoutes: false,
   },
   images: {
     remotePatterns: [
@@ -14,9 +14,6 @@ const nextConfig: NextConfig = {
         hostname: "*.public.blob.vercel-storage.com",
       },
     ],
-=======
-    typedRoutes: false, 
->>>>>>> Issue3
   },
 };
 

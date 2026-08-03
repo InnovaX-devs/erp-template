@@ -1,26 +1,19 @@
 "use client";
-
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { LogOut } from "lucide-react";
 import { toast } from "sonner";
 
 export function LogoutButton() {
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleLogout() {
     setIsLoading(true);
     try {
-      // TODO: reemplazar por la lógica real de destrucción de sesión
-      // al resolver el issue de autenticación.
-      await fetch("/api/auth/logout", { method: "POST" });
+      await signOut({ callbackUrl: "/login" });
       toast.success("Sesión cerrada");
-      router.push("/login");
-      router.refresh();
     } catch {
       toast.error("No se pudo cerrar la sesión. Intentá de nuevo.");
-    } finally {
       setIsLoading(false);
     }
   }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme/theme-provider";
+import { AuthProvider } from "@/components/providers/session-provider";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -9,12 +10,10 @@ const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
   weight: ["500", "600", "700"],
 });
-
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
 });
-
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-jetbrains-mono",
@@ -39,7 +38,9 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
           <Toaster
             position="top-right"
             toastOptions={{

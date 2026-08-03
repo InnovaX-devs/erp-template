@@ -1,10 +1,9 @@
 "use client";
-
 import { useState } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { signIn } from "next-auth/react";
 import type React from "react";
-
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -16,24 +15,21 @@ export function LoginForm() {
     event.preventDefault();
     setError(null);
     setIsLoading(true);
-
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+      const res = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error ?? "No pudimos iniciar sesión. Probá de nuevo.");
-        toast.error(data.error ?? "No pudimos iniciar sesión.");
+      if (res?.error) {
+        setError("Email o contraseña incorrectos.");
+        toast.error("Email o contraseña incorrectos.");
         return;
       }
 
       toast.success("Bienvenido/a de nuevo");
-      window.location.href = "/clientes";
+      window.location.href = "/";
     } catch {
       setError("No pudimos conectarnos al servidor. Revisá tu conexión.");
     } finally {
@@ -52,7 +48,6 @@ export function LoginForm() {
           <span>{error}</span>
         </div>
       )}
-
       <div className="space-y-1.5">
         <label htmlFor="email" className="text-sm font-medium text-ink/80">
           Email
@@ -69,7 +64,6 @@ export function LoginForm() {
           placeholder="admin@esencia.com"
         />
       </div>
-
       <div className="space-y-1.5">
         <label htmlFor="password" className="text-sm font-medium text-ink/80">
           Contraseña
@@ -86,11 +80,10 @@ export function LoginForm() {
           placeholder="••••••••"
         />
       </div>
-
       <button
         type="submit"
         disabled={isLoading}
-        className="className=flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
       >
         {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
         {isLoading ? "Ingresando..." : "Ingresar"}

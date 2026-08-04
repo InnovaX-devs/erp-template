@@ -20,6 +20,8 @@ export async function guardarConfiguracion(formData: FormData) {
     throw new Error("Cotización USD inválida");
   }
 
+  const costoPromedioPonderado = formData.get("costoPromedioPonderado") === "on";
+
   let logoUrl: string | undefined;
 
   if (logoFile && logoFile.size > 0) {
@@ -37,6 +39,7 @@ export async function guardarConfiguracion(formData: FormData) {
     remitenteNombre,
     remitenteDni,
     cotizacionUSD,
+    costoPromedioPonderado,
     ...(logoUrl ? { logoUrl } : {}),
   });
 

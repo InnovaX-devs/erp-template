@@ -31,6 +31,7 @@ export async function actualizarConfiguracion(
     remitenteNombre: string;
     remitenteDni: string;
     cotizacionUSD: number;
+    costoPromedioPonderado: boolean;
   }>
 ) {
   return prisma.configuracion.update({

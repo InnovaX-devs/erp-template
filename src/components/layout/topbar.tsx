@@ -13,14 +13,23 @@ function useSectionTitle() {
   return current?.label ?? "Panel";
 }
 
-export function Topbar() {
+export function Topbar({ cotizacionUSD }: { cotizacionUSD: number }) {
   const title = useSectionTitle();
+  const cotizacionFormateada = new Intl.NumberFormat("es-AR", {
+    minimumFractionDigits: 0,
+  }).format(cotizacionUSD);
 
   return (
     <header className="flex items-center justify-between border-b border-border bg-bg/80 px-6 py-4 backdrop-blur-xl">
       <h1 className="font-display text-lg font-semibold text-text">{title}</h1>
 
       <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5">
+          <span className="text-xs text-text/60">USD</span>
+          <span className="font-mono text-sm font-medium text-text">
+            ${cotizacionFormateada}
+          </span>
+        </div>
         <ThemeToggle />
         <div className="flex items-center gap-2.5 rounded-full border border-border bg-surface px-2 py-1.5 pr-3">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent font-mono text-xs font-medium text-white">

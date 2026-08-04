@@ -1,11 +1,10 @@
 import type { NextConfig } from "next";
-
 const nextConfig: NextConfig = {
+  typedRoutes: false,
   experimental: {
     serverActions: {
       bodySizeLimit: "5mb",
     },
-    typedRoutes: false,
   },
   images: {
     remotePatterns: [
@@ -16,5 +15,4 @@ const nextConfig: NextConfig = {
     ],
   },
 };
-
-export default nextConfig;
+export default nextConfig

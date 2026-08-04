@@ -10,7 +10,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     <div className="flex h-dvh overflow-hidden bg-ivory">
       <Sidebar logoUrl={configuracion.logoUrl ?? null} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar />
+        <Topbar cotizacionUSD={configuracion.cotizacionUSD} />
         <main className="scrollbar-thin flex-1 overflow-y-auto px-6 py-8">
           {children}
         </main>

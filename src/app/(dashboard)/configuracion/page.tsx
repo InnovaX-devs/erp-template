@@ -78,6 +78,30 @@ export default async function ConfiguracionPage() {
           </div>
         </div>
 
+        {/* Cotización USD */}
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Cotización USD
+          </label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+              $
+            </span>
+            <input
+              type="number"
+              name="cotizacionUSD"
+              defaultValue={configuracion.cotizacionUSD}
+              step="0.01"
+              min="0"
+              required
+              className="w-full border rounded p-2 pl-7"
+            />
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Usada para convertir precios en USD a ARS en todo el sistema.
+          </p>
+        </div>
+        
         {/* Datos del remitente */}
         <div>
           <h2 className="text-lg font-semibold mb-3">Datos del remitente</h2>

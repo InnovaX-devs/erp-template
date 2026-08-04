@@ -30,10 +30,21 @@ export async function actualizarConfiguracion(
     direccion: string;
     remitenteNombre: string;
     remitenteDni: string;
+    cotizacionUSD: number;
   }>
 ) {
   return prisma.configuracion.update({
     where: { id: CONFIGURACION_ID },
     data,
   });
+}
+
+export async function obtenerCotizacionUSD(): Promise<number> {
+  const configuracion = await obtenerConfiguracion();
+  return configuracion.cotizacionUSD;
+}
+
+export async function convertirUSDaARS(montoUSD: number): Promise<number> {
+  const cotizacion = await obtenerCotizacionUSD();
+  return montoUSD * cotizacion;
 }

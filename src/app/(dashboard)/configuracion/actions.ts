@@ -13,6 +13,13 @@ export async function guardarConfiguracion(formData: FormData) {
   const remitenteDni = formData.get("remitenteDni") as string;
   const logoFile = formData.get("logo") as File | null;
 
+  const cotizacionUSDRaw = formData.get("cotizacionUSD") as string;
+  const cotizacionUSD = Number(cotizacionUSDRaw);
+
+  if (!cotizacionUSDRaw || Number.isNaN(cotizacionUSD) || cotizacionUSD <= 0) {
+    throw new Error("Cotización USD inválida");
+  }
+
   let logoUrl: string | undefined;
 
   if (logoFile && logoFile.size > 0) {
@@ -29,8 +36,9 @@ export async function guardarConfiguracion(formData: FormData) {
     direccion,
     remitenteNombre,
     remitenteDni,
+    cotizacionUSD,
     ...(logoUrl ? { logoUrl } : {}),
   });
 
-  revalidatePath("/configuracion");
+  revalidatePath("/", "layout");
 }

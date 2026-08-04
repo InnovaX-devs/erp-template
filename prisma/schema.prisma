@@ -395,7 +395,7 @@ model Gasto {
 }
 
 model Configuracion {
-  id              String  @id @default(cuid())
+  id              String  @id @default("singleton")
   nombreNegocio   String
   logoUrl         String?
   telefono        String?
@@ -404,7 +404,7 @@ model Configuracion {
   remitenteNombre String?
   remitenteDni    String?
 
-  cotizacionUSD Float
+  cotizacionUSD Float @default(1000)
 
   // Compras
   costoPromedioPonderado Boolean @default(true)

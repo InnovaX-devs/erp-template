@@ -129,6 +129,25 @@ export default async function ConfiguracionPage() {
           </div>
         </div>
 
+        <div className="border-t pt-4">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              name="costoPromedioPonderado"
+              defaultChecked={configuracion.costoPromedioPonderado}
+              className="h-4 w-4"
+            />
+            <span className="text-sm font-medium">
+              Costo promedio ponderado
+            </span>
+          </label>
+          <p className="text-xs text-gray-500 mt-1">
+            Al confirmar una compra, el costo del producto se recalcula
+            mezclando el stock anterior con el nuevo. Ejemplo: 10 unidades a
+            $1000 + 5 nuevas a $1200 → el costo pasa a $1066.
+          </p>
+        </div>
+
         <button
           type="submit"
           className="bg-black text-white rounded px-4 py-2 hover:bg-gray-800"

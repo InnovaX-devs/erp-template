@@ -65,3 +65,50 @@ export async function GET(request: NextRequest) {
     },
   });
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+
+    // Validaciones básicas de campos obligatorios en backend
+    if (
+      !body.nombre?.trim() ||
+      body.stockActual === undefined ||
+      body.precioCosto === undefined ||
+      body.precioVenta === undefined
+    ) {
+      return NextResponse.json(
+        { error: "Nombre, stock actual, precio costo y precio venta son obligatorios" },
+        { status: 400 }
+      );
+    }
+
+    const nuevoProducto = await prisma.producto.create({
+      data: {
+        nombre: body.nombre.trim(),
+        codigoBarras: body.codigoBarras || null,
+        ubicacion: body.ubicacion || null,
+        marcaId: body.marcaId || null,
+        categoriaId: body.categoriaId || null,
+        stockActual: Number(body.stockActual),
+        stockMinimo: Number(body.stockMinimo || 0),
+        destacado: Boolean(body.destacado),
+        monedaPrecio: body.monedaPrecio || "USD",
+        precioCosto: Number(body.precioCosto),
+        precioVenta: Number(body.precioVenta),
+        precioMayorista: body.precioMayorista ? Number(body.precioMayorista) : null,
+        precioOferta: body.precioOferta ? Number(body.precioOferta) : null,
+        esDecant: Boolean(body.esDecant),
+        activo: true,
+      },
+    });
+
+    return NextResponse.json(nuevoProducto, { status: 201 });
+  } catch (error) {
+    console.error("Error al crear producto:", error);
+    return NextResponse.json(
+      { error: "Error al crear el producto" },
+      { status: 500 }
+    );
+  }
+}

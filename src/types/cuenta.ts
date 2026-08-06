@@ -1,7 +1,7 @@
 export type TipoCuenta = "EFECTIVO_ARS" | "EFECTIVO_USD" | "BANCO_ARS" | "BANCO_USD";
 
 export type CuentaDTO = {
-  id: string;
+  id: number;
   nombre: string;
   tipo: TipoCuenta;
   titular: string | null;

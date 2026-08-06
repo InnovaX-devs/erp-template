@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+type RouteParams = { params: Promise<{ id: string }> };
+
+export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
-    const cuentaId = params.id;
+    const { id } = await params;
+    const cuentaId = Number(id);
+    if (Number.isNaN(cuentaId)) {
+      return NextResponse.json({ error: "ID de cuenta inválido" }, { status: 400 });
+    }
+
     const body = await request.json();
 
     const cuentaExistente = await prisma.cuenta.findUnique({ where: { id: cuentaId } });
@@ -34,8 +41,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         limiteMensualIngresos: body.limiteMensualIngresos
           ? Number(body.limiteMensualIngresos)
           : null,
-        // saldoInicial y saldoActual NO se editan acá: el saldo se mueve
-        // únicamente a través de MovimientoCaja para no romper la trazabilidad.
       },
     });
 
@@ -46,9 +51,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const cuentaId = params.id;
+    const { id } = await params;
+    const cuentaId = Number(id);
+    if (Number.isNaN(cuentaId)) {
+      return NextResponse.json({ error: "ID de cuenta inválido" }, { status: 400 });
+    }
+
     const body = await request.json();
 
     if (typeof body.activa !== "boolean") {
@@ -67,9 +77,13 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 }
 
-export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
-    const cuentaId = params.id;
+    const { id } = await params;
+    const cuentaId = Number(id);
+    if (Number.isNaN(cuentaId)) {
+      return NextResponse.json({ error: "ID de cuenta inválido" }, { status: 400 });
+    }
 
     const [movimientos, pagos] = await Promise.all([
       prisma.movimientoCaja.count({ where: { cuentaId } }),

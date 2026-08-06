@@ -8,7 +8,7 @@ export default function ClienteModal({
   onSaved,
   onClose,
 }: {
-  clienteInicial?: (Partial<ClienteInput> & { id?: string }) | null;
+  clienteInicial?: (Partial<ClienteInput> & { id?: number }) | null;
   onSaved: (cliente: ClienteBasico) => void;
   onClose: () => void;
 }) {

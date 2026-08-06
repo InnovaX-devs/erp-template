@@ -2,18 +2,24 @@
 
 import { useState } from "react";
 import { eliminarCliente } from "./actions";
+import DeudaCell from "./DeudaCell";
 import type { ClienteConDeuda } from "@/lib/clientes";
+import type { CuentaOption } from "./CobrarDeudaModal";
 
 export default function ClientesTable({
   clientes,
+  cuentas,
+  umbralAlDia,
   onEditar,
 }: {
   clientes: ClienteConDeuda[];
+  cuentas: CuentaOption[];
+  umbralAlDia: number;
   onEditar: (cliente: ClienteConDeuda) => void;
 }) {
-  const [eliminandoId, setEliminandoId] = useState<string | null>(null);
+  const [eliminandoId, setEliminandoId] = useState<number | null>(null);
 
-  async function handleEliminar(id: string, nombre: string) {
+  async function handleEliminar(id: number, nombre: string) {
     if (!confirm(`¿Eliminar a ${nombre}? Esta acción no se puede deshacer.`)) return;
     setEliminandoId(id);
     const res = await eliminarCliente(id);
@@ -29,6 +35,7 @@ export default function ClientesTable({
             <th className="px-4 py-3">Cliente</th>
             <th className="px-4 py-3">Contacto</th>
             <th className="px-4 py-3">Tipo</th>
+            <th className="px-4 py-3">Deuda</th>
             <th className="px-4 py-3 text-right">Acciones</th>
           </tr>
         </thead>
@@ -52,6 +59,14 @@ export default function ClientesTable({
                   {c.esMayorista ? "Mayorista" : "Minorista"}
                 </span>
               </td>
+              <td className="px-4 py-4">
+                <DeudaCell
+                  cliente={{ id: c.id, nombre: `${c.nombre} ${c.apellido ?? ""}`.trim() }}
+                  deuda={c.deuda}
+                  umbralAlDia={umbralAlDia}
+                  cuentas={cuentas}
+                />
+              </td>
               <td className="px-4 py-4 text-right space-x-3">
                 <button
                   onClick={() => onEditar(c)}
@@ -71,7 +86,7 @@ export default function ClientesTable({
           ))}
           {clientes.length === 0 && (
             <tr>
-              <td colSpan={4} className="px-4 py-8 text-center text-[#45464f]">
+              <td colSpan={5} className="px-4 py-8 text-center text-[#45464f]">
                 No se encontraron clientes con estos filtros.
               </td>
             </tr>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, FormEvent } from "react";
 import {
   crearCliente,
   actualizarCliente,
@@ -8,7 +8,7 @@ import {
 } from "@/app/(dashboard)/clientes/actions";
 
 export type ClienteBasico = {
-  id: string;
+  id: number;
   nombre: string;
   apellido: string | null;
   esMayorista: boolean;
@@ -19,7 +19,7 @@ export default function ClienteForm({
   onSuccess,
   onCancel,
 }: {
-  clienteInicial?: Partial<ClienteInput> & { id?: string };
+  clienteInicial?: Partial<ClienteInput> & { id?: number };
   onSuccess: (cliente: ClienteBasico) => void;
   onCancel?: () => void;
 }) {

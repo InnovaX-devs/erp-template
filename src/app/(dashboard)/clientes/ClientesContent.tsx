@@ -8,13 +8,18 @@ import ResumenCards from "./ResumenCards";
 import ClientesFilters from "./ClientesFilters";
 import type { ClienteConDeuda } from "@/lib/clientes";
 import type { ClienteBasico } from "@/components/clientes/ClienteForm";
+import type { CuentaOption } from "./CobrarDeudaModal";
 
 export default function ClientesContent({
   clientes,
   resumen,
+  cuentas,
+  umbralAlDia,
 }: {
   clientes: ClienteConDeuda[];
-  resumen: { totalClientes: number; totalMayoristas: number };
+  resumen: { totalClientes: number; totalMayoristas: number; deudaTotal: number };
+  cuentas: CuentaOption[];
+  umbralAlDia: number;
 }) {
   const router = useRouter();
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -54,7 +59,12 @@ export default function ClientesContent({
 
       <ResumenCards resumen={resumen} />
       <ClientesFilters />
-      <ClientesTable clientes={clientes} onEditar={abrirEditar} />
+      <ClientesTable
+        clientes={clientes}
+        cuentas={cuentas}
+        umbralAlDia={umbralAlDia}
+        onEditar={abrirEditar}
+      />
 
       {modalAbierto && (
         <ClienteModal

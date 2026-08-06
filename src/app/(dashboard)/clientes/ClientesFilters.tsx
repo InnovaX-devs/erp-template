@@ -43,6 +43,15 @@ export default function ClientesFilters() {
         <option value="mayorista">Mayorista</option>
         <option value="minorista">Minorista</option>
       </select>
+      <select
+        defaultValue={searchParams.get("deuda") ?? ""}
+        onChange={(e) => actualizarParam("deuda", e.target.value)}
+        className="border border-[#c5c6d0] rounded-lg px-3 py-2 text-sm"
+      >
+        <option value="">Con deuda y al día</option>
+        <option value="con-deuda">Con deuda</option>
+        <option value="al-dia">Al día</option>
+      </select>
     </div>
   );
 }

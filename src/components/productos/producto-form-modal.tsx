@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 export interface ProductoFormData {
   id?: string;
@@ -71,78 +71,129 @@ export function ProductoFormModal({
   // Estados para alta rápida de marcas/categorías
   const [mostrarAltaMarca, setMostrarAltaMarca] = useState(false);
   const [nuevaMarcaNombre, setNuevaMarcaNombre] = useState("");
+  const [guardandoSubitem, setGuardandoSubitem] = useState(false);
+
   const [mostrarAltaCategoria, setMostrarAltaCategoria] = useState(false);
   const [nuevaCategoriaNombre, setNuevaCategoriaNombre] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Cargar datos en caso de edición
-  useEffect(() => {
-    if (productoEditar) {
-      setFormData(productoEditar);
-    } else {
-      setFormData({
-        nombre: "",
-        codigoBarras: "",
-        ubicacion: "",
-        marcaId: "",
-        categoriaId: "",
-        stockActual: 0,
-        stockMinimo: 0,
-        destacado: false,
-        monedaPrecio: "USD",
-        precioCosto: "",
-        precioVenta: "",
-        precioMayorista: "",
-        precioOferta: "",
-        esDecant: false,
-      });
+  // Función para obtener marcas y categorías de la API en caso de que no vengan del padre
+  const fetchAuxiliares = useCallback(async () => {
+    try {
+      const [resMarcas, resCategorias] = await Promise.all([
+        fetch("/api/marcas"),
+        fetch("/api/categorias"),
+      ]);
+
+      if (resMarcas.ok) {
+        const dataM = await resMarcas.json();
+        setMarcas(dataM.items || dataM);
+      }
+      if (resCategorias.ok) {
+        const dataC = await resCategorias.json();
+        setCategorias(dataC.items || dataC);
+      }
+    } catch (err) {
+      console.error("Error al obtener marcas o categorías:", err);
     }
-    setErrorMsg("");
-  }, [productoEditar, isOpen]);
+  }, []);
+
+  // Cargar datos al abrir el modal
+  useEffect(() => {
+    if (isOpen) {
+      fetchAuxiliares();
+
+      if (productoEditar) {
+        setFormData(productoEditar);
+      } else {
+        setFormData({
+          nombre: "",
+          codigoBarras: "",
+          ubicacion: "",
+          marcaId: "",
+          categoriaId: "",
+          stockActual: 0,
+          stockMinimo: 0,
+          destacado: false,
+          monedaPrecio: "USD",
+          precioCosto: "",
+          precioVenta: "",
+          precioMayorista: "",
+          precioOferta: "",
+          esDecant: false,
+        });
+      }
+      setErrorMsg("");
+    }
+  }, [productoEditar, isOpen, fetchAuxiliares]);
 
   if (!isOpen) return null;
 
   // Alta rápida de marca
-  const handleCrearMarcaRapida = async () => {
+  const handleCrearMarcaRapida = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (!nuevaMarcaNombre.trim()) return;
+    
     try {
+      setGuardandoSubitem(true);
       const res = await fetch("/api/marcas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre: nuevaMarcaNombre }),
+        body: JSON.stringify({ nombre: nuevaMarcaNombre.trim() }),
       });
+
       if (res.ok) {
         const marcaCreada = await res.json();
         setMarcas((prev) => [...prev, marcaCreada]);
         setFormData((prev) => ({ ...prev, marcaId: marcaCreada.id }));
         setNuevaMarcaNombre("");
         setMostrarAltaMarca(false);
+      } else {
+        const errData = await res.json();
+        alert(errData.message || "Error al crear la marca");
       }
-    } catch {
-      console.error("Error al crear marca rápida");
+    } catch (err) {
+      console.error("Error al crear marca rápida:", err);
+      alert("Error de conexión al guardar la marca");
+    } finally {
+      setGuardandoSubitem(false);
     }
   };
 
   // Alta rápida de categoría
-  const handleCrearCategoriaRapida = async () => {
+  const handleCrearCategoriaRapida = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (!nuevaCategoriaNombre.trim()) return;
+
     try {
+      setGuardandoSubitem(true);
       const res = await fetch("/api/categorias", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre: nuevaCategoriaNombre }),
+        body: JSON.stringify({ nombre: nuevaCategoriaNombre.trim() }),
       });
+
       if (res.ok) {
         const catCreada = await res.json();
         setCategorias((prev) => [...prev, catCreada]);
         setFormData((prev) => ({ ...prev, categoriaId: catCreada.id }));
         setNuevaCategoriaNombre("");
         setMostrarAltaCategoria(false);
+      } else {
+        const errData = await res.json();
+        alert(errData.message || "Error al crear la categoría");
       }
-    } catch {
-      console.error("Error al crear categoría rápida");
+    } catch (err) {
+      console.error("Error al crear categoría rápida:", err);
+      alert("Error de conexión al guardar la categoría");
+    } finally {
+      setGuardandoSubitem(false);
     }
   };
 
@@ -181,10 +232,10 @@ export function ProductoFormModal({
         throw new Error(errorData.message || "Error al guardar producto");
       }
 
-      onSuccess(); // Notifica al componente padre para actualizar el listado en tiempo real
+      onSuccess();
       onClose();
     } catch (err: any) {
-      setErrorMsg(err.message || "Ocurrió un error insospechado");
+      setErrorMsg(err.message || "Ocurrió un error inesperado");
     } finally {
       setLoading(false);
     }
@@ -198,6 +249,7 @@ export function ProductoFormModal({
             {productoEditar ? "Editar Producto" : "Nuevo Producto"}
           </h2>
           <button
+            type="button"
             onClick={onClose}
             className="rounded-lg p-1 text-text-dim hover:bg-surface-hover hover:text-text"
           >
@@ -490,7 +542,7 @@ export function ProductoFormModal({
             </label>
           </div>
 
-          {/* Botones de acción */}
+          {/* Botones de acción principal */}
           <div className="flex justify-end gap-3 border-t border-border pt-4">
             <button
               type="button"
@@ -512,7 +564,7 @@ export function ProductoFormModal({
 
       {/* Pop-up Alta Rápida Marca */}
       {mostrarAltaMarca && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
           <div className="w-80 rounded-xl border border-border bg-surface p-4 shadow-xl">
             <h3 className="text-sm font-semibold text-text">Nueva Marca</h3>
             <input
@@ -532,10 +584,11 @@ export function ProductoFormModal({
               </button>
               <button
                 type="button"
+                disabled={guardandoSubitem}
                 onClick={handleCrearMarcaRapida}
-                className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-white"
+                className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
               >
-                Guardar
+                {guardandoSubitem ? "Guardando..." : "Guardar"}
               </button>
             </div>
           </div>
@@ -544,7 +597,7 @@ export function ProductoFormModal({
 
       {/* Pop-up Alta Rápida Categoría */}
       {mostrarAltaCategoria && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
           <div className="w-80 rounded-xl border border-border bg-surface p-4 shadow-xl">
             <h3 className="text-sm font-semibold text-text">Nueva Categoría</h3>
             <input
@@ -564,10 +617,11 @@ export function ProductoFormModal({
               </button>
               <button
                 type="button"
+                disabled={guardandoSubitem}
                 onClick={handleCrearCategoriaRapida}
-                className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-white"
+                className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
               >
-                Guardar
+                {guardandoSubitem ? "Guardando..." : "Guardar"}
               </button>
             </div>
           </div>

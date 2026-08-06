@@ -1,0 +1,82 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { eliminarCliente } from "./actions";
+import type { ClienteConDeuda } from "@/lib/clientes";
+
+export default function ClientesTable({
+  clientes,
+}: {
+  clientes: ClienteConDeuda[];
+}) {
+  const [eliminandoId, setEliminandoId] = useState<string | null>(null);
+
+  async function handleEliminar(id: string, nombre: string) {
+    if (!confirm(`¿Eliminar a ${nombre}? Esta acción no se puede deshacer.`)) return;
+    setEliminandoId(id);
+    const res = await eliminarCliente(id);
+    setEliminandoId(null);
+    if (!res.success) alert(res.error);
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-[#F1F5F9]">
+          <tr className="text-left text-[11px] font-bold uppercase tracking-wider text-[#45464f]">
+            <th className="px-4 py-3">Cliente</th>
+            <th className="px-4 py-3">Contacto</th>
+            <th className="px-4 py-3">Tipo</th>
+            <th className="px-4 py-3 text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {clientes.map((c) => (
+            <tr key={c.id} className="border-t border-[#E2E8F0]">
+              <td className="px-4 py-4 font-medium text-[#191c1e]">
+                {c.nombre} {c.apellido ?? ""}
+              </td>
+              <td className="px-4 py-4 text-[#45464f]">
+                {c.telefono ?? c.email ?? "—"}
+              </td>
+              <td className="px-4 py-4">
+                <span
+                  className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                    c.esMayorista
+                      ? "bg-[#fed65b] text-[#745c00]"
+                      : "bg-[#e0e3e5] text-[#45464f]"
+                  }`}
+                >
+                  {c.esMayorista ? "Mayorista" : "Minorista"}
+                </span>
+              </td>
+              <td className="px-4 py-4 text-right space-x-3">
+                <Link
+                  href={`/clientes/${c.id}/editar`}
+                  className="text-[#021541] hover:underline text-sm"
+                >
+                  Editar
+                </Link>
+                <button
+                  onClick={() => handleEliminar(c.id, c.nombre)}
+                  disabled={eliminandoId === c.id}
+                  className="text-[#ba1a1a] hover:underline text-sm disabled:opacity-50"
+                >
+                  {eliminandoId === c.id ? "Eliminando..." : "Eliminar"}
+                </button>
+              </td>
+            </tr>
+          ))}
+          {clientes.length === 0 && (
+            <tr>
+              <td colSpan={4} className="px-4 py-8 text-center text-[#45464f]">
+                No se encontraron clientes con estos filtros.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}

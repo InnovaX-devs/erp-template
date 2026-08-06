@@ -23,16 +23,38 @@ export async function PUT(
 
     const nuevoCosto = Number(body.precioCosto);
     const nuevoVenta = Number(body.precioVenta);
-    const nuevoMayorista = body.precioMayorista ? Number(body.precioMayorista) : null;
+    const nuevoMayorista =
+      body.precioMayorista !== undefined &&
+      body.precioMayorista !== "" &&
+      body.precioMayorista !== null
+        ? Number(body.precioMayorista)
+        : null;
+
+    // FIX: el modelo Producto usa "ubicacionDeposito", no "ubicacion"
+    const ubicacionDeposito =
+      body.ubicacion && String(body.ubicacion).trim() !== ""
+        ? String(body.ubicacion).trim()
+        : null;
+
+    // FIX: Marca.id y Categoria.id son Int en el schema, hay que convertir
+    const marcaId =
+      body.marcaId && String(body.marcaId).trim() !== ""
+        ? Number(body.marcaId)
+        : null;
+
+    const categoriaId =
+      body.categoriaId && String(body.categoriaId).trim() !== ""
+        ? Number(body.categoriaId)
+        : null;
 
     const productoActualizado = await prisma.producto.update({
       where: { id: productoId },
       data: {
         nombre: body.nombre.trim(),
         codigoBarras: body.codigoBarras || null,
-        ubicacion: body.ubicacion || null,
-        marcaId: body.marcaId || null,
-        categoriaId: body.categoriaId || null,
+        ubicacionDeposito,
+        marcaId,
+        categoriaId,
         stockActual: Number(body.stockActual),
         stockMinimo: Number(body.stockMinimo || 0),
         destacado: Boolean(body.destacado),
@@ -40,8 +62,14 @@ export async function PUT(
         precioCosto: nuevoCosto,
         precioVenta: nuevoVenta,
         precioMayorista: nuevoMayorista,
-        precioOferta: body.precioOferta ? Number(body.precioOferta) : null,
-        esDecant: Boolean(body.esDecant),
+        precioOferta:
+          body.precioOferta !== undefined &&
+          body.precioOferta !== "" &&
+          body.precioOferta !== null
+            ? Number(body.precioOferta)
+            : null,
+        // FIX: el modelo Producto usa "seVendePorDecant", no "esDecant"
+        seVendePorDecant: Boolean(body.esDecant),
       },
     });
 

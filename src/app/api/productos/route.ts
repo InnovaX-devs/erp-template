@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { toArs } from "@/lib/currency";
 import type { Prisma } from "@prisma/client";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -29,6 +31,7 @@ export async function GET(request: NextRequest) {
           precioCosto: true,
           precioVenta: true,
           precioMayorista: true,
+          activo: true, 
           marca: { select: { nombre: true } },
         },
       }),
@@ -99,16 +102,16 @@ export async function POST(request: NextRequest) {
       ? String(body.codigoBarras).trim() 
       : null;
 
-    const ubicacion = body.ubicacion && String(body.ubicacion).trim() !== "" 
+    const ubicacionDeposito = body.ubicacion && String(body.ubicacion).trim() !== "" 
       ? String(body.ubicacion).trim() 
       : null;
 
     const marcaId = body.marcaId && String(body.marcaId).trim() !== "" 
-      ? String(body.marcaId).trim() 
+      ? Number(body.marcaId) 
       : null;
 
     const categoriaId = body.categoriaId && String(body.categoriaId).trim() !== "" 
-      ? String(body.categoriaId).trim() 
+      ? Number(body.categoriaId) 
       : null;
 
     const stockActual = Number(body.stockActual);
@@ -128,7 +131,7 @@ export async function POST(request: NextRequest) {
       data: {
         nombre: body.nombre.trim(),
         codigoBarras,
-        ubicacion,
+        ubicacionDeposito,
         marcaId,
         categoriaId,
         stockActual,
@@ -139,7 +142,7 @@ export async function POST(request: NextRequest) {
         precioVenta,
         precioMayorista,
         precioOferta,
-        esDecant: Boolean(body.esDecant),
+        seVendePorDecant: Boolean(body.esDecant),
         activo: true,
       },
     });
@@ -148,7 +151,6 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error("Error al crear producto:", error);
 
-    // Captura de duplicados en Prisma (por ejemplo, código de barras repetido)
     if (error.code === "P2002") {
       const targetField = error.meta?.target?.[0] || "campo";
       return NextResponse.json(

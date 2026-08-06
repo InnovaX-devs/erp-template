@@ -24,3 +24,16 @@ export type ProductosResponse = {
   pageSize: number;
   summary: ProductosSummary;
 };
+
+export type ProductoBusquedaDTO = {
+  id: string;
+  nombre: string;
+  codigoBarras: string | null;
+  stockActual: number;
+  monedaPrecio: Moneda;
+  precioCosto: number;
+  precioVenta: number;
+  precioMayorista: number | null;
+  seVendePorDecant: boolean;
+  marca: { nombre: string } | null;
+};

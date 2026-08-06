@@ -6,8 +6,10 @@ export type ClienteConDeuda = {
   apellido: string | null;
   telefono: string | null;
   email: string | null;
+  direccion: string | null;
+  localidad: string | null;
   esMayorista: boolean;
-  deuda: number; // TODO: calcular a partir de ventas A_CUENTA (issue aparte)
+  deuda: number;
 };
 
 export type ClientesFiltros = {
@@ -26,8 +28,10 @@ export async function getClientesData(filtros: ClientesFiltros = {}) {
     apellido: c.apellido,
     telefono: c.telefono,
     email: c.email,
+    direccion: c.direccion,
+    localidad: c.localidad,
     esMayorista: c.esMayorista,
-    deuda: 0, // placeholder hasta que se implemente el cálculo real
+    deuda: 0, //placeholder hasta que se muestre el calculo real
   }));
 
   const resumen = {

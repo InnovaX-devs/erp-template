@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { eliminarCliente } from "./actions";
 import type { ClienteConDeuda } from "@/lib/clientes";
 
 export default function ClientesTable({
   clientes,
+  onEditar,
 }: {
   clientes: ClienteConDeuda[];
+  onEditar: (cliente: ClienteConDeuda) => void;
 }) {
   const [eliminandoId, setEliminandoId] = useState<string | null>(null);
 
@@ -52,12 +53,12 @@ export default function ClientesTable({
                 </span>
               </td>
               <td className="px-4 py-4 text-right space-x-3">
-                <Link
-                  href={`/clientes/${c.id}/editar`}
+                <button
+                  onClick={() => onEditar(c)}
                   className="text-[#021541] hover:underline text-sm"
                 >
                   Editar
-                </Link>
+                </button>
                 <button
                   onClick={() => handleEliminar(c.id, c.nombre)}
                   disabled={eliminandoId === c.id}

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+// FIX: evita que Next.js cachee este GET como estático.
+// Sin esto, /api/categorias puede devolver siempre la misma
+// respuesta cacheada aunque se creen categorías nuevas.
+export const dynamic = "force-dynamic";
+
 // GET /api/categorias - Obtener todas las categorías
 export async function GET() {
   try {

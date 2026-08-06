@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 export interface ProductoFormData {
   id?: string;
@@ -34,7 +34,7 @@ interface ProductoFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   productoEditar?: ProductoFormData | null;
-  onSuccess: () => void; 
+  onSuccess: () => void;
   marcasIniciales?: Marca[];
   categoriasIniciales?: Categoria[];
 }
@@ -47,7 +47,6 @@ export function ProductoFormModal({
   marcasIniciales = [],
   categoriasIniciales = [],
 }: ProductoFormModalProps) {
-  // Estado del formulario de producto
   const [formData, setFormData] = useState<ProductoFormData>({
     nombre: "",
     codigoBarras: "",
@@ -68,103 +67,167 @@ export function ProductoFormModal({
   const [marcas, setMarcas] = useState<Marca[]>(marcasIniciales);
   const [categorias, setCategorias] = useState<Categoria[]>(categoriasIniciales);
 
-  // Estados para alta rápida de marcas/categorías
+  // Estados para alta rápida
   const [mostrarAltaMarca, setMostrarAltaMarca] = useState(false);
   const [nuevaMarcaNombre, setNuevaMarcaNombre] = useState("");
+  const [guardandoSubitem, setGuardandoSubitem] = useState(false);
+
   const [mostrarAltaCategoria, setMostrarAltaCategoria] = useState(false);
   const [nuevaCategoriaNombre, setNuevaCategoriaNombre] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Cargar datos en caso de edición
-  useEffect(() => {
-    if (productoEditar) {
-      setFormData(productoEditar);
-    } else {
-      setFormData({
-        nombre: "",
-        codigoBarras: "",
-        ubicacion: "",
-        marcaId: "",
-        categoriaId: "",
-        stockActual: 0,
-        stockMinimo: 0,
-        destacado: false,
-        monedaPrecio: "USD",
-        precioCosto: "",
-        precioVenta: "",
-        precioMayorista: "",
-        precioOferta: "",
-        esDecant: false,
-      });
+  const fetchAuxiliares = useCallback(async () => {
+    try {
+      const [resMarcas, resCategorias] = await Promise.all([
+        fetch("/api/marcas"),
+        fetch("/api/categorias"),
+      ]);
+
+      if (resMarcas.ok) {
+        const dataM = await resMarcas.json();
+        setMarcas(Array.isArray(dataM) ? dataM : dataM.items || []);
+      }
+      if (resCategorias.ok) {
+        const dataC = await resCategorias.json();
+        setCategorias(Array.isArray(dataC) ? dataC : dataC.items || []);
+      }
+    } catch (err) {
+      console.error("Error al obtener marcas o categorías:", err);
     }
-    setErrorMsg("");
-  }, [productoEditar, isOpen]);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchAuxiliares();
+
+      if (productoEditar) {
+        setFormData(productoEditar);
+      } else {
+        setFormData({
+          nombre: "",
+          codigoBarras: "",
+          ubicacion: "",
+          marcaId: "",
+          categoriaId: "",
+          stockActual: 0,
+          stockMinimo: 0,
+          destacado: false,
+          monedaPrecio: "USD",
+          precioCosto: "",
+          precioVenta: "",
+          precioMayorista: "",
+          precioOferta: "",
+          esDecant: false,
+        });
+      }
+      setErrorMsg("");
+    }
+  }, [productoEditar, isOpen, fetchAuxiliares]);
 
   if (!isOpen) return null;
 
   // Alta rápida de marca
-  const handleCrearMarcaRapida = async () => {
+  const handleCrearMarcaRapida = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (!nuevaMarcaNombre.trim()) return;
+
     try {
+      setGuardandoSubitem(true);
       const res = await fetch("/api/marcas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre: nuevaMarcaNombre }),
+        body: JSON.stringify({ nombre: nuevaMarcaNombre.trim() }),
       });
+
       if (res.ok) {
         const marcaCreada = await res.json();
         setMarcas((prev) => [...prev, marcaCreada]);
         setFormData((prev) => ({ ...prev, marcaId: marcaCreada.id }));
         setNuevaMarcaNombre("");
         setMostrarAltaMarca(false);
+      } else {
+        const errData = await res.json();
+        alert(errData.message || "Error al crear la marca");
       }
-    } catch {
-      console.error("Error al crear marca rápida");
+    } catch (err) {
+      console.error("Error al crear marca rápida:", err);
+      alert("Error de conexión al guardar la marca");
+    } finally {
+      setGuardandoSubitem(false);
     }
   };
 
   // Alta rápida de categoría
-  const handleCrearCategoriaRapida = async () => {
+  const handleCrearCategoriaRapida = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (!nuevaCategoriaNombre.trim()) return;
+
     try {
+      setGuardandoSubitem(true);
       const res = await fetch("/api/categorias", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre: nuevaCategoriaNombre }),
+        body: JSON.stringify({ nombre: nuevaCategoriaNombre.trim() }),
       });
+
       if (res.ok) {
         const catCreada = await res.json();
         setCategorias((prev) => [...prev, catCreada]);
         setFormData((prev) => ({ ...prev, categoriaId: catCreada.id }));
         setNuevaCategoriaNombre("");
         setMostrarAltaCategoria(false);
+      } else {
+        const errData = await res.json();
+        alert(errData.message || "Error al crear la categoría");
       }
-    } catch {
-      console.error("Error al crear categoría rápida");
+    } catch (err) {
+      console.error("Error al crear categoría rápida:", err);
+      alert("Error de conexión al guardar la categoría");
+    } finally {
+      setGuardandoSubitem(false);
     }
   };
 
-  // Envío del formulario principal
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
-
-    // Validaciones de campos obligatorios
+    // Validaciones de obligatorios
     if (
       !formData.nombre.trim() ||
       formData.stockActual === "" ||
       formData.precioCosto === "" ||
       formData.precioVenta === ""
     ) {
-      setErrorMsg("Por favor completa todos los campos obligatorios (*)");
+      setErrorMsg("Por favor completa los campos obligatorios (*)");
       return;
     }
 
     setLoading(true);
 
+    // Formateo del payload
+    const payload = {
+      ...formData,
+      nombre: formData.nombre.trim(),
+      codigoBarras: formData.codigoBarras.trim() || null,
+      ubicacion: formData.ubicacion.trim() || null,
+      marcaId: formData.marcaId ? Number(formData.marcaId) : null,
+      categoriaId: formData.categoriaId ? Number(formData.categoriaId) : null,
+      stockActual: Number(formData.stockActual),
+      stockMinimo: formData.stockMinimo === "" ? 0 : Number(formData.stockMinimo),
+      precioCosto: Number(formData.precioCosto),
+      precioVenta: Number(formData.precioVenta),
+      precioMayorista: formData.precioMayorista === "" ? null : Number(formData.precioMayorista),
+      precioOferta: formData.precioOferta === "" ? null : Number(formData.precioOferta),
+    };
+
     try {
+      // IMPORTANTE: URL absoluta con "/" al inicio
       const url = productoEditar?.id
         ? `/api/productos/${productoEditar.id}`
         : "/api/productos";
@@ -173,18 +236,20 @@ export function ProductoFormModal({
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Error al guardar producto");
+        throw new Error(data.error || data.message || "Error al guardar el producto");
       }
 
-      onSuccess(); // Notifica al componente padre para actualizar el listado en tiempo real
+      onSuccess();
       onClose();
     } catch (err: any) {
-      setErrorMsg(err.message || "Ocurrió un error insospechado");
+      console.error("Error submit producto:", err);
+      setErrorMsg(err.message || "Ocurrió un error inesperado al guardar el producto");
     } finally {
       setLoading(false);
     }
@@ -198,6 +263,7 @@ export function ProductoFormModal({
             {productoEditar ? "Editar Producto" : "Nuevo Producto"}
           </h2>
           <button
+            type="button"
             onClick={onClose}
             className="rounded-lg p-1 text-text-dim hover:bg-surface-hover hover:text-text"
           >
@@ -259,7 +325,7 @@ export function ProductoFormModal({
               />
             </div>
 
-            {/* Marca + Alta Rápida */}
+            {/* Marca */}
             <div>
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-medium text-text-dim">
@@ -289,7 +355,7 @@ export function ProductoFormModal({
               </select>
             </div>
 
-            {/* Categoría + Alta Rápida */}
+            {/* Categoría */}
             <div>
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-medium text-text-dim">
@@ -361,7 +427,7 @@ export function ProductoFormModal({
             </div>
           </div>
 
-          {/* Precios y Moneda */}
+          {/* Precios */}
           <div className="rounded-xl border border-border bg-surface-hover/30 p-4 space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-text-dim">
@@ -490,7 +556,7 @@ export function ProductoFormModal({
             </label>
           </div>
 
-          {/* Botones de acción */}
+          {/* Botones de acción principal */}
           <div className="flex justify-end gap-3 border-t border-border pt-4">
             <button
               type="button"
@@ -512,7 +578,7 @@ export function ProductoFormModal({
 
       {/* Pop-up Alta Rápida Marca */}
       {mostrarAltaMarca && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
           <div className="w-80 rounded-xl border border-border bg-surface p-4 shadow-xl">
             <h3 className="text-sm font-semibold text-text">Nueva Marca</h3>
             <input
@@ -532,10 +598,11 @@ export function ProductoFormModal({
               </button>
               <button
                 type="button"
+                disabled={guardandoSubitem}
                 onClick={handleCrearMarcaRapida}
-                className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-white"
+                className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
               >
-                Guardar
+                {guardandoSubitem ? "Guardando..." : "Guardar"}
               </button>
             </div>
           </div>
@@ -544,7 +611,7 @@ export function ProductoFormModal({
 
       {/* Pop-up Alta Rápida Categoría */}
       {mostrarAltaCategoria && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
           <div className="w-80 rounded-xl border border-border bg-surface p-4 shadow-xl">
             <h3 className="text-sm font-semibold text-text">Nueva Categoría</h3>
             <input
@@ -564,10 +631,11 @@ export function ProductoFormModal({
               </button>
               <button
                 type="button"
+                disabled={guardandoSubitem}
                 onClick={handleCrearCategoriaRapida}
-                className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-white"
+                className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
               >
-                Guardar
+                {guardandoSubitem ? "Guardando..." : "Guardar"}
               </button>
             </div>
           </div>

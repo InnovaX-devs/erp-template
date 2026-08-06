@@ -9,7 +9,7 @@ datasource db {
 }
 
 model Usuario {
-  id               String            @id @default(cuid())
+  id               Int @id @default(autoincrement())
   nombre           String
   email            String            @unique
   passwordHash     String
@@ -19,14 +19,14 @@ model Usuario {
 }
 
 model Marca {
-  id        String     @id @default(cuid())
+  id        Int @id @default(autoincrement())
   nombre    String     @unique
   activa    Boolean    @default(true)
   productos Producto[]
 }
 
 model Categoria {
-  id        String     @id @default(cuid())
+  id        Int @id @default(autoincrement())
   nombre    String     @unique
   activa    Boolean    @default(true)
   productos Producto[]
@@ -38,16 +38,16 @@ enum MonedaPrecio {
 }
 
 model Producto {
-  id                String  @id @default(cuid())
+  id                Int @id @default(autoincrement())
   nombre            String
   codigoBarras      String? @unique
   ubicacionDeposito String?
   fotoUrl           String?
 
   marca       Marca?     @relation(fields: [marcaId], references: [id])
-  marcaId     String?
+  marcaId     Int?
   categoria   Categoria? @relation(fields: [categoriaId], references: [id])
-  categoriaId String?
+  categoriaId Int?
 
   stockActual Int     @default(0)
   stockMinimo Int     @default(0)
@@ -94,9 +94,9 @@ enum OrigenCambioPrecio {
 }
 
 model HistorialPrecio {
-  id            String             @id @default(cuid())
+  id            Int @id @default(autoincrement())
   producto      Producto           @relation(fields: [productoId], references: [id])
-  productoId    String
+  productoId    Int
   campo         CampoPrecio
   valorAnterior Float?
   valorNuevo    Float
@@ -109,7 +109,7 @@ model HistorialPrecio {
 }
 
 model Cliente {
-  id          String   @id @default(cuid())
+  id          Int @id @default(autoincrement())
   nombre      String
   apellido    String?
   telefono    String?
@@ -144,9 +144,9 @@ enum TipoPrecioVenta {
 }
 
 model Venta {
-  id        String   @id @default(cuid())
+  id         Int @id @default(autoincrement())
   cliente   Cliente? @relation(fields: [clienteId], references: [id])
-  clienteId String?
+  clienteId Int?
 
   fecha           DateTime @default(now())
   cotizacionUsada Float
@@ -175,13 +175,13 @@ model Venta {
 }
 
 model ItemVenta {
-  id      String @id @default(cuid())
+  id          Int @id @default(autoincrement())
   venta   Venta  @relation(fields: [ventaId], references: [id], onDelete: Cascade)
-  ventaId String
+  ventaId Int
 
   // Nullable: contempla el botón "Varios / Muestra" (ítem libre sin producto de catálogo)
   producto         Producto? @relation(fields: [productoId], references: [id])
-  productoId       String?
+  productoId       Int?
   descripcionLibre String?
 
   presentacion       Presentacion @default(FRASCO)
@@ -196,11 +196,11 @@ model ItemVenta {
 }
 
 model PagoVenta {
-  id       String @id @default(cuid())
+  id       Int @id @default(autoincrement())
   venta    Venta  @relation(fields: [ventaId], references: [id], onDelete: Cascade)
-  ventaId  String
+  ventaId  Int
   cuenta   Cuenta @relation(fields: [cuentaId], references: [id])
-  cuentaId String
+  cuentaId Int
   monto    Float
 
   @@index([ventaId])
@@ -213,9 +213,9 @@ enum EstadoPresupuesto {
 }
 
 model Presupuesto {
-  id        String   @id @default(cuid())
+  id        Int @id @default(autoincrement())
   cliente   Cliente? @relation(fields: [clienteId], references: [id])
-  clienteId String?
+  clienteId Int?
 
   fecha            DateTime @default(now())
   vigenciaDias     Int      @default(15)
@@ -232,10 +232,10 @@ model Presupuesto {
 }
 
 model PresupuestoItem {
-  id             String          @id @default(cuid())
+  id          Int @id @default(autoincrement())
   presupuesto    Presupuesto     @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
-  presupuestoId  String
-  productoId     String?
+  presupuestoId  Int
+  productoId     Int?
   descripcion    String
   presentacion   Presentacion    @default(FRASCO)
   tipoPrecio     TipoPrecioVenta @default(MINORISTA)
@@ -246,7 +246,7 @@ model PresupuestoItem {
 }
 
 model Proveedor {
-  id              String   @id @default(cuid())
+  id              Int @id @default(autoincrement())
   nombre          String
   personaContacto String?
   telefono        String?
@@ -268,9 +268,9 @@ enum TipoPagoCompra {
 }
 
 model Compra {
-  id          String     @id @default(cuid())
+  id          Int @id @default(autoincrement())
   proveedor   Proveedor? @relation(fields: [proveedorId], references: [id])
-  proveedorId String?
+  proveedorId Int?
 
   tipoPago   TipoPagoCompra @default(CUENTA)
   total      Float
@@ -288,11 +288,11 @@ model Compra {
 }
 
 model ItemCompra {
-  id            String   @id @default(cuid())
+  id            Int @id @default(autoincrement())
   compra        Compra   @relation(fields: [compraId], references: [id], onDelete: Cascade)
-  compraId      String
+  compraId      Int
   producto      Producto @relation(fields: [productoId], references: [id])
-  productoId    String
+  productoId    Int
   cantidad      Int
   costoUnitario Float
 
@@ -308,7 +308,7 @@ enum TipoCuenta {
 }
 
 model Cuenta {
-  id       String     @id @default(cuid())
+  id       Int @id @default(autoincrement())
   nombre   String
   tipo     TipoCuenta
   titular  String?
@@ -345,9 +345,9 @@ enum ConceptoMovimientoCaja {
 }
 
 model MovimientoCaja {
-  id              String                 @id @default(cuid())
+  id              Int @id @default(autoincrement())
   cuenta          Cuenta                 @relation(fields: [cuentaId], references: [id])
-  cuentaId        String
+  cuentaId        Int
   tipo            TipoMovimientoCaja
   concepto        ConceptoMovimientoCaja
   monto           Float
@@ -355,18 +355,18 @@ model MovimientoCaja {
   fecha           DateTime               @default(now())
 
   venta    Venta?  @relation(fields: [ventaId], references: [id])
-  ventaId  String?
+  ventaId  Int?
   gasto    Gasto?  @relation(fields: [gastoId], references: [id])
-  gastoId  String?
+  gastoId  Int?
   compra   Compra? @relation(fields: [compraId], references: [id])
-  compraId String?
+  compraId Int?
 
   @@index([cuentaId])
   @@index([fecha])
 }
 
 model CategoriaGasto {
-  id     String  @id @default(cuid())
+  id          Int @id @default(autoincrement())
   nombre String  @unique
   gastos Gasto[]
 }
@@ -377,13 +377,13 @@ enum EstadoPagoGasto {
 }
 
 model Gasto {
-  id            String          @id @default(cuid())
+  id            Int @id @default(autoincrement())
   monto         Float
   concepto      String
   categoria     CategoriaGasto? @relation(fields: [categoriaId], references: [id])
-  categoriaId   String?
+  categoriaId   Int?
   proveedor     Proveedor?      @relation(fields: [proveedorId], references: [id])
-  proveedorId   String?
+  proveedorId   Int?
   observaciones String?
   estadoPago    EstadoPagoGasto @default(PENDIENTE)
   fecha         DateTime        @default(now())

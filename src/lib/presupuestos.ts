@@ -25,3 +25,15 @@ export function calcularTotalPresupuesto(
 
   return Math.max(0, Number(total.toFixed(2)));
 }
+
+export type EstadoPresupuesto = "BORRADOR" | "VENCIDO" | "CONVERTIDO";
+
+export function calcularEstadoEfectivo(
+  estadoGuardado: EstadoPresupuesto,
+  fechaVencimiento: Date,
+  ahora: Date = new Date()
+): EstadoPresupuesto {
+  if (estadoGuardado === "CONVERTIDO") return "CONVERTIDO";
+  if (estadoGuardado === "BORRADOR" && fechaVencimiento < ahora) return "VENCIDO";
+  return estadoGuardado;
+}

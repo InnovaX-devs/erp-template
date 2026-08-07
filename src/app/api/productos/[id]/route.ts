@@ -105,6 +105,7 @@ export async function PUT(
         precioMayorista: nuevoMayorista,
         precioOferta: nuevoOferta,
         seVendePorDecant: Boolean(body.esDecant),
+        fotoUrl: body.fotoUrl !== undefined ? body.fotoUrl : undefined,
       },
     });
 

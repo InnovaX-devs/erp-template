@@ -103,7 +103,16 @@ export function ProductoFormModal({
       fetchAuxiliares();
 
       if (productoEditar) {
-        setFormData(productoEditar);
+        setFormData({
+          ...productoEditar,
+          codigoBarras: productoEditar.codigoBarras ?? "",
+          ubicacion: productoEditar.ubicacion ?? "",
+          marcaId: productoEditar.marcaId ?? "",
+          categoriaId: productoEditar.categoriaId ?? "",
+          stockMinimo: productoEditar.stockMinimo ?? "",
+          precioMayorista: productoEditar.precioMayorista ?? "",
+          precioOferta: productoEditar.precioOferta ?? "",
+        });
       } else {
         setFormData({
           nombre: "",
@@ -213,17 +222,23 @@ export function ProductoFormModal({
     // Formateo del payload
     const payload = {
       ...formData,
-      nombre: formData.nombre.trim(),
-      codigoBarras: formData.codigoBarras.trim() || null,
-      ubicacion: formData.ubicacion.trim() || null,
-      marcaId: formData.marcaId ? Number(formData.marcaId) : null,
-      categoriaId: formData.categoriaId ? Number(formData.categoriaId) : null,
+      nombre: formData.nombre?.trim() || "",
+      codigoBarras: formData.codigoBarras?.trim() || null,
+      ubicacion: formData.ubicacion?.trim() || null,
+      marcaId: formData.marcaId ? String(formData.marcaId) : null,
+      categoriaId: formData.categoriaId ? String(formData.categoriaId) : null,
       stockActual: Number(formData.stockActual),
       stockMinimo: formData.stockMinimo === "" ? 0 : Number(formData.stockMinimo),
       precioCosto: Number(formData.precioCosto),
       precioVenta: Number(formData.precioVenta),
-      precioMayorista: formData.precioMayorista === "" ? null : Number(formData.precioMayorista),
-      precioOferta: formData.precioOferta === "" ? null : Number(formData.precioOferta),
+      precioMayorista:
+        formData.precioMayorista === "" || formData.precioMayorista === null
+          ? null
+          : Number(formData.precioMayorista),
+      precioOferta:
+        formData.precioOferta === "" || formData.precioOferta === null
+          ? null
+          : Number(formData.precioOferta),
     };
 
     try {

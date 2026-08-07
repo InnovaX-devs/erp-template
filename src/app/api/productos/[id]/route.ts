@@ -4,10 +4,19 @@ import type { Prisma } from "@prisma/client";
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const productoId = params.id;
+    const { id } = await params;
+    const productoId = Number(id);
+
+    if (isNaN(productoId)) {
+      return NextResponse.json(
+        { error: "El ID del producto debe ser un número válido" },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
 
     const productoAnterior = await prisma.producto.findUnique({
@@ -21,59 +30,86 @@ export async function PUT(
       );
     }
 
+    // Conversión segura de precios
     const nuevoCosto = Number(body.precioCosto);
     const nuevoVenta = Number(body.precioVenta);
+
+    if (isNaN(nuevoCosto) || isNaN(nuevoVenta)) {
+      return NextResponse.json(
+        { error: "Los precios deben ser números válidos" },
+        { status: 400 }
+      );
+    }
+
     const nuevoMayorista =
       body.precioMayorista !== undefined &&
       body.precioMayorista !== "" &&
-      body.precioMayorista !== null
+      body.precioMayorista !== null &&
+      !isNaN(Number(body.precioMayorista))
         ? Number(body.precioMayorista)
         : null;
 
-    // FIX: el modelo Producto usa "ubicacionDeposito", no "ubicacion"
+    const nuevoOferta =
+      body.precioOferta !== undefined &&
+      body.precioOferta !== "" &&
+      body.precioOferta !== null &&
+      !isNaN(Number(body.precioOferta))
+        ? Number(body.precioOferta)
+        : null;
+
+    // Ubicación en depósito
     const ubicacionDeposito =
       body.ubicacion && String(body.ubicacion).trim() !== ""
         ? String(body.ubicacion).trim()
         : null;
 
-    // FIX: Marca.id y Categoria.id son Int en el schema, hay que convertir
+    // Código de barras
+    const codigoBarras =
+      body.codigoBarras && String(body.codigoBarras).trim() !== ""
+        ? String(body.codigoBarras).trim()
+        : null;
+
+    // Marca y Categoría (Int)
     const marcaId =
-      body.marcaId && String(body.marcaId).trim() !== ""
+      body.marcaId && !isNaN(Number(body.marcaId))
         ? Number(body.marcaId)
         : null;
 
     const categoriaId =
-      body.categoriaId && String(body.categoriaId).trim() !== ""
+      body.categoriaId && !isNaN(Number(body.categoriaId))
         ? Number(body.categoriaId)
         : null;
+
+    const stockActual = !isNaN(Number(body.stockActual))
+      ? Number(body.stockActual)
+      : 0;
+
+    const stockMinimo = !isNaN(Number(body.stockMinimo))
+      ? Number(body.stockMinimo)
+      : 0;
 
     const productoActualizado = await prisma.producto.update({
       where: { id: productoId },
       data: {
-        nombre: body.nombre.trim(),
-        codigoBarras: body.codigoBarras || null,
+        nombre: String(body.nombre || "").trim(),
+        codigoBarras,
         ubicacionDeposito,
         marcaId,
         categoriaId,
-        stockActual: Number(body.stockActual),
-        stockMinimo: Number(body.stockMinimo || 0),
+        stockActual,
+        stockMinimo,
         destacado: Boolean(body.destacado),
-        monedaPrecio: body.monedaPrecio,
+        monedaPrecio: body.monedaPrecio || "USD",
         precioCosto: nuevoCosto,
         precioVenta: nuevoVenta,
         precioMayorista: nuevoMayorista,
-        precioOferta:
-          body.precioOferta !== undefined &&
-          body.precioOferta !== "" &&
-          body.precioOferta !== null
-            ? Number(body.precioOferta)
-            : null,
-        // FIX: el modelo Producto usa "seVendePorDecant", no "esDecant"
+        precioOferta: nuevoOferta,
         seVendePorDecant: Boolean(body.esDecant),
+        fotoUrl: body.fotoUrl !== undefined ? body.fotoUrl : undefined,
       },
     });
 
-    // Tipear el array utilizando el tipo generado por Prisma
+    // Auditoría e historial de precios
     const registrosHistorial: Prisma.HistorialPrecioCreateManyInput[] = [];
 
     // Cambio en Precio Costo
@@ -113,7 +149,7 @@ export async function PUT(
       });
     }
 
-    // Guardar en la base de datos si hubo cambios
+    // Registrar cambios en el historial de precios si los hubo
     if (registrosHistorial.length > 0) {
       await prisma.historialPrecio.createMany({
         data: registrosHistorial,
@@ -121,10 +157,10 @@ export async function PUT(
     }
 
     return NextResponse.json(productoActualizado);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error al actualizar producto:", error);
     return NextResponse.json(
-      { error: "Error al actualizar el producto" },
+      { error: error.message || "Error interno al actualizar el producto" },
       { status: 500 }
     );
   }

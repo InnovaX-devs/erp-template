@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 export interface ProductoFormData {
   id?: string;
@@ -18,6 +18,7 @@ export interface ProductoFormData {
   precioMayorista: number | "";
   precioOferta: number | "";
   esDecant: boolean;
+  fotoUrl?: string | null;
 }
 
 interface Marca {
@@ -75,8 +76,16 @@ export function ProductoFormModal({
   const [mostrarAltaCategoria, setMostrarAltaCategoria] = useState(false);
   const [nuevaCategoriaNombre, setNuevaCategoriaNombre] = useState("");
 
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  
 
   const fetchAuxiliares = useCallback(async () => {
     try {
@@ -103,7 +112,18 @@ export function ProductoFormModal({
       fetchAuxiliares();
 
       if (productoEditar) {
-        setFormData(productoEditar);
+        setFormData({
+          ...productoEditar,
+          codigoBarras: productoEditar.codigoBarras ?? "",
+          ubicacion: productoEditar.ubicacion ?? "",
+          marcaId: productoEditar.marcaId ?? "",
+          categoriaId: productoEditar.categoriaId ?? "",
+          stockMinimo: productoEditar.stockMinimo ?? "",
+          precioMayorista: productoEditar.precioMayorista ?? "",
+          precioOferta: productoEditar.precioOferta ?? "",
+          fotoUrl: productoEditar.fotoUrl ?? "",
+        });
+        setPreviewUrl(productoEditar.fotoUrl || null);
       } else {
         setFormData({
           nombre: "",
@@ -120,8 +140,10 @@ export function ProductoFormModal({
           precioMayorista: "",
           precioOferta: "",
           esDecant: false,
-        });
+          fotoUrl: "",
+        }); setPreviewUrl(null);
       }
+      setSelectedFile(null);
       setErrorMsg("");
     }
   }, [productoEditar, isOpen, fetchAuxiliares]);
@@ -194,66 +216,125 @@ export function ProductoFormModal({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg("");
-    // Validaciones de obligatorios
-    if (
-      !formData.nombre.trim() ||
-      formData.stockActual === "" ||
-      formData.precioCosto === "" ||
-      formData.precioVenta === ""
-    ) {
-      setErrorMsg("Por favor completa los campos obligatorios (*)");
+  // Alta de imagen
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      setErrorMsg("Por favor selecciona una imagen válida (JPG o PNG).");
       return;
     }
 
-    setLoading(true);
+  setSelectedFile(file);
+  setPreviewUrl(URL.createObjectURL(file));
+  setErrorMsg("");
+};
+
+const handleRemoveImage = () => {
+  setSelectedFile(null);
+  setPreviewUrl(null);
+  setFormData((prev) => ({ ...prev, fotoUrl: "" }));
+  if (fileInputRef.current) {
+    fileInputRef.current.value = "";
+  }
+};
+
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setErrorMsg("");
+
+  // Validaciones de obligatorios
+  if (
+    !formData.nombre.trim() ||
+    formData.stockActual === "" ||
+    formData.precioCosto === "" ||
+    formData.precioVenta === ""
+  ) {
+    setErrorMsg("Por favor completa los campos obligatorios (*)");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    let finalFotoUrl = formData.fotoUrl || null;
+
+    // Si el usuario seleccionó un archivo nuevo
+    if (selectedFile) {
+      const uploadData = new FormData();
+      uploadData.append("file", selectedFile);
+
+      // Si se está editando y el producto tenía una foto anterior, la enviamos para que el servidor la elimine
+      if (productoEditar?.fotoUrl) {
+        uploadData.append("fotoUrlAnterior", productoEditar.fotoUrl);
+      }
+
+      const resUpload = await fetch("/api/upload", {
+        method: "POST",
+        body: uploadData,
+      });
+
+      if (!resUpload.ok) {
+        const errData = await resUpload.json();
+        throw new Error(errData.error || "Error al subir la imagen");
+      }
+
+      const { url } = await resUpload.json();
+      finalFotoUrl = url;
+    }
 
     // Formateo del payload
     const payload = {
       ...formData,
-      nombre: formData.nombre.trim(),
-      codigoBarras: formData.codigoBarras.trim() || null,
-      ubicacion: formData.ubicacion.trim() || null,
-      marcaId: formData.marcaId ? Number(formData.marcaId) : null,
-      categoriaId: formData.categoriaId ? Number(formData.categoriaId) : null,
+      nombre: formData.nombre?.trim() || "",
+      codigoBarras: formData.codigoBarras?.trim() || null,
+      ubicacion: formData.ubicacion?.trim() || null,
+      marcaId: formData.marcaId ? String(formData.marcaId) : null,
+      categoriaId: formData.categoriaId ? String(formData.categoriaId) : null,
       stockActual: Number(formData.stockActual),
       stockMinimo: formData.stockMinimo === "" ? 0 : Number(formData.stockMinimo),
       precioCosto: Number(formData.precioCosto),
       precioVenta: Number(formData.precioVenta),
-      precioMayorista: formData.precioMayorista === "" ? null : Number(formData.precioMayorista),
-      precioOferta: formData.precioOferta === "" ? null : Number(formData.precioOferta),
+      precioMayorista:
+        formData.precioMayorista === "" || formData.precioMayorista === null
+          ? null
+          : Number(formData.precioMayorista),
+      precioOferta:
+        formData.precioOferta === "" || formData.precioOferta === null
+          ? null
+          : Number(formData.precioOferta),
+      fotoUrl: finalFotoUrl,
     };
 
-    try {
-      // IMPORTANTE: URL absoluta con "/" al inicio
-      const url = productoEditar?.id
-        ? `/api/productos/${productoEditar.id}`
-        : "/api/productos";
-      const method = productoEditar?.id ? "PUT" : "POST";
+    // IMPORTANTE: URL absoluta con "/" al inicio
+    const url = productoEditar?.id
+      ? `/api/productos/${productoEditar.id}`
+      : "/api/productos";
+    const method = productoEditar?.id ? "PUT" : "POST";
 
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.error || data.message || "Error al guardar el producto");
-      }
-
-      onSuccess();
-      onClose();
-    } catch (err: any) {
-      console.error("Error submit producto:", err);
-      setErrorMsg(err.message || "Ocurrió un error inesperado al guardar el producto");
-    } finally {
-      setLoading(false);
+    if (!res.ok) {
+      throw new Error(data.error || data.message || "Error al guardar el producto");
     }
-  };
+
+    onSuccess();
+    onClose();
+  } catch (err: any) {
+    console.error("Error submit producto:", err);
+    setErrorMsg(err.message || "Ocurrió un error inesperado al guardar el producto");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm overflow-y-auto">
@@ -554,6 +635,75 @@ export function ProductoFormModal({
               />
               Se vende por decant
             </label>
+          </div>
+
+          <div className="col-span-2 space-y-2">
+            <label className="block text-sm font-medium text-text">
+              Imagen del Producto
+            </label>
+
+            <div className="flex items-center gap-4">
+              {/* Previsualización */}
+              {previewUrl ? (
+                <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-border bg-surface">
+                  <img
+                    src={previewUrl}
+                    alt="Previsualización"
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    disabled={loading}
+                    className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs text-white opacity-80 hover:opacity-100 disabled:opacity-50"
+                    title="Quitar imagen"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-border bg-surface text-xs text-text/50">
+                  Sin imagen
+                </div>
+              )}
+
+              {/* Input oculto e invocación desde el Botón */}
+              <div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/jpeg, image/png, image/jpg, image/webp"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={loading}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text shadow-sm hover:bg-surface/80 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                  {previewUrl ? "Cambiar imagen" : "Cargar imagen"}
+                </button>
+
+                <p className="mt-1 text-xs text-text/60">
+                  Formatos permitidos: JPG, PNG o WEBP.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Botones de acción principal */}

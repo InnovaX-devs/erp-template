@@ -91,6 +91,7 @@ enum OrigenCambioPrecio {
   MANUAL
   RECALCULO_DECANT
   ACTUALIZACION_MASIVA
+  COMPRA_CONFIRMADA
 }
 
 model HistorialPrecio {

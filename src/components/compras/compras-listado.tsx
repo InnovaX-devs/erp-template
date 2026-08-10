@@ -7,8 +7,9 @@ import { cn } from "@/lib/cn";
 interface Compra {
   id: number;
   proveedor: { nombre: string } | null;
-  tipoPago: "CUENTA" | "EFECTIVO" | "TRANSFERENCIA";
-  total: number;
+  cuenta: { nombre: string; tipo: string } | null;
+  totalUSD: number;
+  totalARS: number | null;
   confirmada: boolean;
   pagada: boolean;
   recibida: boolean;
@@ -16,11 +17,7 @@ interface Compra {
   fecha: string;
 }
 
-type FiltroKey =
-  | "todas"
-  | "pendientes"
-  | "confirmadas"
-  | "canceladas";
+type FiltroKey = "todas" | "pendientes" | "confirmadas" | "canceladas";
 
 const FILTROS: { key: FiltroKey; label: string }[] = [
   { key: "todas", label: "Todas" },
@@ -28,12 +25,6 @@ const FILTROS: { key: FiltroKey; label: string }[] = [
   { key: "confirmadas", label: "Confirmadas" },
   { key: "canceladas", label: "Canceladas" },
 ];
-
-const TIPO_PAGO_LABEL: Record<Compra["tipoPago"], string> = {
-  CUENTA: "Cuenta",
-  EFECTIVO: "Efectivo",
-  TRANSFERENCIA: "Transferencia",
-};
 
 function estadoDeCompra(compra: Compra): { label: string; className: string } {
   if (compra.cancelada) {
@@ -57,8 +48,7 @@ export function ComprasListado() {
     setCargando(true);
     setError(null);
 
-    const url =
-      filtro === "todas" ? "/api/compras" : `/api/compras?filtro=${filtro}`;
+    const url = filtro === "todas" ? "/api/compras" : `/api/compras?filtro=${filtro}`;
 
     return fetch(url)
       .then(async (res) => {
@@ -76,9 +66,7 @@ export function ComprasListado() {
   }, [filtro]);
 
   const comprasFiltradas = compras.filter((c) =>
-    (c.proveedor?.nombre ?? "")
-      .toLowerCase()
-      .includes(busqueda.trim().toLowerCase())
+    (c.proveedor?.nombre ?? "").toLowerCase().includes(busqueda.trim().toLowerCase())
   );
 
   const ejecutarAccion = async (id: number, accion: "confirmar" | "cancelar") => {
@@ -97,7 +85,6 @@ export function ComprasListado() {
 
   return (
     <div className="space-y-6">
-      {/* Header, mismo patrón que ProveedoresTab */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="font-display text-xl font-semibold text-text">Compras</h2>
@@ -111,7 +98,6 @@ export function ComprasListado() {
         </Link>
       </div>
 
-      {/* Buscador + tabs de filtro */}
       <div className="flex flex-wrap items-center gap-2">
         <input
           type="text"
@@ -142,7 +128,6 @@ export function ComprasListado() {
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      {/* Tabla */}
       <div className="rounded-xl border border-border bg-surface">
         {cargando ? (
           <p className="p-8 text-center text-sm text-text-dim">Cargando...</p>
@@ -158,7 +143,7 @@ export function ComprasListado() {
               <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-text-dim">
                 <th className="px-4 py-3 font-medium">#</th>
                 <th className="px-4 py-3 font-medium">Proveedor</th>
-                <th className="px-4 py-3 font-medium">Tipo de pago</th>
+                <th className="px-4 py-3 font-medium">Cuenta</th>
                 <th className="px-4 py-3 font-medium">Total</th>
                 <th className="px-4 py-3 font-medium">Estado</th>
                 <th className="px-4 py-3 font-medium">Fecha</th>
@@ -176,11 +161,18 @@ export function ComprasListado() {
                     <td className="px-4 py-3 text-text">
                       {compra.proveedor?.nombre ?? "Sin especificar"}
                     </td>
-                    <td className="px-4 py-3 text-text-dim">
-                      {TIPO_PAGO_LABEL[compra.tipoPago]}
-                    </td>
+                    <td className="px-4 py-3 text-text-dim">{compra.cuenta?.nombre ?? "—"}</td>
                     <td className="px-4 py-3 font-medium text-text">
-                      {compra.total.toFixed(2)}
+                      USD {compra.totalUSD.toFixed(2)}
+                      {compra.totalARS != null && (
+                        <span className="ml-1 text-xs font-normal text-text-dim">
+                          (ARS{" "}
+                          {compra.totalARS.toLocaleString("es-AR", {
+                            maximumFractionDigits: 0,
+                          })}
+                          )
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span

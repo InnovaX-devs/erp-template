@@ -9,6 +9,12 @@ interface Proveedor {
   nombre: string;
 }
 
+interface CuentaOpcion {
+  id: number;
+  nombre: string;
+  tipo: "EFECTIVO_ARS" | "EFECTIVO_USD" | "BANCO_ARS" | "BANCO_USD";
+}
+
 interface ProductoBusqueda {
   id: number;
   nombre: string;
@@ -23,10 +29,18 @@ interface ItemCarrito {
   productoId: number;
   nombre: string;
   cantidad: number;
-  costoUnitario: number;
+  costoUnitarioUSD: number;
 }
 
-type TipoPago = "CUENTA" | "EFECTIVO" | "TRANSFERENCIA";
+const TIPO_CUENTA_LABEL: Record<CuentaOpcion["tipo"], string> = {
+  EFECTIVO_ARS: "Efectivo ARS",
+  EFECTIVO_USD: "Efectivo USD",
+  BANCO_ARS: "Banco ARS",
+  BANCO_USD: "Banco USD",
+};
+
+const esTipoCuentaUSD = (tipo: CuentaOpcion["tipo"]) =>
+  tipo === "EFECTIVO_USD" || tipo === "BANCO_USD";
 
 export default function NuevaCompraPage() {
   const router = useRouter();
@@ -38,6 +52,13 @@ export default function NuevaCompraPage() {
   const [nombreProveedorNuevo, setNombreProveedorNuevo] = useState("");
   const [creandoProveedor, setCreandoProveedor] = useState(false);
 
+  // Cuenta de pago (reemplaza al viejo tipoPago)
+  const [cuentas, setCuentas] = useState<CuentaOpcion[]>([]);
+  const [cuentaId, setCuentaId] = useState<string>("");
+
+  // Cotización (para mostrar total en ARS y convertir costos de productos en ARS)
+  const [cotizacion, setCotizacion] = useState<number>(1000);
+
   // Buscador de producto
   const [busqueda, setBusqueda] = useState("");
   const [resultados, setResultados] = useState<ProductoBusqueda[]>([]);
@@ -46,13 +67,11 @@ export default function NuevaCompraPage() {
 
   // Carrito
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
-  const [tipoPago, setTipoPago] = useState<TipoPago>("CUENTA");
 
   // Envío
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Confirmación (issue #61) — pantalla que aparece después de guardar
   const [compraCreada, setCompraCreada] = useState<{ id: number } | null>(null);
   const [confirmando, setConfirmando] = useState(false);
   const [errorConfirmar, setErrorConfirmar] = useState<string | null>(null);
@@ -62,11 +81,21 @@ export default function NuevaCompraPage() {
       .then((r) => r.json())
       .then((data) => setProveedores(data.items ?? data))
       .catch(() => setProveedores([]));
+
+    fetch("/api/cuentas")
+      .then((r) => r.json())
+      .then((data) => setCuentas(data.items ?? []))
+      .catch(() => setCuentas([]));
+
+    // Ajustá el endpoint si tu ruta de configuración tiene otro nombre/forma.
+    fetch("/api/configuracion")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.cotizacionUSD) setCotizacion(Number(data.cotizacionUSD));
+      })
+      .catch(() => {});
   }, []);
 
-  // Búsqueda con debounce contra /api/productos/buscar — sirve tanto para
-  // tipeo como para lectura de código de barras (el lector escribe el
-  // código y dispara Enter).
   useEffect(() => {
     if (!busqueda.trim()) {
       setResultados([]);
@@ -89,32 +118,41 @@ export default function NuevaCompraPage() {
     return () => clearTimeout(timeout);
   }, [busqueda]);
 
-  const agregarAlCarrito = useCallback((producto: ProductoBusqueda) => {
-    setCarrito((prev) => {
-      const existente = prev.find((it) => it.productoId === producto.id);
-      if (existente) {
-        return prev.map((it) =>
-          it.productoId === producto.id ? { ...it, cantidad: it.cantidad + 1 } : it
-        );
-      }
-      return [
-        ...prev,
-        {
-          productoId: producto.id,
-          nombre: producto.nombre,
-          cantidad: 1,
-          costoUnitario: producto.precioCosto,
-        },
-      ];
-    });
-    setBusqueda("");
-    setResultados([]);
-    inputBusquedaRef.current?.focus();
-  }, []);
+  const agregarAlCarrito = useCallback(
+    (producto: ProductoBusqueda) => {
+      // El costo de compra siempre se carga en USD. Si el producto tiene
+      // su costo en ARS, convertimos con la cotización actual como punto
+      // de partida (el usuario puede corregirlo a mano).
+      const costoUnitarioUSD =
+        producto.monedaPrecio === "ARS"
+          ? Number((producto.precioCosto / cotizacion).toFixed(2))
+          : producto.precioCosto;
+
+      setCarrito((prev) => {
+        const existente = prev.find((it) => it.productoId === producto.id);
+        if (existente) {
+          return prev.map((it) =>
+            it.productoId === producto.id ? { ...it, cantidad: it.cantidad + 1 } : it
+          );
+        }
+        return [
+          ...prev,
+          {
+            productoId: producto.id,
+            nombre: producto.nombre,
+            cantidad: 1,
+            costoUnitarioUSD,
+          },
+        ];
+      });
+      setBusqueda("");
+      setResultados([]);
+      inputBusquedaRef.current?.focus();
+    },
+    [cotizacion]
+  );
 
   const handleKeyDownBusqueda = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Lectura de código de barras: al presionar Enter, si hay un único
-    // resultado (o uno con código exacto), se agrega directo sin click.
     if (e.key === "Enter" && resultados.length > 0) {
       e.preventDefault();
       const exacto = resultados.find((r) => r.codigoBarras === busqueda.trim());
@@ -124,7 +162,7 @@ export default function NuevaCompraPage() {
 
   const actualizarItem = (
     productoId: number,
-    campo: "cantidad" | "costoUnitario",
+    campo: "cantidad" | "costoUnitarioUSD",
     valor: number
   ) => {
     setCarrito((prev) =>
@@ -136,10 +174,13 @@ export default function NuevaCompraPage() {
     setCarrito((prev) => prev.filter((it) => it.productoId !== productoId));
   };
 
-  const total = useMemo(
-    () => carrito.reduce((acc, it) => acc + it.cantidad * it.costoUnitario, 0),
+  const totalUSD = useMemo(
+    () => carrito.reduce((acc, it) => acc + it.cantidad * it.costoUnitarioUSD, 0),
     [carrito]
   );
+  const totalARS = totalUSD * cotizacion;
+
+  const cuentaSeleccionada = cuentas.find((c) => String(c.id) === cuentaId);
 
   const crearProveedorRapido = async () => {
     if (!nombreProveedorNuevo.trim()) return;
@@ -167,6 +208,10 @@ export default function NuevaCompraPage() {
       setError("Agregá al menos un producto a la compra.");
       return;
     }
+    if (!cuentaId) {
+      setError("Elegí la cuenta desde la que se va a pagar la compra.");
+      return;
+    }
     setError(null);
     setEnviando(true);
     try {
@@ -175,20 +220,16 @@ export default function NuevaCompraPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           proveedorId: proveedorId || null,
-          tipoPago,
+          cuentaId: Number(cuentaId),
           items: carrito.map((it) => ({
             productoId: it.productoId,
             cantidad: it.cantidad,
-            costoUnitario: it.costoUnitario,
+            costoUnitarioUSD: it.costoUnitarioUSD,
           })),
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error al crear la compra");
-
-      // En vez de redirigir directo, mostramos la opción de confirmar ahora
-      // (issue #61). El listado con la acción de confirmar por fila es
-      // trabajo del issue #62, todavía no existe.
       setCompraCreada({ id: data.id });
     } catch (err: any) {
       setError(err.message || "Ocurrió un error al guardar la compra");
@@ -202,9 +243,7 @@ export default function NuevaCompraPage() {
     setConfirmando(true);
     setErrorConfirmar(null);
     try {
-      const res = await fetch(`/api/compras/${compraCreada.id}/confirmar`, {
-        method: "POST",
-      });
+      const res = await fetch(`/api/compras/${compraCreada.id}/confirmar`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error al confirmar la compra");
       router.push("/compras");
@@ -215,22 +254,17 @@ export default function NuevaCompraPage() {
     }
   };
 
-  // Pantalla de éxito tras guardar — issue #61
   if (compraCreada) {
     return (
       <div className="mx-auto max-w-md space-y-6 text-center">
         <div className="rounded-xl border border-border bg-surface p-8">
-          <p className="text-lg font-semibold text-text">
-            Compra #{compraCreada.id} guardada
-          </p>
+          <p className="text-lg font-semibold text-text">Compra #{compraCreada.id} guardada</p>
           <p className="mt-2 text-sm text-text-dim">
-            Todavía no impactó en stock ni costo. Confirmala para actualizar
-            el inventario, o hacelo más tarde desde el listado.
+            Todavía no impactó en stock, costo ni caja. Confirmala para actualizar el
+            inventario y descontar el saldo de la cuenta, o hacelo más tarde desde el listado.
           </p>
 
-          {errorConfirmar && (
-            <p className="mt-3 text-sm text-danger">{errorConfirmar}</p>
-          )}
+          {errorConfirmar && <p className="mt-3 text-sm text-danger">{errorConfirmar}</p>}
 
           <div className="mt-6 flex flex-col gap-2">
             <button
@@ -315,6 +349,30 @@ export default function NuevaCompraPage() {
         )}
       </div>
 
+      {/* Cuenta de pago */}
+      <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
+        <p className="text-xs uppercase tracking-wide text-text-dim">
+          Cuenta desde la que se paga
+        </p>
+        <select
+          value={cuentaId}
+          onChange={(e) => setCuentaId(e.target.value)}
+          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
+        >
+          <option value="">Elegí una cuenta...</option>
+          {cuentas.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nombre} — {TIPO_CUENTA_LABEL[c.tipo]}
+            </option>
+          ))}
+        </select>
+        {cuentas.length === 0 && (
+          <p className="text-xs text-text-dim">
+            No hay cuentas activas registradas. Creá una desde Caja/Cuentas antes de comprar.
+          </p>
+        )}
+      </div>
+
       {/* Buscador de producto */}
       <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
         <p className="text-xs uppercase tracking-wide text-text-dim">
@@ -360,9 +418,7 @@ export default function NuevaCompraPage() {
 
       {/* Carrito */}
       <div className="rounded-xl border border-border bg-surface p-4">
-        <p className="mb-3 text-xs uppercase tracking-wide text-text-dim">
-          Ítems de la compra
-        </p>
+        <p className="mb-3 text-xs uppercase tracking-wide text-text-dim">Ítems de la compra</p>
         {carrito.length === 0 ? (
           <p className="py-6 text-center text-sm text-text-dim">
             Todavía no agregaste productos.
@@ -373,8 +429,8 @@ export default function NuevaCompraPage() {
               <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-text-dim">
                 <th className="pb-2 pr-4 font-medium">Producto</th>
                 <th className="pb-2 pr-4 font-medium">Cantidad</th>
-                <th className="pb-2 pr-4 font-medium">Costo unit.</th>
-                <th className="pb-2 pr-4 font-medium">Subtotal</th>
+                <th className="pb-2 pr-4 font-medium">Costo unit. (USD)</th>
+                <th className="pb-2 pr-4 font-medium">Subtotal USD</th>
                 <th className="pb-2 font-medium" />
               </tr>
             </thead>
@@ -388,11 +444,7 @@ export default function NuevaCompraPage() {
                       min={1}
                       value={it.cantidad}
                       onChange={(e) =>
-                        actualizarItem(
-                          it.productoId,
-                          "cantidad",
-                          Math.max(1, Number(e.target.value))
-                        )
+                        actualizarItem(it.productoId, "cantidad", Math.max(1, Number(e.target.value)))
                       }
                       className="w-20 rounded-md border border-border bg-surface px-2 py-1 text-text focus:border-primary focus:outline-none"
                     />
@@ -402,11 +454,11 @@ export default function NuevaCompraPage() {
                       type="number"
                       min={0}
                       step="0.01"
-                      value={it.costoUnitario}
+                      value={it.costoUnitarioUSD}
                       onChange={(e) =>
                         actualizarItem(
                           it.productoId,
-                          "costoUnitario",
+                          "costoUnitarioUSD",
                           Math.max(0, Number(e.target.value))
                         )
                       }
@@ -414,7 +466,7 @@ export default function NuevaCompraPage() {
                     />
                   </td>
                   <td className="py-2 pr-4 font-medium text-text">
-                    {(it.cantidad * it.costoUnitario).toFixed(2)}
+                    {(it.cantidad * it.costoUnitarioUSD).toFixed(2)}
                   </td>
                   <td className="py-2">
                     <button
@@ -432,33 +484,21 @@ export default function NuevaCompraPage() {
         )}
       </div>
 
-      {/* Tipo de pago + total + guardar */}
+      {/* Total + guardar */}
       <div className="rounded-xl border border-border bg-surface p-4 space-y-4">
-        <div>
-          <p className="mb-2 text-xs uppercase tracking-wide text-text-dim">Tipo de pago</p>
-          <div className="flex gap-2">
-            {(["CUENTA", "EFECTIVO", "TRANSFERENCIA"] as TipoPago[]).map((tp) => (
-              <button
-                key={tp}
-                type="button"
-                onClick={() => setTipoPago(tp)}
-                className={cn(
-                  "rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
-                  tipoPago === tp
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border text-text-dim hover:text-text"
-                )}
-              >
-                {tp === "CUENTA" ? "Cuenta" : tp === "EFECTIVO" ? "Efectivo" : "Transferencia"}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between border-t border-border pt-4">
+        <div className="flex items-center justify-between">
           <div>
             <p className="text-xs uppercase tracking-wide text-text-dim">Total</p>
-            <p className="text-2xl font-semibold text-text">{total.toFixed(2)}</p>
+            <p className="text-2xl font-semibold text-text">USD {totalUSD.toFixed(2)}</p>
+            <p className="text-sm text-text-dim">
+              ≈ ARS {totalARS.toLocaleString("es-AR", { maximumFractionDigits: 2 })}
+              {cuentaSeleccionada && (
+                <span>
+                  {" "}
+                  · se debitará en {TIPO_CUENTA_LABEL[cuentaSeleccionada.tipo]} al confirmar
+                </span>
+              )}
+            </p>
           </div>
           <button
             type="button"

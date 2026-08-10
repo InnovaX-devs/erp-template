@@ -262,40 +262,40 @@ model Proveedor {
   @@index([nombre])
 }
 
-enum TipoPagoCompra {
-  CUENTA
-  EFECTIVO
-  TRANSFERENCIA
-}
-
 model Compra {
   id          Int @id @default(autoincrement())
   proveedor   Proveedor? @relation(fields: [proveedorId], references: [id])
   proveedorId Int?
 
-  tipoPago   TipoPagoCompra @default(CUENTA)
-  total      Float
-  confirmada Boolean        @default(false)
-  pagada     Boolean        @default(false)
-  recibida   Boolean        @default(false)
-  cancelada  Boolean        @default(false)
-  fecha      DateTime       @default(now())
+  cuenta   Cuenta @relation(fields: [cuentaId], references: [id])
+  cuentaId Int
+
+  totalUSD        Float
+  totalARS        Float?
+  cotizacionUsada Float?
+
+  confirmada Boolean  @default(false)
+  pagada     Boolean  @default(false)
+  recibida   Boolean  @default(false)
+  cancelada  Boolean  @default(false)
+  fecha      DateTime @default(now())
 
   items           ItemCompra[]
   movimientosCaja MovimientoCaja[]
 
   @@index([proveedorId])
+  @@index([cuentaId])
   @@index([fecha])
 }
 
 model ItemCompra {
-  id            Int @id @default(autoincrement())
-  compra        Compra   @relation(fields: [compraId], references: [id], onDelete: Cascade)
-  compraId      Int
-  producto      Producto @relation(fields: [productoId], references: [id])
-  productoId    Int
-  cantidad      Int
-  costoUnitario Float
+  id               Int @id @default(autoincrement())
+  compra           Compra   @relation(fields: [compraId], references: [id], onDelete: Cascade)
+  compraId         Int
+  producto         Producto @relation(fields: [productoId], references: [id])
+  productoId       Int
+  cantidad         Int
+  costoUnitarioUSD Float
 
   @@index([compraId])
   @@index([productoId])
@@ -328,6 +328,7 @@ model Cuenta {
 
   movimientos MovimientoCaja[]
   pagosVenta  PagoVenta[]
+  compras Compra[]
 
   @@index([nombre])
 }

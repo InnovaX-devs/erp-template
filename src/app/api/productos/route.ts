@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const q = searchParams.get("q")?.trim() ?? "";
+    const fetchAll = searchParams.get("all") === "true"; // Detecta si pedimos todos sin paginar
     const page = Math.max(1, Number(searchParams.get("page") ?? 1));
     const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize") ?? 50)));
 
@@ -17,23 +18,46 @@ export async function GET(request: NextRequest) {
       ...(q ? { nombre: { contains: q, mode: "insensitive" } } : {}),
     };
 
+    const selectFields = {
+      id: true,
+      nombre: true,
+      stockActual: true,
+      monedaPrecio: true,
+      precioCosto: true,
+      precioVenta: true,
+      precioMayorista: true,
+      precioOferta: true,
+      activo: true,
+      marcaId: true,
+      categoriaId: true,
+      marca: { select: { id: true, nombre: true } },
+      categoria: { select: { id: true, nombre: true } },
+    };
+
+    // Si pedimos todos los productos (para actualización masiva)
+    if (fetchAll) {
+      const items = await prisma.producto.findMany({
+        where,
+        orderBy: { nombre: "asc" },
+        select: selectFields,
+      });
+
+      return NextResponse.json({
+        items,
+        total: items.length,
+        page: 1,
+        pageSize: items.length,
+      });
+    }
+
+    // Paginación por defecto para la vista principal de productos
     const [items, total, aggregateBase] = await Promise.all([
       prisma.producto.findMany({
         where,
         orderBy: { nombre: "asc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
-        select: {
-          id: true,
-          nombre: true,
-          stockActual: true,
-          monedaPrecio: true,
-          precioCosto: true,
-          precioVenta: true,
-          precioMayorista: true,
-          activo: true, 
-          marca: { select: { nombre: true } },
-        },
+        select: selectFields,
       }),
       prisma.producto.count({ where }),
       prisma.producto.findMany({

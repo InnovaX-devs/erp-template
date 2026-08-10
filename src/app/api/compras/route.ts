@@ -4,8 +4,6 @@ import type { Prisma } from "@prisma/client";
 
 const FILTROS_VALIDOS = [
   "pendientes",
-  "sin_pagar",
-  "sin_recibir",
   "confirmadas",
   "canceladas",
 ] as const;
@@ -16,10 +14,6 @@ function armarWhere(filtro: string | null): Prisma.CompraWhereInput {
   switch (filtro as Filtro | null) {
     case "pendientes":
       return { confirmada: false, cancelada: false };
-    case "sin_pagar":
-      return { pagada: false, cancelada: false };
-    case "sin_recibir":
-      return { recibida: false, cancelada: false };
     case "confirmadas":
       return { confirmada: true, cancelada: false };
     case "canceladas":

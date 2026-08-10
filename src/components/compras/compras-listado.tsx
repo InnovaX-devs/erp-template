@@ -19,16 +19,12 @@ interface Compra {
 type FiltroKey =
   | "todas"
   | "pendientes"
-  | "sin_pagar"
-  | "sin_recibir"
   | "confirmadas"
   | "canceladas";
 
 const FILTROS: { key: FiltroKey; label: string }[] = [
   { key: "todas", label: "Todas" },
   { key: "pendientes", label: "Pendientes" },
-  { key: "sin_pagar", label: "Sin pagar" },
-  { key: "sin_recibir", label: "Sin recibir" },
   { key: "confirmadas", label: "Confirmadas" },
   { key: "canceladas", label: "Canceladas" },
 ];

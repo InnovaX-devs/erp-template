@@ -1,7 +1,7 @@
 import type { Moneda } from "@/lib/currency";
 
 export type ProductoDTO = {
-  id: string;
+  id: number;
   nombre: string;
   marca: { nombre: string } | null;
   stockActual: number;
@@ -26,7 +26,7 @@ export type ProductosResponse = {
 };
 
 export type ProductoBusquedaDTO = {
-  id: string;
+  id: number;
   nombre: string;
   codigoBarras: string | null;
   stockActual: number;

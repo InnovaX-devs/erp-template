@@ -1,21 +1,25 @@
 "use client";
 
 import { createContext, useContext, useState, type ReactNode } from "react";
+import type { ClienteBusquedaResult } from "@/lib/clientes-busqueda";
 
 type TipoPrecio = "MINORISTA" | "MAYORISTA";
 
 type VentaContextValue = {
   tipoPrecio: TipoPrecio;
   setTipoPrecio: (tipo: TipoPrecio) => void;
+  cliente: ClienteBusquedaResult | null;
+  setCliente: (cliente: ClienteBusquedaResult | null) => void;
 };
 
 const VentaContext = createContext<VentaContextValue | null>(null);
 
 export function VentaProvider({ children }: { children: ReactNode }) {
   const [tipoPrecio, setTipoPrecio] = useState<TipoPrecio>("MINORISTA");
+  const [cliente, setCliente] = useState<ClienteBusquedaResult | null>(null);
 
   return (
-    <VentaContext.Provider value={{ tipoPrecio, setTipoPrecio }}>
+    <VentaContext.Provider value={{ tipoPrecio, setTipoPrecio, cliente, setCliente }}>
       {children}
     </VentaContext.Provider>
   );

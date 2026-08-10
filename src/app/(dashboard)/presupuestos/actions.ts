@@ -4,32 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { calcularFechaVencimiento, calcularTotalPresupuesto } from "@/lib/presupuestos";
 import type { ProductoBusqueda, ClienteBusqueda, ItemPresupuestoLocal } from "./types";
 
-// ─────────────────────────────────────────────────────────
-// TODO: reemplazar por la búsqueda real de @miladelfino cuando
-// mergee su rama. Contrato esperado (ver types.ts → ProductoBusqueda):
-// recibe query string, devuelve productos activos incluyendo sin stock.
-// Referencia: issue #55 (este) depende de esa función.
-// ─────────────────────────────────────────────────────────
-export async function buscarProductos(query: string): Promise<ProductoBusqueda[]> {
-  if (!query.trim()) return [];
-  return prisma.producto.findMany({
-    where: {
-      nombre: { contains: query, mode: "insensitive" },
-      activo: true,
-    },
-    select: {
-      id: true,
-      nombre: true,
-      precioVenta: true,
-      precioMayorista: true,
-      stockActual: true,
-      seVendePorDecant: true,
-    },
-    take: 10,
-    orderBy: { nombre: "asc" },
-  });
-}
-
 export async function buscarClientes(query: string): Promise<ClienteBusqueda[]> {
   if (!query.trim()) return [];
   return prisma.cliente.findMany({

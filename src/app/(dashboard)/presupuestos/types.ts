@@ -1,10 +1,12 @@
 export type ProductoBusqueda = {
   id: number;
   nombre: string;
+  codigoBarras: string | null;
   precioVenta: number; // minorista
   precioMayorista: number | null;
   stockActual: number;
   seVendePorDecant: boolean;
+  marca: { nombre: string } | null;
 };
 
 export type ClienteBusqueda = {

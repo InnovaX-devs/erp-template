@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { buscarProductos } from "./actions";
+import { useState, useEffect, useRef } from "react";
 import type { ProductoBusqueda } from "./types";
 
 export default function BuscadorProducto({
@@ -14,15 +13,42 @@ export default function BuscadorProducto({
   const [query, setQuery] = useState("");
   const [resultados, setResultados] = useState<ProductoBusqueda[]>([]);
   const [abierto, setAbierto] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [cargando, setCargando] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!query.trim()) {
+      setResultados([]);
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      setCargando(true);
+      try {
+        const res = await fetch(`/api/productos/buscar?q=${encodeURIComponent(query)}`, {
+          signal: controller.signal,
+        });
+        const data = await res.json();
+        setResultados(data.items ?? []);
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          console.error("Error buscando productos:", err);
+        }
+      } finally {
+        setCargando(false);
+      }
+    }, 400); // debounce 400ms, mismo criterio que ya usás en otros buscadores
+
+    return () => clearTimeout(timeout);
+  }, [query]);
 
   function handleChange(value: string) {
     setQuery(value);
     setAbierto(true);
-    startTransition(async () => {
-      const res = await buscarProductos(value);
-      setResultados(res);
-    });
   }
 
   function handleSeleccionar(producto: ProductoBusqueda) {
@@ -60,13 +86,11 @@ export default function BuscadorProducto({
 
       {abierto && query.trim() && (
         <div className="absolute z-10 mt-1 w-full bg-white border border-[#c5c6d0] rounded-lg shadow-lg max-h-64 overflow-y-auto">
-          {isPending && (
-            <p className="px-3 py-2 text-sm text-[#45464f]">Buscando...</p>
-          )}
-          {!isPending && resultados.length === 0 && (
+          {cargando && <p className="px-3 py-2 text-sm text-[#45464f]">Buscando...</p>}
+          {!cargando && resultados.length === 0 && (
             <p className="px-3 py-2 text-sm text-[#45464f]">Sin resultados.</p>
           )}
-          {!isPending &&
+          {!cargando &&
             resultados.map((p) => {
               const precio = tipoPrecio === "MAYORISTA" ? p.precioMayorista ?? p.precioVenta : p.precioVenta;
               return (
@@ -78,6 +102,7 @@ export default function BuscadorProducto({
                 >
                   <span>
                     {p.nombre}
+                    {p.marca && <span className="ml-1 text-[#45464f]">— {p.marca.nombre}</span>}
                     {p.stockActual === 0 && (
                       <span className="ml-2 text-[11px] text-[#ba1a1a]">sin stock</span>
                     )}

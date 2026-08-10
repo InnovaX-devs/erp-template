@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 
+
 export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
   const desde = sp.get("desde");
@@ -40,30 +41,49 @@ export async function GET(request: NextRequest) {
     select: { tipo: true, monto: true, cuenta: { select: { tipo: true } } },
   });
 
+  // Ingresos/Egresos/Neto: sí dependen del período filtrado.
   let ingresos = 0;
   let egresos = 0;
-  let totalEfectivo = 0;
-  let totalTransferencia = 0;
-
   for (const m of todosEnPeriodo) {
     if (m.tipo === "INGRESO") ingresos += m.monto;
     else egresos += m.monto;
-
-    const esEfectivo = m.cuenta.tipo.startsWith("EFECTIVO");
-    const signo = m.tipo === "INGRESO" ? 1 : -1;
-    if (esEfectivo) totalEfectivo += m.monto * signo;
-    else totalTransferencia += m.monto * signo;
   }
 
-  const saldoTotal = await prisma.cuenta.aggregate({
-    where: { activa: true },
-    _sum: { saldoActual: true },
+  // Saldo total, Efectivo y Transferencia: son una foto del momento actual,
+  // no dependen del período. Efectivo/Transferencia sí respetan el filtro
+  // de cuenta específica cuando el usuario elige una.
+  const cuentasActivas = await prisma.cuenta.findMany({
+    where: {
+      activa: true,
+      ...(cuentaId ? { id: Number(cuentaId) } : {}),
+    },
+    select: { tipo: true, saldoActual: true },
   });
+
+  let saldoTotal = 0;
+  let totalEfectivo = 0;
+  let totalTransferencia = 0;
+
+  const configuracion = await prisma.configuracion.findUnique({
+    where: { id: "singleton" },
+    select: { cotizacionUSD: true },
+  });
+  const cotizacion = configuracion?.cotizacionUSD ?? 1000;
+
+  for (const c of cuentasActivas) {
+    const saldoEnArs = c.tipo.endsWith("USD") ? c.saldoActual * cotizacion : c.saldoActual;
+    saldoTotal += saldoEnArs;
+    if (c.tipo.startsWith("EFECTIVO")) {
+      totalEfectivo += saldoEnArs;
+    } else {
+      totalTransferencia += saldoEnArs;
+    }
+  }
 
   return NextResponse.json({
     items,
     resumen: {
-      saldoTotal: saldoTotal._sum.saldoActual ?? 0,
+      saldoTotal,
       totalEfectivo,
       totalTransferencia,
       ingresosPeriodo: ingresos,

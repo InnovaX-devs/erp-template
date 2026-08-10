@@ -14,4 +14,5 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Compras", href: "/compras", icon: PackagePlus },
   { label: "Ventas", href: "/ventas", icon: Receipt },
   { label: "Contabilidad", href: "/finanzas", icon: Calculator },
+  { label: "Flujo de Caja", href: "/finanzas/flujo-caja", icon: Calculator },
 ];

@@ -6,14 +6,24 @@ import { prisma } from "@/lib/prisma";
 // respuesta cacheada aunque se creen categorías nuevas.
 export const dynamic = "force-dynamic";
 
-// GET /api/categorias - Obtener todas las categorías
+// GET /api/categorias - Obtener todas las categorías con conteo de productos
 export async function GET() {
   try {
     const categorias = await prisma.categoria.findMany({
+      include: {
+        _count: {
+          select: { productos: true },
+        },
+      },
       orderBy: { nombre: "asc" },
     });
 
-    return NextResponse.json(categorias);
+    const resultado = categorias.map((cat) => ({
+      ...cat,
+      cantidadProductos: cat._count.productos,
+    }));
+
+    return NextResponse.json(resultado);
   } catch (error) {
     console.error("Error al obtener categorías:", error);
     return NextResponse.json(
@@ -38,6 +48,7 @@ export async function POST(request: NextRequest) {
     const nuevaCategoria = await prisma.categoria.create({
       data: {
         nombre: nombre.trim(),
+        activa: true,
       },
     });
 

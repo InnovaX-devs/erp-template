@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
 import { ProductoFormModal, type ProductoFormData } from "@/components/productos/producto-form-modal";
+import Link from "next/link";
 
 
 interface Producto {
@@ -127,6 +128,12 @@ export default function ProductosPage() {
         </div>
         
         {/* EVENTO ONCLICK AGREGADO AQUÍ */}
+        <Link
+          href="/productos/actualizar-precios"
+          className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+        >
+          + Actualizar Precios
+        </Link>
         <button
           type="button"
           onClick={handleAbrirCrear}

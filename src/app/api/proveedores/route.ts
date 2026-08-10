@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 
-// Criterio de negocio (issue #59): "total comprado" y "deuda" se calculan
-// a partir de compras REALES, no de un campo manual.
-// Solo cuentan las compras confirmadas y no canceladas — una compra sin
-// confirmar es un carrito en borrador, todavía no es una compra real.
 const WHERE_COMPRA_REAL = {
   confirmada: true,
   cancelada: false,
@@ -14,11 +10,8 @@ const WHERE_COMPRA_REAL = {
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const q = searchParams.get("q")?.trim().toLowerCase() ?? "";
-  const estado = searchParams.get("estado") ?? "todos"; // todos | con-deuda | al-dia
+  const estado = searchParams.get("estado") ?? "todos";
 
-  // Traemos TODOS los proveedores con sus compras reales para poder:
-  // 1) calcular el resumen global (siempre sobre el total, sin aplicar filtros)
-  // 2) filtrar la lista después, en memoria
   const proveedores = await prisma.proveedor.findMany({
     orderBy: { nombre: "asc" },
     select: {
@@ -32,17 +25,21 @@ export async function GET(request: NextRequest) {
       createdAt: true,
       compras: {
         where: WHERE_COMPRA_REAL,
-        select: { total: true, pagada: true },
+        // totalARS siempre está seteado acá porque WHERE_COMPRA_REAL
+        // filtra confirmada: true, y totalARS/cotizacionUsada se completan
+        // justo al confirmar (ver /api/compras/[id]/confirmar).
+        select: { totalUSD: true, totalARS: true, pagada: true },
       },
     },
   });
 
   const proveedoresConCalculos = proveedores.map((p) => {
     const cantidadCompras = p.compras.length;
-    const totalComprado = p.compras.reduce((acc, c) => acc + c.total, 0);
+    const totalComprado = p.compras.reduce((acc, c) => acc + (c.totalARS ?? 0), 0);
+    const totalCompradoUSD = p.compras.reduce((acc, c) => acc + c.totalUSD, 0);
     const deudaCompras = p.compras
       .filter((c) => !c.pagada)
-      .reduce((acc, c) => acc + c.total, 0);
+      .reduce((acc, c) => acc + (c.totalARS ?? 0), 0);
     const deuda = p.deudaInicial + deudaCompras;
 
     return {
@@ -55,13 +52,12 @@ export async function GET(request: NextRequest) {
       notas: p.notas,
       cantidadCompras,
       totalComprado,
+      totalCompradoUSD,
       deuda,
       alDia: deuda <= 0,
     };
   });
 
-  // Resumen global: siempre sobre TODOS los proveedores, sin aplicar
-  // busqueda/filtro de estado (mismo criterio que se usa en /api/productos)
   const resumen = {
     totalProveedores: proveedoresConCalculos.length,
     totalComprado: proveedoresConCalculos.reduce((acc, p) => acc + p.totalComprado, 0),
@@ -71,7 +67,6 @@ export async function GET(request: NextRequest) {
     ),
   };
 
-  // Aplicamos los filtros para la lista que se muestra en la tabla
   const items = proveedoresConCalculos.filter((p) => {
     const coincideBusqueda = q ? p.nombre.toLowerCase().includes(q) : true;
     const coincideEstado =
@@ -91,10 +86,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     if (!body.nombre?.trim()) {
-      return NextResponse.json(
-        { error: "El nombre es obligatorio" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "El nombre es obligatorio" }, { status: 400 });
     }
 
     const nuevoProveedor = await prisma.proveedor.create({
@@ -103,8 +95,6 @@ export async function POST(request: NextRequest) {
         personaContacto: body.personaContacto?.trim() || null,
         telefono: body.telefono?.trim() || null,
         email: body.email?.trim() || null,
-        // Deuda previa (saldo inicial): se refleja desde el primer momento
-        // porque el cálculo de deuda en GET siempre le suma este valor.
         deudaInicial: body.deudaInicial ? Number(body.deudaInicial) : 0,
         notas: body.notas?.trim() || null,
       },
@@ -113,9 +103,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(nuevoProveedor, { status: 201 });
   } catch (error) {
     console.error("Error al crear proveedor:", error);
-    return NextResponse.json(
-      { error: "Error al crear el proveedor" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Error al crear el proveedor" }, { status: 500 });
   }
 }

@@ -6,7 +6,16 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: proveedorId } = await params;
+    const { id } = await params;
+    const proveedorId = Number(id);
+
+    if (!Number.isInteger(proveedorId)) {
+      return NextResponse.json(
+        { error: "ID de proveedor inválido" },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
 
     if (!body.nombre?.trim()) {
@@ -57,7 +66,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: proveedorId } = await params;
+    const { id } = await params;
+    const proveedorId = Number(id);
+
+    if (!Number.isInteger(proveedorId)) {
+      return NextResponse.json(
+        { error: "ID de proveedor inválido" },
+        { status: 400 }
+      );
+    }
 
     const cantidadCompras = await prisma.compra.count({
       where: { proveedorId },

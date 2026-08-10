@@ -140,32 +140,33 @@ export function ProveedoresTab() {
 
       {/* Filtros y tabla */}
       <div className="rounded-xl border border-border bg-surface p-4">
-        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            {FILTROS.map((f) => (
-              <button
-                key={f.value}
-                onClick={() => setFiltroEstado(f.value)}
-                className={cn(
-                  "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-                  filtroEstado === f.value
-                    ? "bg-primary text-white"
-                    : "border border-border text-text-dim hover:bg-surface-hover"
-                )}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
+      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <input
+          type="text"
+          placeholder="Buscar por nombre..."
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-text-dim focus:border-primary focus:outline-none sm:w-64"
+        />
 
-          <input
-            type="text"
-            placeholder="Buscar por nombre..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-text-dim focus:border-primary focus:outline-none sm:w-64"
-          />
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          {FILTROS.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              onClick={() => setFiltroEstado(f.value)}
+              className={cn(
+                "rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors",
+                filtroEstado === f.value
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border text-text-dim hover:text-text"
+              )}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
+      </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

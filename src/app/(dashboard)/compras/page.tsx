@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { ProveedoresTab } from "@/components/proveedores/proveedores-tab";
+import { ComprasListado } from "@/components/compras/compras-listado";
 
 type Tab = "compras" | "proveedores";
 
@@ -53,9 +54,7 @@ export default function ComprasPage() {
       {tab === "proveedores" ? (
         <ProveedoresTab />
       ) : (
-        <div className="rounded-xl border border-border bg-surface p-8 text-center text-sm text-text-dim">
-          Listado de compras — próximamente (issues #61 y #62 del milestone).
-        </div>
+        <ComprasListado />
       )}
     </div>
   );

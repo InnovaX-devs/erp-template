@@ -52,6 +52,11 @@ export default function NuevaCompraPage() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Confirmación (issue #61) — pantalla que aparece después de guardar
+  const [compraCreada, setCompraCreada] = useState<{ id: number } | null>(null);
+  const [confirmando, setConfirmando] = useState(false);
+  const [errorConfirmar, setErrorConfirmar] = useState<string | null>(null);
+
   useEffect(() => {
     fetch("/api/proveedores")
       .then((r) => r.json())
@@ -181,15 +186,73 @@ export default function NuevaCompraPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error al crear la compra");
 
-      // Queda pendiente — el issue #61 se encarga de confirmarla
-      // (impactar stock/costo) desde el listado.
-      router.push("/compras");
+      // En vez de redirigir directo, mostramos la opción de confirmar ahora
+      // (issue #61). El listado con la acción de confirmar por fila es
+      // trabajo del issue #62, todavía no existe.
+      setCompraCreada({ id: data.id });
     } catch (err: any) {
       setError(err.message || "Ocurrió un error al guardar la compra");
     } finally {
       setEnviando(false);
     }
   };
+
+  const confirmarCompra = async () => {
+    if (!compraCreada) return;
+    setConfirmando(true);
+    setErrorConfirmar(null);
+    try {
+      const res = await fetch(`/api/compras/${compraCreada.id}/confirmar`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al confirmar la compra");
+      router.push("/compras");
+    } catch (err: any) {
+      setErrorConfirmar(err.message || "Ocurrió un error al confirmar la compra");
+    } finally {
+      setConfirmando(false);
+    }
+  };
+
+  // Pantalla de éxito tras guardar — issue #61
+  if (compraCreada) {
+    return (
+      <div className="mx-auto max-w-md space-y-6 text-center">
+        <div className="rounded-xl border border-border bg-surface p-8">
+          <p className="text-lg font-semibold text-text">
+            Compra #{compraCreada.id} guardada
+          </p>
+          <p className="mt-2 text-sm text-text-dim">
+            Todavía no impactó en stock ni costo. Confirmala para actualizar
+            el inventario, o hacelo más tarde desde el listado.
+          </p>
+
+          {errorConfirmar && (
+            <p className="mt-3 text-sm text-danger">{errorConfirmar}</p>
+          )}
+
+          <div className="mt-6 flex flex-col gap-2">
+            <button
+              type="button"
+              disabled={confirmando}
+              onClick={confirmarCompra}
+              className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {confirmando ? "Confirmando..." : "Confirmar compra ahora"}
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/compras")}
+              className="rounded-lg border border-border px-4 py-2.5 text-sm text-text-dim hover:text-text"
+            >
+              Confirmar más tarde
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

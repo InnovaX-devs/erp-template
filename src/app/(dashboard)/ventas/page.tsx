@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Tag } from "lucide-react";
 import { toast } from "sonner";
 import { VentaProvider, useVenta } from "@/components/ventas/venta-context";
@@ -16,23 +17,68 @@ import type { ProductoBusquedaDTO } from "@/types/producto";
 import type { ItemCarrito, TipoPrecioLinea } from "@/types/item-carrito";
 import { SelectorCobro } from "@/components/ventas/selector-cobro";
 import { confirmarVenta, registrarPedido } from "./actions";
+import { obtenerPresupuestoParaConvertir } from "@/app/(dashboard)/presupuestos/actions";
 
 export default function NuevaVentaPage() {
   return (
     <VentaProvider>
-      <NuevaVentaContenido />
+      {/* useSearchParams exige Suspense en Next 16 + Turbopack o rompe el build */}
+      <Suspense fallback={null}>
+        <NuevaVentaContenido />
+      </Suspense>
     </VentaProvider>
   );
 }
 
 function NuevaVentaContenido() {
-
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [modalPrecioAbierto, setModalPrecioAbierto] = useState(false);
   const [modalDescuentoAbierto, setModalDescuentoAbierto] = useState(false);
   const [descuento, setDescuento] = useState<Descuento>(null);
   const { tipoPrecio, cliente, setCliente, modoCobro, setModoCobro, pagos, setPagos } = useVenta();
-  
+
+  // --- Prefill desde un Presupuesto ("Convertir a venta") ---
+  const searchParams = useSearchParams();
+  const presupuestoIdParam = searchParams.get("presupuestoId");
+  const [presupuestoIdOrigen, setPresupuestoIdOrigen] = useState<number | null>(null);
+  const yaPrecargado = useRef(false);
+
+  useEffect(() => {
+    if (!presupuestoIdParam || yaPrecargado.current) return;
+    yaPrecargado.current = true;
+
+    const id = Number(presupuestoIdParam);
+    if (Number.isNaN(id)) return;
+
+    (async () => {
+      const resultado = await obtenerPresupuestoParaConvertir(id);
+      if (!resultado.success) {
+        toast.error(resultado.error);
+        return;
+      }
+      const { data } = resultado;
+      setPresupuestoIdOrigen(data.presupuestoId);
+      setCarrito(
+        data.items.map((item) => ({
+          id: item.id,
+          producto: item.producto,
+          tipoPrecio: item.tipoPrecio,
+          cantidad: item.cantidad,
+          precioUnitarioArs: item.precioUnitarioArs,
+        }))
+      );
+      setCliente(data.cliente);
+      setDescuento(
+        data.descuentoPorcentaje != null
+          ? { tipo: "PORCENTAJE", valor: data.descuentoPorcentaje }
+          : data.descuentoMonto != null
+            ? { tipo: "MONTO", valor: data.descuentoMonto }
+            : null
+      );
+      toast.success("Presupuesto cargado. Revisá los datos antes de confirmar.");
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presupuestoIdParam]);
 
   const subtotal = carrito.reduce((acc, it) => acc + it.cantidad * it.precioUnitarioArs, 0);
 
@@ -100,7 +146,6 @@ function NuevaVentaContenido() {
     setCarrito((prev) => prev.filter((it) => it.id !== id));
   }
 
-
   function armarInput() {
     return {
       clienteId: cliente?.id ?? null,
@@ -115,6 +160,7 @@ function NuevaVentaContenido() {
       descuentoPorcentaje: descuento?.tipo === "PORCENTAJE" ? descuento.valor : null,
       totalARS: total,
       cotizacionUSD: 0, // se completa abajo
+      presupuestoId: presupuestoIdOrigen,
     };
   }
 
@@ -124,6 +170,7 @@ function NuevaVentaContenido() {
     setPagos([{ id: "pago-unica", cuentaId: null, monto: 0 }]);
     setModoCobro("UNICA");
     setCliente(null);
+    setPresupuestoIdOrigen(null);
   }
 
   async function handleConfirmarVenta() {
@@ -168,6 +215,12 @@ function NuevaVentaContenido() {
 
   return (
     <div className="space-y-4 p-6">
+      {presupuestoIdOrigen != null && (
+        <div className="rounded-lg border border-amber/40 bg-amber/10 px-3 py-2 text-sm text-text">
+          Convirtiendo el presupuesto #{presupuestoIdOrigen} — revisá los datos antes de confirmar.
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-3">
         <BuscadorCliente />
         <BuscadorProducto onSeleccionar={agregarProducto} />

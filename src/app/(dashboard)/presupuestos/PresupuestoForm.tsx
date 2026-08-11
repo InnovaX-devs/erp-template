@@ -7,6 +7,7 @@ import BuscadorCliente from "./BuscadorCliente";
 import ItemsPresupuestoTable from "./ItemsPresupuestoTable";
 import { crearPresupuesto } from "./actions";
 import { calcularFechaVencimiento, calcularTotalPresupuesto } from "@/lib/presupuestos";
+import { toArs } from "@/lib/currency";
 import type { ItemPresupuestoLocal, ProductoBusqueda } from "./types";
 import type { ClienteBasico } from "@/components/clientes/ClienteForm";
 
@@ -37,8 +38,10 @@ export default function PresupuestoForm() {
   );
 
   function agregarProducto(producto: ProductoBusqueda) {
-    const precioUnitario =
+    const precioBaseOriginal =
       tipoPrecio === "MAYORISTA" ? producto.precioMayorista ?? producto.precioVenta : producto.precioVenta;
+
+    const precioUnitario = toArs(precioBaseOriginal, producto.monedaPrecio);
 
     setItems((prev) => [
       ...prev,
@@ -92,7 +95,6 @@ export default function PresupuestoForm() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Barra superior: cliente + buscador + toggle */}
       <div className="flex items-center gap-3 p-4 bg-white border-b border-[#e2e8f0]">
         <BuscadorCliente clienteSeleccionado={cliente} onSeleccionar={setCliente} />
 
@@ -120,7 +122,6 @@ export default function PresupuestoForm() {
         </div>
       </div>
 
-      {/* Tabla / estado vacío */}
       <div className="flex-1 bg-white rounded-2xl m-4 border border-[#e2e8f0] overflow-y-auto">
         <ItemsPresupuestoTable
           items={items}
@@ -130,7 +131,6 @@ export default function PresupuestoForm() {
         />
       </div>
 
-      {/* Barra inferior: vigencia, observaciones, descuento, total, guardar */}
       <div className="p-4 bg-[#eceef0] flex items-end gap-4">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-wider text-[#45464f] mb-1">

@@ -130,6 +130,10 @@ export async function POST(request: NextRequest) {
       ? String(body.ubicacion).trim() 
       : null;
 
+    const contenidoMl = body.contenidoMl !== undefined && body.contenidoMl !== "" && body.contenidoMl !== null
+      ? Number(body.contenidoMl)
+      : null;
+
     const marcaId = body.marcaId && String(body.marcaId).trim() !== "" 
       ? Number(body.marcaId) 
       : null;
@@ -164,6 +168,7 @@ export async function POST(request: NextRequest) {
         nombre: body.nombre.trim(),
         codigoBarras,
         ubicacionDeposito,
+        contenidoMl,
         marcaId,
         categoriaId,
         stockActual,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { BarcodeInput } from "@/components/ui/barcode-input";
 
 export interface ProductoFormData {
   id?: string;
@@ -9,6 +10,7 @@ export interface ProductoFormData {
   ubicacion: string;
   marcaId: string;
   categoriaId: string;
+  contenidoMl: number | "";
   stockActual: number | "";
   stockMinimo: number | "";
   destacado: boolean;
@@ -56,6 +58,7 @@ export function ProductoFormModal({
     ubicacion: "",
     marcaId: "",
     categoriaId: "",
+    contenidoMl: "",
     stockActual: "",
     stockMinimo: "",
     destacado: false,
@@ -118,13 +121,24 @@ export function ProductoFormModal({
       if (productoEditar) {
         setFormData({
           ...productoEditar,
+          nombre: productoEditar.nombre ?? "",
           codigoBarras: productoEditar.codigoBarras ?? "",
           ubicacion: productoEditar.ubicacion ?? "",
           marcaId: productoEditar.marcaId ?? "",
           categoriaId: productoEditar.categoriaId ?? "",
+          contenidoMl: productoEditar.contenidoMl ?? "",
+          stockActual: productoEditar.stockActual ?? "",
           stockMinimo: productoEditar.stockMinimo ?? "",
+          destacado: productoEditar.destacado ?? false,
+          monedaPrecio: productoEditar.monedaPrecio ?? "USD",
+          precioCosto: productoEditar.precioCosto ?? "",
+          precioVenta: productoEditar.precioVenta ?? "",
           precioMayorista: productoEditar.precioMayorista ?? "",
           precioOferta: productoEditar.precioOferta ?? "",
+          esDecant: productoEditar.esDecant ?? false,
+          overrideDecant5ml: productoEditar.overrideDecant5ml ?? "",
+          overrideDecant10ml: productoEditar.overrideDecant10ml ?? "",
+          id: productoEditar.id,
           fotoUrl: productoEditar.fotoUrl ?? "",
         });
         setPreviewUrl(productoEditar.fotoUrl || null);
@@ -135,6 +149,7 @@ export function ProductoFormModal({
           ubicacion: "",
           marcaId: "",
           categoriaId: "",
+          contenidoMl: "",
           stockActual: 0,
           stockMinimo: 0,
           destacado: false,
@@ -299,6 +314,7 @@ const handleRemoveImage = () => {
       ubicacion: formData.ubicacion?.trim() || null,
       marcaId: formData.marcaId ? String(formData.marcaId) : null,
       categoriaId: formData.categoriaId ? String(formData.categoriaId) : null,
+      contenidoMl: formData.contenidoMl === "" ? null : Number(formData.contenidoMl),
       stockActual: Number(formData.stockActual),
       stockMinimo: formData.stockMinimo === "" ? 0 : Number(formData.stockMinimo),
       precioCosto: Number(formData.precioCosto),
@@ -387,19 +403,19 @@ const handleRemoveImage = () => {
               <label className="block text-xs font-medium text-text-dim">
                 Código de Barras
               </label>
-              <input
-                type="text"
+              <BarcodeInput
                 value={formData.codigoBarras}
-                onChange={(e) =>
-                  setFormData({ ...formData, codigoBarras: e.target.value })
+                onChange={(value) =>
+                  setFormData({ ...formData, codigoBarras: value })
                 }
+                placeholder="Escaneá o tipeá el código..."
                 className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
               />
             </div>
           </div>
 
           {/* Ubicación, Marca y Categoría */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
             <div>
               <label className="block text-xs font-medium text-text-dim">
                 Ubicación en depósito
@@ -409,6 +425,26 @@ const handleRemoveImage = () => {
                 value={formData.ubicacion}
                 onChange={(e) =>
                   setFormData({ ...formData, ubicacion: e.target.value })
+                }
+                className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-text-dim">
+                Contenido (ml)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                placeholder="Ej: 100"
+                value={formData.contenidoMl ?? ""}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    contenidoMl: e.target.value === "" ? "" : Number(e.target.value),
+                  })
                 }
                 className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
               />

@@ -31,7 +31,7 @@ export function Sidebar({ logoUrl }: { logoUrl: string | null }) {
       </div>
       <nav className="flex-1 px-3 space-y-1" aria-label="Navegación principal">
         {NAV_ITEMS.map((item) => {
-          const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
+          const isActive = pathname === item.href;
           const Icon = item.icon;
           return (
             <Link

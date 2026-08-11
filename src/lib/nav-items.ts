@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Users, FlaskConical, PackagePlus, Receipt, Calculator, Tag } from "lucide-react";
+import { Users, FlaskConical, PackagePlus, Receipt, Calculator, Tag, Wallet } from "lucide-react";
 
 export type NavItem = {
   label: string;
@@ -15,4 +15,5 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Ventas", href: "/ventas", icon: Receipt },
   { label: "Contabilidad", href: "/finanzas", icon: Calculator },
   { label: "Flujo de Caja", href: "/finanzas/flujo-caja", icon: Calculator },
+  { label: "Gastos", href: "/finanzas/gastos", icon: Wallet },
 ];

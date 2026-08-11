@@ -19,6 +19,8 @@ export interface ProductoFormData {
   precioOferta: number | "";
   esDecant: boolean;
   fotoUrl?: string | null;
+  overrideDecant5ml: number | "";
+  overrideDecant10ml: number | "";
 }
 
 interface Marca {
@@ -63,6 +65,8 @@ export function ProductoFormModal({
     precioMayorista: "",
     precioOferta: "",
     esDecant: false,
+    overrideDecant5ml: "",
+    overrideDecant10ml: "",
   });
 
   const [marcas, setMarcas] = useState<Marca[]>(marcasIniciales);
@@ -141,6 +145,8 @@ export function ProductoFormModal({
           precioOferta: "",
           esDecant: false,
           fotoUrl: "",
+          overrideDecant5ml: "",
+         overrideDecant10ml: "",
         }); setPreviewUrl(null);
       }
       setSelectedFile(null);
@@ -297,6 +303,8 @@ const handleRemoveImage = () => {
       stockMinimo: formData.stockMinimo === "" ? 0 : Number(formData.stockMinimo),
       precioCosto: Number(formData.precioCosto),
       precioVenta: Number(formData.precioVenta),
+      overrideDecant5ml: formData.overrideDecant5ml === "" ? null : Number(formData.overrideDecant5ml),
+      overrideDecant10ml: formData.overrideDecant10ml === "" ? null : Number(formData.overrideDecant10ml),
       precioMayorista:
         formData.precioMayorista === "" || formData.precioMayorista === null
           ? null
@@ -636,6 +644,64 @@ const handleRemoveImage = () => {
               Se vende por decant
             </label>
           </div>
+
+          {/* Overrides de precio de decant — solo si "se vende por decant" está activo */}
+          {formData.esDecant && (
+            <div className="rounded-xl border border-border bg-surface-hover/30 p-4 space-y-3">
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-text-dim">
+                  Precios manuales de decant (opcional)
+                </span>
+                <p className="mt-1 text-xs text-text-dim">
+                  Si cargás un valor acá, se usa tal cual al vender el decant, en vez del
+                  cálculo automático por fórmula. Dejalo vacío para seguir usando la fórmula.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-text-dim">
+                    Precio decant 5ml
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Cálculo automático"
+                    value={formData.overrideDecant5ml}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        overrideDecant5ml:
+                          e.target.value === "" ? "" : Number(e.target.value),
+                      })
+                    }
+                    className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-text-dim">
+                    Precio decant 10ml
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Cálculo automático"
+                    value={formData.overrideDecant10ml}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        overrideDecant10ml:
+                          e.target.value === "" ? "" : Number(e.target.value),
+                      })
+                    }
+                    className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="col-span-2 space-y-2">
             <label className="block text-sm font-medium text-text">

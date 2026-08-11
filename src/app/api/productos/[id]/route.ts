@@ -116,21 +116,21 @@ export async function PUT(
     if (Number(productoAnterior.precioCosto) !== nuevoCosto) {
       registrosHistorial.push({
         productoId,
-        campo: "COSTO" as any,
+        campo: "COSTO",
         valorAnterior: Number(productoAnterior.precioCosto),
         valorNuevo: nuevoCosto,
-        origen: "MANUAL" as any,
+        origen: "MANUAL",
       });
     }
 
-    // Cambio en Precio Venta
+    // Cambio en Precio Venta Minorista
     if (Number(productoAnterior.precioVenta) !== nuevoVenta) {
       registrosHistorial.push({
         productoId,
-        campo: "VENTA" as any,
+        campo: "MINORISTA",
         valorAnterior: Number(productoAnterior.precioVenta),
         valorNuevo: nuevoVenta,
-        origen: "MANUAL" as any,
+        origen: "MANUAL",
       });
     }
 
@@ -142,10 +142,10 @@ export async function PUT(
     if (mayoristaAnterior !== nuevoMayorista && nuevoMayorista !== null) {
       registrosHistorial.push({
         productoId,
-        campo: "MAYORISTA" as any,
+        campo: "MAYORISTA",
         valorAnterior: mayoristaAnterior,
         valorNuevo: nuevoMayorista,
-        origen: "MANUAL" as any,
+        origen: "MANUAL",
       });
     }
 

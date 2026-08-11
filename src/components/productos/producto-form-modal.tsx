@@ -9,6 +9,7 @@ export interface ProductoFormData {
   ubicacion: string;
   marcaId: string;
   categoriaId: string;
+  contenidoMl: number | "";
   stockActual: number | "";
   stockMinimo: number | "";
   destacado: boolean;
@@ -56,6 +57,7 @@ export function ProductoFormModal({
     ubicacion: "",
     marcaId: "",
     categoriaId: "",
+    contenidoMl: "",
     stockActual: "",
     stockMinimo: "",
     destacado: false,
@@ -122,6 +124,7 @@ export function ProductoFormModal({
           ubicacion: productoEditar.ubicacion ?? "",
           marcaId: productoEditar.marcaId ?? "",
           categoriaId: productoEditar.categoriaId ?? "",
+          contenidoMl: productoEditar.contenidoMl ?? "",
           stockMinimo: productoEditar.stockMinimo ?? "",
           precioMayorista: productoEditar.precioMayorista ?? "",
           precioOferta: productoEditar.precioOferta ?? "",
@@ -135,6 +138,7 @@ export function ProductoFormModal({
           ubicacion: "",
           marcaId: "",
           categoriaId: "",
+          contenidoMl: "",
           stockActual: 0,
           stockMinimo: 0,
           destacado: false,
@@ -299,6 +303,7 @@ const handleRemoveImage = () => {
       ubicacion: formData.ubicacion?.trim() || null,
       marcaId: formData.marcaId ? String(formData.marcaId) : null,
       categoriaId: formData.categoriaId ? String(formData.categoriaId) : null,
+      contenidoMl: formData.contenidoMl === "" ? null : Number(formData.contenidoMl),
       stockActual: Number(formData.stockActual),
       stockMinimo: formData.stockMinimo === "" ? 0 : Number(formData.stockMinimo),
       precioCosto: Number(formData.precioCosto),
@@ -399,7 +404,7 @@ const handleRemoveImage = () => {
           </div>
 
           {/* Ubicación, Marca y Categoría */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
             <div>
               <label className="block text-xs font-medium text-text-dim">
                 Ubicación en depósito
@@ -409,6 +414,26 @@ const handleRemoveImage = () => {
                 value={formData.ubicacion}
                 onChange={(e) =>
                   setFormData({ ...formData, ubicacion: e.target.value })
+                }
+                className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-text-dim">
+                Contenido (ml)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                placeholder="Ej: 100"
+                value={formData.contenidoMl ?? ""}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    contenidoMl: e.target.value === "" ? "" : Number(e.target.value),
+                  })
                 }
                 className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
               />

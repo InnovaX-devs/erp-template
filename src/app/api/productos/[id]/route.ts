@@ -63,6 +63,15 @@ export async function PUT(
         ? String(body.ubicacion).trim()
         : null;
 
+    // Contenido en ml de la botella (usado en el cálculo de precio de decant)
+    const contenidoMl =
+      body.contenidoMl !== undefined &&
+      body.contenidoMl !== "" &&
+      body.contenidoMl !== null &&
+      !isNaN(Number(body.contenidoMl))
+        ? Number(body.contenidoMl)
+        : null;
+    
     // Código de barras
     const codigoBarras =
       body.codigoBarras && String(body.codigoBarras).trim() !== ""
@@ -94,6 +103,7 @@ export async function PUT(
         nombre: String(body.nombre || "").trim(),
         codigoBarras,
         ubicacionDeposito,
+        contenidoMl,
         marcaId,
         categoriaId,
         stockActual,

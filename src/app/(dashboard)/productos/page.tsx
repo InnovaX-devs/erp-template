@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
 import { ProductoFormModal, type ProductoFormData } from "@/components/productos/producto-form-modal";
+import { FormulaDecantModal } from "@/components/productos/formula-decant-modal";
 import Link from "next/link";
 
 
@@ -30,6 +31,29 @@ export default function ProductosPage() {
   const [productoEditar, setProductoEditar] = useState<ProductoFormData | null>(null);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [cargando, setCargando] = useState(true);
+
+  // Estados para el Modal de Fórmula Decant
+  const [isFormulaDecantOpen, setIsFormulaDecantOpen] = useState(false);
+  const [configDecant, setConfigDecant] = useState({
+    costoEnvaseDecantARS: 1500,
+    multiplicadorInsumoDecant: 2.5,
+    cotizacionUSD: 1200,
+  });
+
+  useEffect(() => {
+    fetch("/api/configuracion")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setConfigDecant({
+            costoEnvaseDecantARS: data.costoEnvaseDecantARS ?? 1500,
+            multiplicadorInsumoDecant: data.multiplicadorInsumoDecant ?? 2.5,
+            cotizacionUSD: data.cotizacionUSD ?? 1200,
+          });
+        }
+      })
+      .catch((error) => console.error("Error al cargar configuración:", error));
+  }, []);
 
   // Cargar productos desde la API
   const cargarProductos = useCallback(async () => {
@@ -126,21 +150,29 @@ export default function ProductosPage() {
             Gestión de inventario y valores de venta
           </p>
         </div>
-        
-        {/* EVENTO ONCLICK AGREGADO AQUÍ */}
-        <Link
-          href="/productos/actualizar-precios"
-          className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
-        >
-          + Actualizar Precios
-        </Link>
-        <button
-          type="button"
-          onClick={handleAbrirCrear}
-          className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
-        >
-          + Nuevo Producto
-        </button>
+
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/productos/actualizar-precios"
+            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          >
+            + Actualizar Precios
+          </Link>
+          <button
+            type="button"
+            onClick={() => setIsFormulaDecantOpen(true)}
+            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          >
+            Fórmula Decant
+          </button>
+          <button
+            type="button"
+            onClick={handleAbrirCrear}
+            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          >
+            + Nuevo Producto
+          </button>
+        </div>
       </div>
 
       {/* Tarjetas Resumen */}
@@ -321,6 +353,15 @@ export default function ProductosPage() {
         onClose={() => setIsModalOpen(false)}
         productoEditar={productoEditar}
         onSuccess={cargarProductos}
+      />
+
+      {/* Modal para Fórmula Decant */}
+      <FormulaDecantModal
+        isOpen={isFormulaDecantOpen}
+        onClose={() => setIsFormulaDecantOpen(false)}
+        costoEnvaseDecantARSInicial={configDecant.costoEnvaseDecantARS}
+        multiplicadorInsumoDecantInicial={configDecant.multiplicadorInsumoDecant}
+        cotizacionUSD={configDecant.cotizacionUSD}
       />
     </div>
   );

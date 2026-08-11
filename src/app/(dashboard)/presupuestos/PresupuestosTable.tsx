@@ -63,7 +63,7 @@ export default function PresupuestosTable({ presupuestos }: { presupuestos: Pres
                 >
                   Ver
                 </button>
-                {p.estado !== "CONVERTIDO" && (
+                {p.estado === "BORRADOR" && (
                   <Link href={`/presupuestos/${p.id}/editar`} className="text-[#021541] text-xs font-medium">
                     Editar
                   </Link>

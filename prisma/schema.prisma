@@ -150,6 +150,9 @@ model Venta {
   cliente   Cliente? @relation(fields: [clienteId], references: [id])
   clienteId Int?
 
+  presupuesto   Presupuesto? @relation(fields: [presupuestoId], references: [id])
+  presupuestoId Int?         @unique
+
   fecha           DateTime @default(now())
   cotizacionUsada Float
 
@@ -158,11 +161,10 @@ model Venta {
 
   totalUSD    Float
   totalARS    Float
-  montoPagado Float @default(0) // relevante cuando estadoPago = A_CUENTA
+  montoPagado Float @default(0)
 
   estadoPago EstadoPago @default(PAGADA)
 
-  // Logística (banderas independientes, no un estado lineal)
   armado   Boolean @default(false)
   enviado  Boolean @default(false)
   retirado Boolean @default(false)
@@ -230,7 +232,8 @@ model Presupuesto {
 
   estado EstadoPresupuesto @default(BORRADOR)
 
-  items PresupuestoItem[]
+  items           PresupuestoItem[]
+  ventaConvertida Venta?
 }
 
 model PresupuestoItem {

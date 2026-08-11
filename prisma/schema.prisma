@@ -43,6 +43,7 @@ model Producto {
   codigoBarras      String? @unique
   ubicacionDeposito String?
   fotoUrl           String?
+  contenidoMl       Int?
 
   marca       Marca?     @relation(fields: [marcaId], references: [id])
   marcaId     Int?

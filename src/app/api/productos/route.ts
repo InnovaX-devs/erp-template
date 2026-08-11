@@ -151,6 +151,14 @@ export async function POST(request: NextRequest) {
       ? Number(body.precioOferta) 
       : null;
 
+    const overrideDecant5ml = body.overrideDecant5ml !== undefined && body.overrideDecant5ml !== "" && body.overrideDecant5ml !== null
+      ? Number(body.overrideDecant5ml)
+      : null;
+
+    const overrideDecant10ml = body.overrideDecant10ml !== undefined && body.overrideDecant10ml !== "" && body.overrideDecant10ml !== null
+      ? Number(body.overrideDecant10ml)
+      : null;
+
     const nuevoProducto = await prisma.producto.create({
       data: {
         nombre: body.nombre.trim(),
@@ -166,10 +174,36 @@ export async function POST(request: NextRequest) {
         precioVenta,
         precioMayorista,
         precioOferta,
+        overrideDecant5ml,
+        overrideDecant10ml,
         seVendePorDecant: Boolean(body.esDecant),
         activo: true,
       },
     });
+
+    // Si se cargó algún override al crear el producto, dejamos registro en el historial.
+    const historialAlCrear = [];
+    if (overrideDecant5ml !== null) {
+      historialAlCrear.push({
+        productoId: nuevoProducto.id,
+        campo: "OVERRIDE_5ML" as const,
+        valorAnterior: null,
+        valorNuevo: overrideDecant5ml,
+        origen: "MANUAL" as const,
+      });
+    }
+    if (overrideDecant10ml !== null) {
+      historialAlCrear.push({
+        productoId: nuevoProducto.id,
+        campo: "OVERRIDE_10ML" as const,
+        valorAnterior: null,
+        valorNuevo: overrideDecant10ml,
+        origen: "MANUAL" as const,
+      });
+    }
+    if (historialAlCrear.length > 0) {
+      await prisma.historialPrecio.createMany({ data: historialAlCrear });
+    }
 
     return NextResponse.json(nuevoProducto, { status: 201 });
   } catch (error: any) {

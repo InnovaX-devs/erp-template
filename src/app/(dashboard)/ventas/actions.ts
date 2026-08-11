@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 import type { EstadoPago, TipoPrecioVenta } from "@prisma/client";
 
 type ItemInput = {
@@ -23,6 +24,7 @@ type VentaInput = {
   descuentoPorcentaje: number | null;
   totalARS: number;
   cotizacionUSD: number;
+  presupuestoId?: number | null; // presente solo cuando la venta viene de "Convertir a venta"
 };
 
 type ResultadoVenta =
@@ -56,6 +58,26 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
 
   try {
     const ventaId = await prisma.$transaction(async (tx) => {
+      // 0. Si viene de un presupuesto, revalidar que siga siendo convertible
+      //    (nadie lo convirtió en otra pestaña, y no venció mientras el
+      //    usuario armaba el cobro).
+      if (input.presupuestoId != null) {
+        const presupuesto = await tx.presupuesto.findUnique({
+          where: { id: input.presupuestoId },
+          select: { estado: true, fechaVencimiento: true },
+        });
+
+        if (!presupuesto) {
+          throw new Error("El presupuesto de origen ya no existe.");
+        }
+        if (presupuesto.estado !== "BORRADOR") {
+          throw new Error("Este presupuesto ya fue convertido o ya no es un borrador.");
+        }
+        if (presupuesto.fechaVencimiento < new Date()) {
+          throw new Error("Este presupuesto venció, no se puede convertir.");
+        }
+      }
+
       // 1. Validar y descontar stock
       for (const item of input.items) {
         const producto = await tx.producto.findUnique({
@@ -80,6 +102,7 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
       const venta = await tx.venta.create({
         data: {
           clienteId: input.clienteId,
+          presupuestoId: input.presupuestoId ?? null,
           cotizacionUsada,
           descuentoMonto: input.descuentoMonto,
           descuentoPorcentaje: input.descuentoPorcentaje,
@@ -122,8 +145,23 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
         });
       }
 
+      // 4. Marcar el presupuesto de origen como CONVERTIDO.
+      //    updateMany con el estado como filtro = guard atómico contra
+      //    doble conversión en carrera (dos pestañas confirmando a la vez).
+      if (input.presupuestoId != null) {
+        const actualizado = await tx.presupuesto.updateMany({
+          where: { id: input.presupuestoId, estado: "BORRADOR" },
+          data: { estado: "CONVERTIDO" },
+        });
+        if (actualizado.count === 0) {
+          throw new Error("Este presupuesto ya fue convertido en otra pestaña.");
+        }
+      }
+
       return venta.id;
     });
+
+    revalidatePath("/", "layout");
 
     return { success: true, ventaId };
   } catch (e) {

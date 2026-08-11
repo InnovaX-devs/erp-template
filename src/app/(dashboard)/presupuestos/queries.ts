@@ -65,3 +65,13 @@ export async function obtenerPresupuestos(
 
   return conEstadoEfectivo.filter((p) => p.estado === filtros.estado);
 }
+
+export async function obtenerPresupuestoPorId(id: number) {
+  return prisma.presupuesto.findUnique({
+    where: { id },
+    include: {
+      cliente: { select: { id: true, nombre: true, apellido: true, esMayorista: true } },
+      items: true,
+    },
+  });
+}

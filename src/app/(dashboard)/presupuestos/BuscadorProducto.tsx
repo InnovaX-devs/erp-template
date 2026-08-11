@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { toArs } from "@/lib/currency";
 import type { ProductoBusqueda } from "./types";
 
 export default function BuscadorProducto({
@@ -41,7 +42,7 @@ export default function BuscadorProducto({
       } finally {
         setCargando(false);
       }
-    }, 400); // debounce 400ms, mismo criterio que ya usás en otros buscadores
+    }, 400);
 
     return () => clearTimeout(timeout);
   }, [query]);
@@ -92,7 +93,8 @@ export default function BuscadorProducto({
           )}
           {!cargando &&
             resultados.map((p) => {
-              const precio = tipoPrecio === "MAYORISTA" ? p.precioMayorista ?? p.precioVenta : p.precioVenta;
+              const precioBase = tipoPrecio === "MAYORISTA" ? p.precioMayorista ?? p.precioVenta : p.precioVenta;
+              const precio = toArs(precioBase, p.monedaPrecio);
               return (
                 <button
                   key={p.id}

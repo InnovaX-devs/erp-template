@@ -90,15 +90,19 @@ export function BuscadorProducto({ onSeleccionar }: Props) {
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
       if (esLectora.current && query.trim()) {
-        e.preventDefault();
         buscarPorCodigoExacto(query.trim());
         esLectora.current = false;
         return;
       }
       if (abierto && activeIndex >= 0 && resultados[activeIndex]) {
-        e.preventDefault();
         seleccionar(resultados[activeIndex]);
+        return;
+      }
+      if (query.trim()) {
+        buscarPorCodigoExacto(query.trim());
       }
       return;
     }

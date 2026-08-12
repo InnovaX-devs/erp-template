@@ -57,6 +57,23 @@ export async function PUT(
         ? Number(body.precioOferta)
         : null;
 
+    // Overrides manuales de precio de decant
+    const nuevoOverride5ml =
+      body.overrideDecant5ml !== undefined &&
+      body.overrideDecant5ml !== "" &&
+      body.overrideDecant5ml !== null &&
+      !isNaN(Number(body.overrideDecant5ml))
+        ? Number(body.overrideDecant5ml)
+        : null;
+
+    const nuevoOverride10ml =
+      body.overrideDecant10ml !== undefined &&
+      body.overrideDecant10ml !== "" &&
+      body.overrideDecant10ml !== null &&
+      !isNaN(Number(body.overrideDecant10ml))
+        ? Number(body.overrideDecant10ml)
+        : null;
+
     // Ubicación en depósito
     const ubicacionDeposito =
       body.ubicacion && String(body.ubicacion).trim() !== ""
@@ -71,7 +88,7 @@ export async function PUT(
       !isNaN(Number(body.contenidoMl))
         ? Number(body.contenidoMl)
         : null;
-    
+
     // Código de barras
     const codigoBarras =
       body.codigoBarras && String(body.codigoBarras).trim() !== ""
@@ -97,29 +114,8 @@ export async function PUT(
       ? Number(body.stockMinimo)
       : 0;
 
-    const productoActualizado = await prisma.producto.update({
-      where: { id: productoId },
-      data: {
-        nombre: String(body.nombre || "").trim(),
-        codigoBarras,
-        ubicacionDeposito,
-        contenidoMl,
-        marcaId,
-        categoriaId,
-        stockActual,
-        stockMinimo,
-        destacado: Boolean(body.destacado),
-        monedaPrecio: body.monedaPrecio || "USD",
-        precioCosto: nuevoCosto,
-        precioVenta: nuevoVenta,
-        precioMayorista: nuevoMayorista,
-        precioOferta: nuevoOferta,
-        seVendePorDecant: Boolean(body.esDecant),
-        fotoUrl: body.fotoUrl !== undefined ? body.fotoUrl : undefined,
-      },
-    });
-
-    // Auditoría e historial de precios
+    // Auditoría e historial de precios.
+    // Se arma ANTES del update para comparar contra los valores previos.
     const registrosHistorial: Prisma.HistorialPrecioCreateManyInput[] = [];
 
     // Cambio en Precio Costo
@@ -159,12 +155,65 @@ export async function PUT(
       });
     }
 
-    // Registrar cambios en el historial de precios si los hubo
-    if (registrosHistorial.length > 0) {
-      await prisma.historialPrecio.createMany({
-        data: registrosHistorial,
+    // Cambio en override de decant 5ml
+    const override5mlAnterior = productoAnterior.overrideDecant5ml
+      ? Number(productoAnterior.overrideDecant5ml)
+      : null;
+
+    if (override5mlAnterior !== nuevoOverride5ml && nuevoOverride5ml !== null) {
+      registrosHistorial.push({
+        productoId,
+        campo: "OVERRIDE_5ML",
+        valorAnterior: override5mlAnterior,
+        valorNuevo: nuevoOverride5ml,
+        origen: "MANUAL",
       });
     }
+
+    // Cambio en override de decant 10ml
+    const override10mlAnterior = productoAnterior.overrideDecant10ml
+      ? Number(productoAnterior.overrideDecant10ml)
+      : null;
+
+    if (override10mlAnterior !== nuevoOverride10ml && nuevoOverride10ml !== null) {
+      registrosHistorial.push({
+        productoId,
+        campo: "OVERRIDE_10ML",
+        valorAnterior: override10mlAnterior,
+        valorNuevo: nuevoOverride10ml,
+        origen: "MANUAL",
+      });
+    }
+
+    // Update del producto e inserción del historial en una misma transacción.
+    const [productoActualizado] = await prisma.$transaction([
+      prisma.producto.update({
+        where: { id: productoId },
+        data: {
+          nombre: String(body.nombre || "").trim(),
+          codigoBarras,
+          ubicacionDeposito,
+          contenidoMl,
+          marcaId,
+          categoriaId,
+          stockActual,
+          stockMinimo,
+          destacado: Boolean(body.destacado),
+          monedaPrecio: body.monedaPrecio || "USD",
+          precioCosto: nuevoCosto,
+          precioVenta: nuevoVenta,
+          precioMayorista: nuevoMayorista,
+          precioOferta: nuevoOferta,
+          overrideDecant5ml: nuevoOverride5ml,
+          overrideDecant10ml: nuevoOverride10ml,
+          seVendePorDecant: Boolean(body.esDecant),
+          fotoUrl: body.fotoUrl !== undefined ? body.fotoUrl : undefined,
+        },
+      }),
+      ...(registrosHistorial.length > 0
+        ? [prisma.historialPrecio.createMany({ data: registrosHistorial })]
+        : []),
+    ]);
 
     return NextResponse.json(productoActualizado);
   } catch (error: any) {

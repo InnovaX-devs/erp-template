@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
 import { ProductoFormModal, type ProductoFormData } from "@/components/productos/producto-form-modal";
 import { FormulaDecantModal } from "@/components/productos/formula-decant-modal";
+import { PdfGeneratorModal } from "@/components/productos/pdf-generator-modal";
+import { FileText } from "lucide-react";
 import Link from "next/link";
 
 
@@ -46,6 +48,7 @@ export default function ProductosPage() {
 
   // Estados para el Modal de Fórmula Decant
   const [isFormulaDecantOpen, setIsFormulaDecantOpen] = useState(false);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [configDecant, setConfigDecant] = useState({
     costoEnvaseDecantARS: 1500,
     multiplicadorInsumoDecant: 2.5,
@@ -188,6 +191,14 @@ export default function ProductosPage() {
         </div>
 
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setIsPdfModalOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-medium text-text hover:bg-surface-hover"
+          >
+            <FileText className="h-4 w-4" />
+            Generar PDF
+          </button>
           <Link
             href="/productos/actualizar-precios"
             className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
@@ -398,6 +409,11 @@ export default function ProductosPage() {
         costoEnvaseDecantARSInicial={configDecant.costoEnvaseDecantARS}
         multiplicadorInsumoDecantInicial={configDecant.multiplicadorInsumoDecant}
         cotizacionUSD={configDecant.cotizacionUSD}
+      />
+
+      <PdfGeneratorModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
       />
     </div>
   );

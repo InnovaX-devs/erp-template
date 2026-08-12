@@ -4,7 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import type { EstadoPago, TipoPrecioVenta } from "@prisma/client";
 import { Prisma } from "@prisma/client";
-import type { FiltrosVentas, ResultadoListadoVentas, VentaListItem } from "@/types/venta";  
+import type {
+  FiltrosVentas,
+  ResultadoListadoVentas,
+  VentaListItem,
+  FiltrosPedidos,
+  ResultadoListadoPedidos,
+  PedidoListItem,
+} from "@/types/venta"; 
 
 type ItemInput = {
   productoId: number;
@@ -85,29 +92,37 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
       // 1. Validar y descontar stock
       // FRASCO: descuenta `cantidad` unidades. DECANT con "abrioFrascoCerrado": descuenta 1 unidad fija
       // (se abrió un solo frasco físico, sin importar cuántos decants salgan de ahí).
-      for (const item of input.items) {
-        const unidadesADescontar = item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
-        if (unidadesADescontar === 0) continue;
+      //
+      // Solo se descuenta acá si "armado" es true (venta confirmada directa,
+      // sin pasar por el Kanban). Si es un pedido (armado=false), el stock
+      // se reserva recién en la issue #52 cuando el pedido se marca "Armado"
+      // desde el tablero — así dos vendedores no pueden vender el mismo
+      // stock mientras el pedido está "por armar".
+      if (armado) {
+        for (const item of input.items) {
+          const unidadesADescontar = item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
+          if (unidadesADescontar === 0) continue;
 
-        const producto = await tx.producto.findUnique({
-          where: { id: item.productoId },
-          select: { stockActual: true, nombre: true },
-        });
-        if (!producto || producto.stockActual < unidadesADescontar) {
-          throw new Error(
-            `Stock insuficiente para "${producto?.nombre ?? "producto"}" (disponible: ${producto?.stockActual ?? 0})`
-          );
+          const producto = await tx.producto.findUnique({
+            where: { id: item.productoId },
+            select: { stockActual: true, nombre: true },
+          });
+          if (!producto || producto.stockActual < unidadesADescontar) {
+            throw new Error(
+              `Stock insuficiente para "${producto?.nombre ?? "producto"}" (disponible: ${producto?.stockActual ?? 0})`
+            );
+          }
         }
-      }
 
-      for (const item of input.items) {
-        const unidadesADescontar = item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
-        if (unidadesADescontar === 0) continue;
+        for (const item of input.items) {
+          const unidadesADescontar = item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
+          if (unidadesADescontar === 0) continue;
 
-        await tx.producto.update({
-          where: { id: item.productoId },
-          data: { stockActual: { decrement: unidadesADescontar } },
-        });
+          await tx.producto.update({
+            where: { id: item.productoId },
+            data: { stockActual: { decrement: unidadesADescontar } },
+          });
+        }
       }
 
       // 2. Crear la venta + ítems
@@ -303,4 +318,264 @@ export async function listarVentas(filtros: FiltrosVentas): Promise<ResultadoLis
   });
 
   return { ventas: ventasFormateadas, totalRegistros };
+}
+
+export type StockDisponibilidad = {
+  stockFisico: number;
+  reservado: number;
+  disponible: number;
+  alcanza: boolean;
+};
+
+export async function verificarStockDisponible(
+  productoId: number,
+  unidadesRequeridas: number
+): Promise<StockDisponibilidad> {
+  const producto = await prisma.producto.findUnique({
+    where: { id: productoId },
+    select: { stockActual: true },
+  });
+  const stockFisico = producto?.stockActual ?? 0;
+
+  // Reservado = suma de unidades comprometidas en pedidos sin armar (armado=false)
+  // que siguen activos (ni cancelados ni anulados). Usa la misma regla que
+  // el descuento real: FRASCO cuenta la cantidad completa; DECANT solo
+  // cuenta si abrió un frasco cerrado (abrioFrascoCerrado=true).
+  const itemsPendientes = await prisma.itemVenta.findMany({
+    where: {
+      productoId,
+      venta: {
+        armado: false,
+        estadoPago: { notIn: ["CANCELADA", "ANULADA"] },
+      },
+    },
+    select: { cantidad: true, presentacion: true, abrioFrascoCerrado: true },
+  });
+
+  const reservado = itemsPendientes.reduce((acc, item) => {
+    const unidades =
+      item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
+    return acc + unidades;
+  }, 0);
+
+  const disponible = stockFisico - reservado;
+
+  return {
+    stockFisico,
+    reservado,
+    disponible,
+    alcanza: unidadesRequeridas <= disponible,
+  };
+}
+
+export async function listarPedidos(filtros: FiltrosPedidos): Promise<ResultadoListadoPedidos> {
+  const { clienteTexto, fechaDesde, fechaHasta, orden, sinCobrar, sinArmar, sinEnviar, sinRetirar } = filtros;
+
+  const where: Prisma.VentaWhereInput = {
+    retirado: false,
+    estadoPago: { notIn: ["CANCELADA", "ANULADA"] },
+  };
+
+  if (sinCobrar) where.estadoPago = "A_CUENTA";
+  if (sinArmar) where.armado = false;
+  if (sinEnviar) where.enviado = false;
+  if (sinRetirar) where.retirado = false; // ya está arriba, pero explícito por claridad de filtro activo
+
+  const texto = clienteTexto.trim();
+  if (texto) {
+    const soloNumeros = texto.replace(/^#/, "");
+    const esNumero = /^\d+$/.test(soloNumeros);
+
+    if (esNumero) {
+      where.id = Number(soloNumeros);
+    } else if (texto.toLowerCase() === "sin cliente") {
+      where.clienteId = null;
+    } else {
+      where.cliente = {
+        OR: [
+          { nombre: { contains: texto, mode: "insensitive" } },
+          { apellido: { contains: texto, mode: "insensitive" } },
+        ],
+      };
+    }
+  }
+
+  if (fechaDesde || fechaHasta) {
+    where.fecha = {};
+    if (fechaDesde) where.fecha.gte = new Date(`${fechaDesde}T00:00:00`);
+    if (fechaHasta) where.fecha.lte = new Date(`${fechaHasta}T23:59:59`);
+  }
+
+  const ventas = await prisma.venta.findMany({
+    where,
+    orderBy: { fecha: orden === "MAS_NUEVO" ? "desc" : "asc" },
+    include: {
+      cliente: { select: { nombre: true, apellido: true } },
+    },
+  });
+
+  const pedidos: PedidoListItem[] = ventas.map((venta) => ({
+    id: venta.id,
+    clienteNombre: venta.cliente
+      ? `${venta.cliente.nombre}${venta.cliente.apellido ? " " + venta.cliente.apellido : ""}`
+      : null,
+    totalARS: venta.totalARS,
+    montoPagado: venta.montoPagado,
+    estadoPago: venta.estadoPago,
+    armado: venta.armado,
+    enviado: venta.enviado,
+    retirado: venta.retirado,
+    fecha: venta.fecha.toISOString(),
+  }));
+
+  return { pedidos };
+}
+
+type ResultadoAccionPedido = { success: true } | { success: false; error: string };
+
+export async function marcarArmado(ventaId: number): Promise<ResultadoAccionPedido> {
+  try {
+    const venta = await prisma.venta.findUnique({
+      where: { id: ventaId },
+      include: { items: true },
+    });
+    if (!venta) return { success: false, error: "El pedido no existe" };
+    if (venta.armado) return { success: false, error: "El pedido ya está armado" };
+
+    await prisma.$transaction(async (tx) => {
+      // Misma regla de descuento que crearVentaInterna: FRASCO descuenta
+      // cantidad completa; DECANT solo si abrió un frasco cerrado.
+      for (const item of venta.items) {
+        const unidadesADescontar =
+          item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
+        if (unidadesADescontar === 0) continue;
+
+        const producto = await tx.producto.findUnique({
+          where: { id: item.productoId! },
+          select: { stockActual: true, nombre: true },
+        });
+        if (!producto || producto.stockActual < unidadesADescontar) {
+          throw new Error(
+            `Stock insuficiente para "${producto?.nombre ?? "producto"}" (disponible: ${producto?.stockActual ?? 0})`
+          );
+        }
+      }
+
+      for (const item of venta.items) {
+        const unidadesADescontar =
+          item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
+        if (unidadesADescontar === 0) continue;
+
+        await tx.producto.update({
+          where: { id: item.productoId! },
+          data: { stockActual: { decrement: unidadesADescontar } },
+        });
+      }
+
+      await tx.venta.update({ where: { id: ventaId }, data: { armado: true } });
+    });
+
+    revalidatePath("/ventas/pedidos");
+    return { success: true };
+  } catch (e) {
+    const mensaje = e instanceof Error ? e.message : "Error al marcar como armado";
+    return { success: false, error: mensaje };
+  }
+}
+
+export async function marcarEnviado(ventaId: number): Promise<ResultadoAccionPedido> {
+  try {
+    const venta = await prisma.venta.findUnique({ where: { id: ventaId } });
+    if (!venta) return { success: false, error: "El pedido no existe" };
+    if (!venta.armado) return { success: false, error: "El pedido todavía no fue armado" };
+
+    await prisma.venta.update({ where: { id: ventaId }, data: { enviado: true } });
+    revalidatePath("/ventas/pedidos");
+    return { success: true };
+  } catch (e) {
+    const mensaje = e instanceof Error ? e.message : "Error al marcar como enviado";
+    return { success: false, error: mensaje };
+  }
+}
+
+export async function marcarRetirado(ventaId: number): Promise<ResultadoAccionPedido> {
+  try {
+    const venta = await prisma.venta.findUnique({ where: { id: ventaId } });
+    if (!venta) return { success: false, error: "El pedido no existe" };
+    if (!venta.armado) return { success: false, error: "El pedido todavía no fue armado" };
+
+    await prisma.venta.update({ where: { id: ventaId }, data: { retirado: true } });
+    revalidatePath("/ventas/pedidos");
+    return { success: true };
+  } catch (e) {
+    const mensaje = e instanceof Error ? e.message : "Error al marcar como retirado";
+    return { success: false, error: mensaje };
+  }
+}
+
+export async function registrarCobroPedido(
+  ventaId: number,
+  pagos: { cuentaId: number; monto: number }[]
+): Promise<ResultadoAccionPedido> {
+  const pagosValidos = pagos.filter((p) => p.cuentaId != null && p.monto > 0);
+  if (pagosValidos.length === 0) {
+    return { success: false, error: "Ingresá al menos un pago válido" };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const venta = await tx.venta.findUnique({ where: { id: ventaId } });
+      if (!venta) throw new Error("El pedido no existe");
+      if (venta.estadoPago === "PAGADA") throw new Error("El pedido ya está pagado");
+
+      const montoNuevo = pagosValidos.reduce((acc, p) => acc + p.monto, 0);
+      const restante = venta.totalARS - venta.montoPagado;
+
+      if (montoNuevo > restante + 0.01) {
+        throw new Error(
+          `El monto ingresado ($${montoNuevo.toFixed(2)}) supera lo que falta cobrar ($${restante.toFixed(2)})`
+        );
+      }
+
+      for (const pago of pagosValidos) {
+        const cuenta = await tx.cuenta.update({
+          where: { id: pago.cuentaId },
+          data: { saldoActual: { increment: pago.monto } },
+        });
+
+        await tx.pagoVenta.create({
+          data: { ventaId, cuentaId: pago.cuentaId, monto: pago.monto },
+        });
+
+        await tx.movimientoCaja.create({
+          data: {
+            cuentaId: pago.cuentaId,
+            tipo: "INGRESO",
+            concepto: "VENTA_COBRADA",
+            monto: pago.monto,
+            saldoResultante: cuenta.saldoActual,
+            ventaId,
+          },
+        });
+      }
+
+      const nuevoMontoPagado = venta.montoPagado + montoNuevo;
+      const nuevoEstado: EstadoPago = nuevoMontoPagado >= venta.totalARS - 0.01 ? "PAGADA" : "A_CUENTA";
+
+      if (nuevoEstado === "A_CUENTA" && !venta.clienteId) {
+        throw new Error("Para dejar un saldo pendiente el pedido necesita un cliente asociado.");
+      }
+
+      await tx.venta.update({
+        where: { id: ventaId },
+        data: { montoPagado: nuevoMontoPagado, estadoPago: nuevoEstado },
+      });
+    });
+
+    revalidatePath("/ventas/pedidos");
+    return { success: true };
+  } catch (e) {
+    const mensaje = e instanceof Error ? e.message : "Error al registrar el cobro";
+    return { success: false, error: mensaje };
+  }
 }

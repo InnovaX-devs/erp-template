@@ -26,3 +26,30 @@ export type ResultadoListadoVentas = {
   ventas: VentaListItem[];
   totalRegistros: number;
 };
+
+export type PedidoListItem = {
+  id: number;
+  clienteNombre: string | null;
+  totalARS: number;
+  montoPagado: number;
+  estadoPago: EstadoPago;
+  armado: boolean;
+  enviado: boolean;
+  retirado: boolean;
+  fecha: string; // ISO
+};
+
+export type FiltrosPedidos = {
+  clienteTexto: string;
+  fechaDesde: string | null;
+  fechaHasta: string | null;
+  orden: "MAS_NUEVO" | "MAS_VIEJO";
+  sinCobrar: boolean;
+  sinArmar: boolean;
+  sinEnviar: boolean;
+  sinRetirar: boolean;
+};
+
+export type ResultadoListadoPedidos = {
+  pedidos: PedidoListItem[];
+};

@@ -10,12 +10,24 @@ import Link from "next/link";
 interface Producto {
   id: string;
   nombre: string;
+  codigoBarras?: string | null;
+  ubicacionDeposito?: string | null;
+  fotoUrl?: string | null;
+  contenidoMl?: number | null;
   marca?: { nombre: string } | null;
+  marcaId?: number | null;
+  categoriaId?: number | null;
   stockActual: number;
+  stockMinimo?: number;
+  destacado?: boolean;
   precioCosto: number;
   precioVenta: number;
   precioMayorista?: number | null;
+  precioOferta?: number | null;
   monedaPrecio: "USD" | "ARS";
+  overrideDecant5ml?: number | null;
+  overrideDecant10ml?: number | null;
+  seVendePorDecant?: boolean;
   activo: boolean;
 }
 
@@ -133,8 +145,32 @@ export default function ProductosPage() {
     setIsModalOpen(true);
   };
 
+  function mapProductoToFormData(producto: Producto): ProductoFormData {
+    return {
+      id: String(producto.id),
+      nombre: producto.nombre ?? "",
+      codigoBarras: producto.codigoBarras ?? "",
+      ubicacion: producto.ubicacionDeposito ?? "",
+      marcaId: producto.marcaId ? String(producto.marcaId) : "",
+      categoriaId: producto.categoriaId ? String(producto.categoriaId) : "",
+      contenidoMl: producto.contenidoMl ?? "",
+      stockActual: producto.stockActual ?? "",
+      stockMinimo: producto.stockMinimo ?? "",
+      destacado: producto.destacado ?? false,
+      monedaPrecio: producto.monedaPrecio ?? "USD",
+      precioCosto: producto.precioCosto ?? "",
+      precioVenta: producto.precioVenta ?? "",
+      precioMayorista: producto.precioMayorista ?? "",
+      precioOferta: producto.precioOferta ?? "",
+      esDecant: producto.seVendePorDecant ?? false,
+      overrideDecant5ml: producto.overrideDecant5ml ?? "",
+      overrideDecant10ml: producto.overrideDecant10ml ?? "",
+    };
+  };
+  
+
   const handleAbrirEditar = (producto: Producto) => {
-    setProductoEditar(producto as unknown as ProductoFormData);
+    setProductoEditar(mapProductoToFormData(producto));
     setIsModalOpen(true);
 };
 

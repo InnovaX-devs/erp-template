@@ -36,6 +36,10 @@ export async function POST(
         montoADescontar = gasto.monto / cotizacion; // convierte ARS -> USD
       }
 
+      if (cuenta.saldoActual - montoADescontar < 0) {
+        throw new Error("SALDO_INSUFICIENTE");
+      }
+
       const saldoResultante = cuenta.saldoActual - montoADescontar;
 
       await tx.movimientoCaja.create({
@@ -70,6 +74,9 @@ export async function POST(
     }
     if (error?.message === "CUENTA_NO_ENCONTRADA") {
       return NextResponse.json({ error: "La cuenta seleccionada no existe" }, { status: 404 });
+    }
+    if (error?.message === "SALDO_INSUFICIENTE") {
+      return NextResponse.json({ error: "La cuenta no tiene saldo suficiente para este gasto" }, { status: 409 });
     }
     if (error?.message === "SIN_COTIZACION") {
       return NextResponse.json({ error: "No hay una cotización de USD configurada" }, { status: 400 });

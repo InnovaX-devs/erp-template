@@ -18,6 +18,8 @@ import type { ItemCarrito, TipoPrecioLinea } from "@/types/item-carrito";
 import { SelectorCobro } from "@/components/ventas/selector-cobro";
 import { confirmarVenta, registrarPedido } from "./actions";
 import { obtenerPresupuestoParaConvertir } from "@/app/(dashboard)/presupuestos/actions";
+import { ModalPresentacion } from "@/components/ventas/modal-presentacion";
+import type { Presentacion } from "@/types/decant";
 
 export default function NuevaVentaPage() {
   return (
@@ -43,6 +45,9 @@ function NuevaVentaContenido() {
   const [presupuestoIdOrigen, setPresupuestoIdOrigen] = useState<number | null>(null);
   const yaPrecargado = useRef(false);
 
+  const [modalPresentacionAbierto, setModalPresentacionAbierto] = useState(false);
+  const [productoParaPresentacion, setProductoParaPresentacion] = useState<ProductoBusquedaDTO | null>(null);
+
   useEffect(() => {
     if (!presupuestoIdParam || yaPrecargado.current) return;
     yaPrecargado.current = true;
@@ -65,6 +70,8 @@ function NuevaVentaContenido() {
           tipoPrecio: item.tipoPrecio,
           cantidad: item.cantidad,
           precioUnitarioArs: item.precioUnitarioArs,
+          presentacion: "FRASCO",
+          abrioFrascoCerrado: false,
         }))
       );
       setCliente(data.cliente);
@@ -88,24 +95,46 @@ function NuevaVentaContenido() {
 
   const [procesando, setProcesando] = useState(false);
 
-  function agregarProducto(producto: ProductoBusquedaDTO) {
-    const precioBaseOriginal =
-      tipoPrecio === "MAYORISTA" && producto.precioMayorista != null
-        ? producto.precioMayorista
-        : producto.precioVenta;
-
-    const precioUnitarioArs = toArs(precioBaseOriginal, producto.monedaPrecio);
-
+  function agregarAlCarrito(
+    producto: ProductoBusquedaDTO,
+    presentacion: Presentacion,
+    precioUnitarioArs: number,
+    abrioFrascoCerrado: boolean
+  ) {
     const nuevoItem: ItemCarrito = {
       id: `${producto.id}-${Date.now()}`,
       producto,
       tipoPrecio,
       cantidad: 1,
       precioUnitarioArs,
+      presentacion,
+      abrioFrascoCerrado,
     };
 
     setCarrito((prev) => [...prev, nuevoItem]);
-    toast.success(`${producto.nombre} agregado (${tipoPrecio === "MAYORISTA" ? "May" : "Min"})`);
+    const etiqueta = presentacion === "FRASCO" ? "" : presentacion === "DECANT_5ML" ? " (Decant 5ml)" : " (Decant 10ml)";
+    toast.success(`${producto.nombre}${etiqueta} agregado (${tipoPrecio === "MAYORISTA" ? "May" : "Min"})`);
+  }
+
+  function agregarProducto(producto: ProductoBusquedaDTO) {
+    if (producto.seVendePorDecant) {
+      setProductoParaPresentacion(producto);
+      setModalPresentacionAbierto(true);
+      return;
+    }
+
+    const precioBaseOriginal =
+      tipoPrecio === "MAYORISTA" && producto.precioMayorista != null ? producto.precioMayorista : producto.precioVenta;
+    const precioUnitarioArs = toArs(precioBaseOriginal, producto.monedaPrecio);
+
+    agregarAlCarrito(producto, "FRASCO", precioUnitarioArs, false);
+  }
+
+  function handleElegirPresentacion(presentacion: Presentacion, precioArs: number, abrioFrascoCerrado: boolean) {
+    if (!productoParaPresentacion) return;
+    agregarAlCarrito(productoParaPresentacion, presentacion, precioArs, abrioFrascoCerrado);
+    setModalPresentacionAbierto(false);
+    setProductoParaPresentacion(null);
   }
 
   function cambiarCantidad(id: string, cantidad: number) {
@@ -154,6 +183,8 @@ function NuevaVentaContenido() {
         cantidad: it.cantidad,
         precioUnitarioArs: it.precioUnitarioArs,
         tipoPrecio: it.tipoPrecio,
+        presentacion: it.presentacion,
+        abrioFrascoCerrado: it.abrioFrascoCerrado,
       })),
       pagos: pagos.map((p) => ({ cuentaId: p.cuentaId as number, monto: p.monto })),
       descuentoMonto: descuento?.tipo === "MONTO" ? descuento.valor : null,
@@ -280,7 +311,16 @@ function NuevaVentaContenido() {
           </div>
         </div>
       )}
-
+      {modalPresentacionAbierto && productoParaPresentacion && (
+        <ModalPresentacion
+          producto={productoParaPresentacion}
+          onElegir={handleElegirPresentacion}
+          onClose={() => {
+            setModalPresentacionAbierto(false);
+            setProductoParaPresentacion(null);
+          }}
+        />
+      )}
       {modalPrecioAbierto && <ModalConsultarPrecio onClose={() => setModalPrecioAbierto(false)} />}
       {modalDescuentoAbierto && (
         <ModalDescuento
@@ -290,5 +330,6 @@ function NuevaVentaContenido() {
         />
       )}
     </div>
+    
   );
 }

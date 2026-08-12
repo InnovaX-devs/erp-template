@@ -9,6 +9,8 @@ type ItemInput = {
   cantidad: number;
   precioUnitarioArs: number;
   tipoPrecio: TipoPrecioVenta;
+  presentacion: "FRASCO" | "DECANT_5ML" | "DECANT_10ML";
+  abrioFrascoCerrado: boolean;
 };
 
 type PagoInput = {
@@ -79,12 +81,17 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
       }
 
       // 1. Validar y descontar stock
+      // FRASCO: descuenta `cantidad` unidades. DECANT con "abrioFrascoCerrado": descuenta 1 unidad fija
+      // (se abrió un solo frasco físico, sin importar cuántos decants salgan de ahí).
       for (const item of input.items) {
+        const unidadesADescontar = item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
+        if (unidadesADescontar === 0) continue;
+
         const producto = await tx.producto.findUnique({
           where: { id: item.productoId },
           select: { stockActual: true, nombre: true },
         });
-        if (!producto || producto.stockActual < item.cantidad) {
+        if (!producto || producto.stockActual < unidadesADescontar) {
           throw new Error(
             `Stock insuficiente para "${producto?.nombre ?? "producto"}" (disponible: ${producto?.stockActual ?? 0})`
           );
@@ -92,9 +99,12 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
       }
 
       for (const item of input.items) {
+        const unidadesADescontar = item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
+        if (unidadesADescontar === 0) continue;
+
         await tx.producto.update({
           where: { id: item.productoId },
-          data: { stockActual: { decrement: item.cantidad } },
+          data: { stockActual: { decrement: unidadesADescontar } },
         });
       }
 
@@ -117,6 +127,8 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
               cantidad: item.cantidad,
               precioUnitarioUSD: item.precioUnitarioArs / cotizacionUsada,
               tipoPrecio: item.tipoPrecio,
+              presentacion: item.presentacion,
+              abrioFrascoCerrado: item.abrioFrascoCerrado,
             })),
           },
         },

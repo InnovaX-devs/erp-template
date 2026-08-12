@@ -111,7 +111,14 @@ function FilaCarrito({
               Mayorista
             </button>
           </div>
-          <span className="font-medium text-text">{item.producto.nombre}</span>
+          <span className="font-medium text-text">
+            {item.producto.nombre}
+            {item.presentacion !== "FRASCO" && (
+              <span className="ml-1.5 rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent">
+                {item.presentacion === "DECANT_5ML" ? "5ml" : "10ml"}
+              </span>
+            )}
+          </span>
         </div>
       </td>
 

@@ -35,5 +35,8 @@ export type ProductoBusquedaDTO = {
   precioVenta: number;
   precioMayorista: number | null;
   seVendePorDecant: boolean;
+  contenidoMl: number | null;
+  overrideDecant5ml: number | null;
+  overrideDecant10ml: number | null;
   marca: { nombre: string } | null;
 };

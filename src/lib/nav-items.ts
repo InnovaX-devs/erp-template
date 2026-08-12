@@ -20,5 +20,5 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Historial de Ventas", href: "/ventas/historial", icon: Receipt },
   { label: "Pedidos", href: "/ventas/pedidos", icon: PackagePlus },
   { label: "Historial de precios", href: "/historial-precios", icon: History },
-  { label: "Reporte de Decants", href: "/reportes/decants", icon: Droplets },
+  { label: "Reportes", href: "/reportes", icon: Droplets },
 ];

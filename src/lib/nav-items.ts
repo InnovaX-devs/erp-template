@@ -16,4 +16,5 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Contabilidad", href: "/finanzas", icon: Calculator },
   { label: "Flujo de Caja", href: "/finanzas/flujo-caja", icon: Calculator },
   { label: "Gastos", href: "/finanzas/gastos", icon: Wallet },
+  { label: "Historial de Ventas", href: "/ventas/historial", icon: Receipt },
 ];

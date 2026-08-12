@@ -3,6 +3,8 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import type { EstadoPago, TipoPrecioVenta } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import type { FiltrosVentas, ResultadoListadoVentas, VentaListItem } from "@/types/venta";  
 
 type ItemInput = {
   productoId: number;
@@ -189,4 +191,116 @@ export async function confirmarVenta(input: VentaInput): Promise<ResultadoVenta>
 
 export async function registrarPedido(input: VentaInput): Promise<ResultadoVenta> {
   return crearVentaInterna(input, false);
+}
+
+export async function listarVentas(filtros: FiltrosVentas): Promise<ResultadoListadoVentas> {
+  const { estado, clienteTexto, fechaDesde, fechaHasta, orden, page, pageSize } = filtros;
+
+  const where: Prisma.VentaWhereInput = {};
+
+  if (estado !== "TODOS") {
+    where.estadoPago = estado;
+  }
+
+  const texto = clienteTexto.trim();
+  if (texto) {
+    const soloNumeros = texto.replace(/^#/, ""); // permite escribir "8" o "#8"
+    const esNumero = /^\d+$/.test(soloNumeros);
+
+    if (esNumero) {
+      where.id = Number(soloNumeros);
+    } else if (texto.toLowerCase() === "sin cliente") {
+      where.clienteId = null;
+    } else {
+      where.cliente = {
+        OR: [
+          { nombre: { contains: texto, mode: "insensitive" } },
+          { apellido: { contains: texto, mode: "insensitive" } },
+        ],
+      };
+    }
+  }
+
+  if (fechaDesde || fechaHasta) {
+    where.fecha = {};
+    if (fechaDesde) where.fecha.gte = new Date(`${fechaDesde}T00:00:00`);
+    if (fechaHasta) where.fecha.lte = new Date(`${fechaHasta}T23:59:59`);
+  }
+
+  const [ventas, totalRegistros, configuracion] = await Promise.all([
+    prisma.venta.findMany({
+      where,
+      orderBy: { fecha: orden === "MAS_NUEVO" ? "desc" : "asc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: {
+        cliente: { select: { nombre: true, apellido: true } },
+        items: {
+          include: {
+            producto: { select: { precioCosto: true, monedaPrecio: true, contenidoMl: true } },
+          },
+        },
+      },
+    }),
+    prisma.venta.count({ where }),
+    prisma.configuracion.findUnique({ where: { id: "singleton" } }),
+  ]);
+
+  const costoEnvaseDecantARS = configuracion?.costoEnvaseDecantARS ?? 0;
+
+  const ventasFormateadas: VentaListItem[] = ventas.map((venta) => {
+    const costoTotalARS = venta.items.reduce((acc, item) => {
+      if (!item.producto) return acc;
+
+      const costoProductoARS =
+        item.producto.monedaPrecio === "USD"
+          ? item.producto.precioCosto * venta.cotizacionUsada
+          : item.producto.precioCosto;
+
+      let costoItemARS: number;
+
+      switch (item.presentacion) {
+        case "FRASCO":
+          costoItemARS = costoProductoARS * item.cantidad;
+          break;
+
+        case "DECANT_5ML":
+        case "DECANT_10ML": {
+          if (!item.producto.contenidoMl || item.producto.contenidoMl <= 0) {
+            // Sin contenidoMl no se puede calcular el costo proporcional real.
+            // No sumamos nada, pero esto puede inflar la ganancia mostrada
+            // (queda documentado, ideal a futuro: marcar la venta como "costo incompleto").
+            return acc;
+          }
+
+          const ml = item.presentacion === "DECANT_5ML" ? 5 : 10;
+          const costoPerfumeARS = (costoProductoARS / item.producto.contenidoMl) * ml;
+          costoItemARS = (costoPerfumeARS + costoEnvaseDecantARS) * item.cantidad;
+          break;
+        }
+
+        default:
+          costoItemARS = 0;
+      }
+
+      return acc + costoItemARS;
+    }, 0);
+
+    const gananciaARS = venta.totalARS - costoTotalARS;
+    const gananciaPorcentaje = costoTotalARS > 0 ? (gananciaARS / costoTotalARS) * 100 : 0;
+
+    return {
+      id: venta.id,
+      clienteNombre: venta.cliente
+        ? `${venta.cliente.nombre}${venta.cliente.apellido ? " " + venta.cliente.apellido : ""}`
+        : null,
+      totalARS: venta.totalARS,
+      gananciaARS,
+      gananciaPorcentaje,
+      fecha: venta.fecha.toISOString(),
+      estado: venta.estadoPago,
+    };
+  });
+
+  return { ventas: ventasFormateadas, totalRegistros };
 }

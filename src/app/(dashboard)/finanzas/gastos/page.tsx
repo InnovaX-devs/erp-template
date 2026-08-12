@@ -1,3 +1,4 @@
+// app/gastos/page.tsx
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -7,9 +8,13 @@ import { TarjetasResumenGastos } from "@/components/finanzas/tarjetas-resumen-ga
 import { FiltrosGastos } from "@/components/finanzas/filtros-gastos";
 import { TablaGastos } from "@/components/finanzas/tabla-gastos";
 import { GastoFormModal } from "@/components/finanzas/gasto-form-modal";
+import { AnalisisGastosTab } from "@/components/finanzas/analisis-gastos-tab";
 import type { GastoDTO } from "@/types/gasto";
 
+type Pestana = "listado" | "analisis";
+
 export default function GastosPage() {
+  const [pestana, setPestana] = useState<Pestana>("listado");
   const [gastos, setGastos] = useState<GastoDTO[]>([]);
   const [resumen, setResumen] = useState({ totalGastos: 0, cajaDisponible: 0 });
   const [q, setQ] = useState("");
@@ -34,24 +39,8 @@ export default function GastosPage() {
   }, [q]);
 
   useEffect(() => {
-    cargarGastos();
-  }, [cargarGastos]);
-
-  async function eliminarGasto(gasto: GastoDTO) {
-    if (!confirm(`¿Eliminar el gasto "${gasto.concepto}"? Esta acción no se puede deshacer.`)) return;
-    try {
-      const res = await fetch(`/api/gastos/${gasto.id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || "No se pudo eliminar el gasto");
-        return;
-      }
-      toast.success("Gasto eliminado");
-      cargarGastos();
-    } catch {
-      toast.error("No se pudo eliminar el gasto");
-    }
-  }
+    if (pestana === "listado") cargarGastos();
+  }, [pestana, cargarGastos]);
 
   return (
     <div className="space-y-4 p-6">
@@ -60,33 +49,54 @@ export default function GastosPage() {
           <h1 className="text-xl font-semibold text-text">Gastos</h1>
           <p className="text-sm text-text-dim">{gastos.length} gastos registrados</p>
         </div>
-        <button
-          onClick={() => setModalFormAbierto(true)}
-          className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-        >
-          <Plus size={16} /> Nuevo gasto
-        </button>
+        {pestana === "listado" && (
+          <button
+            onClick={() => setModalFormAbierto(true)}
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+          >
+            <Plus size={16} /> Nuevo gasto
+          </button>
+        )}
       </div>
 
-      <TarjetasResumenGastos resumen={resumen} />
-
-      <div className="rounded-xl border border-border bg-surface p-4">
-        <FiltrosGastos q={q} onChangeQ={setQ} />
+      <div className="flex gap-1 border-b border-border">
+        {(["listado", "analisis"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setPestana(tab)}
+            className={`px-4 py-2 text-sm font-medium ${
+              pestana === tab
+                ? "border-b-2 border-primary text-primary"
+                : "text-text-dim hover:text-text"
+            }`}
+          >
+            {tab === "listado" ? "Listado" : "Análisis"}
+          </button>
+        ))}
       </div>
 
-      {cargando ? (
-        <div className="rounded-xl border border-border bg-surface p-8 text-center text-sm text-text-dim">
-          Cargando...
-        </div>
+      {pestana === "listado" ? (
+        <>
+          <TarjetasResumenGastos resumen={resumen} />
+          <div className="rounded-xl border border-border bg-surface p-4">
+            <FiltrosGastos q={q} onChangeQ={setQ} />
+          </div>
+          {cargando ? (
+            <div className="rounded-xl border border-border bg-surface p-8 text-center text-sm text-text-dim">
+              Cargando...
+            </div>
+          ) : (
+            <TablaGastos gastos={gastos} />
+          )}
+          <GastoFormModal
+            isOpen={modalFormAbierto}
+            onClose={() => setModalFormAbierto(false)}
+            onSuccess={cargarGastos}
+          />
+        </>
       ) : (
-        <TablaGastos gastos={gastos} onEliminar={eliminarGasto} />
+        <AnalisisGastosTab />
       )}
-
-      <GastoFormModal
-        isOpen={modalFormAbierto}
-        onClose={() => setModalFormAbierto(false)}
-        onSuccess={cargarGastos}
-      />
     </div>
   );
 }

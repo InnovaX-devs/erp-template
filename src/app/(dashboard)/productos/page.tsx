@@ -4,18 +4,32 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
 import { ProductoFormModal, type ProductoFormData } from "@/components/productos/producto-form-modal";
 import { FormulaDecantModal } from "@/components/productos/formula-decant-modal";
+import { PdfGeneratorModal } from "@/components/productos/pdf-generator-modal";
+import { FileText } from "lucide-react";
 import Link from "next/link";
 
 
 interface Producto {
   id: string;
   nombre: string;
+  codigoBarras?: string | null;
+  ubicacionDeposito?: string | null;
+  fotoUrl?: string | null;
+  contenidoMl?: number | null;
   marca?: { nombre: string } | null;
+  marcaId?: number | null;
+  categoriaId?: number | null;
   stockActual: number;
+  stockMinimo?: number;
+  destacado?: boolean;
   precioCosto: number;
   precioVenta: number;
   precioMayorista?: number | null;
+  precioOferta?: number | null;
   monedaPrecio: "USD" | "ARS";
+  overrideDecant5ml?: number | null;
+  overrideDecant10ml?: number | null;
+  seVendePorDecant?: boolean;
   activo: boolean;
 }
 
@@ -34,6 +48,7 @@ export default function ProductosPage() {
 
   // Estados para el Modal de Fórmula Decant
   const [isFormulaDecantOpen, setIsFormulaDecantOpen] = useState(false);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [configDecant, setConfigDecant] = useState({
     costoEnvaseDecantARS: 1500,
     multiplicadorInsumoDecant: 2.5,
@@ -133,8 +148,32 @@ export default function ProductosPage() {
     setIsModalOpen(true);
   };
 
+  function mapProductoToFormData(producto: Producto): ProductoFormData {
+    return {
+      id: String(producto.id),
+      nombre: producto.nombre ?? "",
+      codigoBarras: producto.codigoBarras ?? "",
+      ubicacion: producto.ubicacionDeposito ?? "",
+      marcaId: producto.marcaId ? String(producto.marcaId) : "",
+      categoriaId: producto.categoriaId ? String(producto.categoriaId) : "",
+      contenidoMl: producto.contenidoMl ?? "",
+      stockActual: producto.stockActual ?? "",
+      stockMinimo: producto.stockMinimo ?? "",
+      destacado: producto.destacado ?? false,
+      monedaPrecio: producto.monedaPrecio ?? "USD",
+      precioCosto: producto.precioCosto ?? "",
+      precioVenta: producto.precioVenta ?? "",
+      precioMayorista: producto.precioMayorista ?? "",
+      precioOferta: producto.precioOferta ?? "",
+      esDecant: producto.seVendePorDecant ?? false,
+      overrideDecant5ml: producto.overrideDecant5ml ?? "",
+      overrideDecant10ml: producto.overrideDecant10ml ?? "",
+    };
+  };
+  
+
   const handleAbrirEditar = (producto: Producto) => {
-    setProductoEditar(producto as unknown as ProductoFormData);
+    setProductoEditar(mapProductoToFormData(producto));
     setIsModalOpen(true);
 };
 
@@ -152,6 +191,14 @@ export default function ProductosPage() {
         </div>
 
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setIsPdfModalOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-medium text-text hover:bg-surface-hover"
+          >
+            <FileText className="h-4 w-4" />
+            Generar PDF
+          </button>
           <Link
             href="/productos/actualizar-precios"
             className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
@@ -362,6 +409,11 @@ export default function ProductosPage() {
         costoEnvaseDecantARSInicial={configDecant.costoEnvaseDecantARS}
         multiplicadorInsumoDecantInicial={configDecant.multiplicadorInsumoDecant}
         cotizacionUSD={configDecant.cotizacionUSD}
+      />
+
+      <PdfGeneratorModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
       />
     </div>
   );

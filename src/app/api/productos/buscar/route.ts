@@ -31,6 +31,9 @@ export async function GET(request: NextRequest) {
       precioVenta: true,
       precioMayorista: true,
       seVendePorDecant: true,
+      contenidoMl: true,
+      overrideDecant5ml: true,
+      overrideDecant10ml: true,
       marca: { select: { nombre: true } },
     },
   });

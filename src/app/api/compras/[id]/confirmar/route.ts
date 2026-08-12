@@ -53,6 +53,13 @@ export async function POST(
     const montoADebitar = cuentaEsUSD ? compra.totalUSD : totalARS;
     const nuevoSaldoCuenta = compra.cuenta.saldoActual - montoADebitar;
 
+    if (nuevoSaldoCuenta < 0) {
+      return NextResponse.json(
+        { error: "La cuenta seleccionada no tiene saldo suficiente para pagar esta compra" },
+        { status: 409 }
+      );
+    }
+
     const compraActualizada = await prisma.$transaction(async (tx) => {
       for (const item of compra.items) {
         const producto = await tx.producto.findUnique({

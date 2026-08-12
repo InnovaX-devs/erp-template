@@ -106,6 +106,10 @@ export async function POST(request: NextRequest) {
         montoADescontar = monto / cotizacion;
       }
 
+      if (cuenta.saldoActual - montoADescontar < 0) {
+        throw new Error("SALDO_INSUFICIENTE");
+      }
+
       const nuevoGasto = await tx.gasto.create({ data: dataBase });
 
       const saldoResultante = cuenta.saldoActual - montoADescontar;
@@ -136,6 +140,9 @@ export async function POST(request: NextRequest) {
     }
     if (error?.message === "SIN_COTIZACION") {
       return NextResponse.json({ error: "No hay una cotización de USD configurada" }, { status: 400 });
+    }
+    if (error?.message === "SALDO_INSUFICIENTE") {
+      return NextResponse.json({ error: "La cuenta no tiene saldo suficiente para este gasto" }, { status: 409 });
     }
     console.error("Error al crear gasto:", error);
     return NextResponse.json({ error: "Error al crear el gasto" }, { status: 500 });

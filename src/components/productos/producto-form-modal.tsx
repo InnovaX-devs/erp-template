@@ -161,7 +161,7 @@ export function ProductoFormModal({
           esDecant: false,
           fotoUrl: "",
           overrideDecant5ml: "",
-         overrideDecant10ml: "",
+          overrideDecant10ml: "",
         }); setPreviewUrl(null);
       }
       setSelectedFile(null);

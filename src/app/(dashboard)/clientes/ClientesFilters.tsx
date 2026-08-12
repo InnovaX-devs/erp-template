@@ -2,6 +2,19 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
+import Select from "@/components/ui/Select";
+
+const OPCIONES_TIPO = [
+  { value: "", label: "Todos los tipos" },
+  { value: "mayorista", label: "Mayorista" },
+  { value: "minorista", label: "Minorista" },
+];
+
+const OPCIONES_DEUDA = [
+  { value: "", label: "Con deuda y al día" },
+  { value: "con-deuda", label: "Con deuda" },
+  { value: "al-dia", label: "Al día" },
+];
 
 export default function ClientesFilters() {
   const router = useRouter();
@@ -25,33 +38,28 @@ export default function ClientesFilters() {
   }
 
   return (
-    <div className="flex flex-wrap gap-3 items-center">
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
       <input
         type="text"
         placeholder="Buscar por nombre..."
         value={busqueda}
         onChange={(e) => handleBusquedaChange(e.target.value)}
-        className="border border-[#c5c6d0] rounded-lg px-3 py-2 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[#021541]"
+        className="w-full min-w-0 rounded-lg border border-[#c5c6d0] px-3 py-2 text-sm sm:w-64 focus:outline-none focus:ring-2 focus:ring-[#021541]"
       />
 
-      <select
-        defaultValue={searchParams.get("tipo") ?? ""}
-        onChange={(e) => actualizarParam("tipo", e.target.value)}
-        className="border border-[#c5c6d0] rounded-lg px-3 py-2 text-sm"
-      >
-        <option value="">Todos los tipos</option>
-        <option value="mayorista">Mayorista</option>
-        <option value="minorista">Minorista</option>
-      </select>
-      <select
-        defaultValue={searchParams.get("deuda") ?? ""}
-        onChange={(e) => actualizarParam("deuda", e.target.value)}
-        className="border border-[#c5c6d0] rounded-lg px-3 py-2 text-sm"
-      >
-        <option value="">Con deuda y al día</option>
-        <option value="con-deuda">Con deuda</option>
-        <option value="al-dia">Al día</option>
-      </select>
+      <Select
+        value={searchParams.get("tipo") ?? ""}
+        onChange={(value) => actualizarParam("tipo", value)}
+        options={OPCIONES_TIPO}
+        className="w-full sm:w-48"
+      />
+
+      <Select
+        value={searchParams.get("deuda") ?? ""}
+        onChange={(value) => actualizarParam("deuda", value)}
+        options={OPCIONES_DEUDA}
+        className="w-full sm:w-52"
+      />
     </div>
   );
 }

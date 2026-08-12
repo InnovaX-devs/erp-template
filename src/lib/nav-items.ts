@@ -18,5 +18,5 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Flujo de Caja", href: "/finanzas/flujo-caja", icon: Calculator },
   { label: "Gastos", href: "/finanzas/gastos", icon: Wallet },
   { label: "Historial de precios", href: "/historial-precios", icon: History },
-  { label: "Reporte de Decants", href: "/reportes/decants", icon: Droplets },
+  { label: "Reportes", href: "/reportes", icon: Droplets },
 ];

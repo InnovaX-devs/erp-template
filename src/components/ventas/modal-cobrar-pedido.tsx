@@ -1,0 +1,100 @@
+"use client";
+
+import { useState } from "react";
+import { toast } from "sonner";
+import { SelectorCobro } from "./selector-cobro";
+import { registrarCobroPedido } from "@/app/(dashboard)/ventas/actions";
+import { formatCurrency } from "@/lib/currency";
+import type { ModoCobro, PagoLinea } from "@/types/pago";
+import type { PedidoListItem } from "@/types/venta";
+
+interface Props {
+  pedido: PedidoListItem;
+  tieneCliente: boolean;
+  onClose: () => void;
+  onCobrado: () => void;
+}
+
+export function ModalCobrarPedido({ pedido, tieneCliente, onClose, onCobrado }: Props) {
+  const restante = pedido.totalARS - pedido.montoPagado;
+
+  const [modo, setModo] = useState<ModoCobro>("UNICA");
+  const [pagos, setPagos] = useState<PagoLinea[]>([{ id: "pago-unica", cuentaId: null, monto: restante }]);
+  const [procesando, setProcesando] = useState(false);
+
+  const sumaPagada = pagos.reduce((acc, p) => acc + p.monto, 0);
+  const esValido =
+    modo === "A_CUENTA"
+      ? sumaPagada > 0 && sumaPagada <= restante && pagos.every((p) => p.cuentaId != null)
+      : Math.abs(restante - sumaPagada) < 0.01 && pagos.every((p) => p.cuentaId != null && p.monto > 0);
+
+  async function handleConfirmar() {
+    if (!esValido) return;
+    setProcesando(true);
+    const resultado = await registrarCobroPedido(
+      pedido.id,
+      pagos.filter((p) => p.cuentaId != null).map((p) => ({ cuentaId: p.cuentaId as number, monto: p.monto }))
+    );
+    setProcesando(false);
+
+    if (!resultado.success) {
+      toast.error(resultado.error);
+      return;
+    }
+    toast.success(`Pedido #${pedido.id} cobrado`);
+    onCobrado();
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border pb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-text">Cobrar pedido</h2>
+            {pedido.clienteNombre && <p className="text-sm text-text-dim">Cliente: {pedido.clienteNombre}</p>}
+          </div>
+          <button onClick={onClose} className="rounded-lg p-1 text-text-dim hover:bg-surface-hover hover:text-text">
+            ✕
+          </button>
+        </div>
+
+        <div className="mt-4 flex items-center justify-between">
+          <span className="text-sm text-text-dim">
+            {pedido.montoPagado > 0 ? "Saldo pendiente" : "Total del pedido"}
+          </span>
+          <span className="text-xl font-bold text-text">{formatCurrency(restante, "ARS")}</span>
+        </div>
+
+        <div className="mt-4">
+          <SelectorCobro
+            total={restante}
+            tieneCliente={tieneCliente}
+            modo={modo}
+            pagos={pagos}
+            onCambiarModo={setModo}
+            onCambiarPagos={setPagos}
+          />
+        </div>
+
+        <div className="mt-5 flex justify-end gap-2 border-t border-border pt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-dim hover:bg-surface-hover"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirmar}
+            disabled={!esValido || procesando}
+            className="rounded-lg bg-success px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+          >
+            {procesando ? "Procesando..." : "Confirmar cobro"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

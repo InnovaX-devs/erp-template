@@ -1,0 +1,56 @@
+// lib/gastos-analisis.ts
+
+/**
+ * Calcula la variación entre dos montos, contemplando el caso en que
+ * el período anterior no tuvo gastos (división por cero).
+ *
+ * - anterior > 0            -> porcentaje normal
+ * - anterior === 0, actual === 0 -> porcentaje 0 (sin cambios)
+ * - anterior === 0, actual > 0   -> porcentaje null (no expresable como %),
+ *                                    se marca sinDatosPrevios para que la UI
+ *                                    muestre "Sin datos previos" en vez de "+∞%"
+ */
+export function calcularVariacion(actual: number, anterior: number) {
+  const monto = actual - anterior;
+  if (anterior === 0) {
+    return {
+      monto,
+      porcentaje: actual === 0 ? 0 : null,
+      sinDatosPrevios: true,
+    };
+  }
+  return {
+    monto,
+    porcentaje: (monto / anterior) * 100,
+    sinDatosPrevios: false,
+  };
+}
+
+export function mesAnterior(anio: number, mes: number) {
+  return mes === 1 ? { anio: anio - 1, mes: 12 } : { anio, mes: mes - 1 };
+}
+
+/** Rango [inicio, fin) en UTC para un mes calendario (fin exclusivo). */
+export function rangoDeMes(anio: number, mes: number) {
+  const inicio = new Date(Date.UTC(anio, mes - 1, 1));
+  const fin = new Date(Date.UTC(anio, mes, 1));
+  return { inicio, fin };
+}
+
+/** Devuelve los últimos n meses (incluyendo anioFin/mesFin), ordenados ascendente. */
+export function ultimosNMeses(anioFin: number, mesFin: number, n: number) {
+  const meses: { anio: number; mes: number }[] = [];
+  let anio = anioFin;
+  let mes = mesFin;
+  for (let i = 0; i < n; i++) {
+    meses.unshift({ anio, mes });
+    const prev = mesAnterior(anio, mes);
+    anio = prev.anio;
+    mes = prev.mes;
+  }
+  return meses;
+}
+
+export function etiquetaMes(anio: number, mes: number) {
+  return `${anio}-${String(mes).padStart(2, "0")}`;
+}

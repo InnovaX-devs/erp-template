@@ -104,19 +104,19 @@ export default function CobrarDeudaModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
-          <div>
+        <div className="flex items-start justify-between border-b border-slate-100 px-4 sm:px-6 py-5">
+          <div className="min-w-0">
             <h2 className="text-lg font-semibold text-slate-900">Cobrar deuda</h2>
-            <p className="text-sm text-slate-500">{cliente.nombre}</p>
+            <p className="text-sm text-slate-500 truncate">{cliente.nombre}</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 shrink-0 pl-2">
             ✕
           </button>
         </div>
 
-        <div className="space-y-5 px-6 py-5">
+        <div className="space-y-5 px-4 sm:px-6 py-5">
           {/* Deuda total */}
           <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
             <span className="text-sm text-slate-500">Deuda total</span>
@@ -125,66 +125,57 @@ export default function CobrarDeudaModal({
 
           {/* Forma de pago */}
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Forma de pago
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Forma de pago
+              </p>
+              <button
+                onClick={toggleMixto}
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              >
+                {mixto ? "Simple" : "Mixto"}
+              </button>
+            </div>
 
-            {filas.map((fila, i) => {
-              const cuenta = cuentas.find((c) => c.id === fila.cuentaId);
-              return (
-                <div key={i} className="flex items-center gap-2">
-                  <select
-                    value={fila.cuentaId}
-                    onChange={(e) => actualizarFila(i, { cuentaId: Number(e.target.value) })}
-                    className="flex-1 appearance-none rounded-lg bg-[#1A2B56] px-4 py-3 text-sm font-medium text-white"
-                  >
-                    {cuentas.map((c) => (
-                      <option key={c.id} value={c.id} className="text-slate-900">
-                        {c.nombre} — ${fmt(c.saldoActual)}
-                      </option>
-                    ))}
-                  </select>
+            {filas.map((fila, i) => (
+              <div
+                key={i}
+                className="flex flex-col gap-2 sm:flex-row sm:items-center rounded-lg border border-slate-200 p-2 sm:border-0 sm:p-0"
+              >
+                <select
+                  value={fila.cuentaId}
+                  onChange={(e) => actualizarFila(i, { cuentaId: Number(e.target.value) })}
+                  className="w-full sm:flex-1 appearance-none rounded-lg bg-[#1A2B56] px-4 py-3 text-sm font-medium text-white"
+                >
+                  {cuentas.map((c) => (
+                    <option key={c.id} value={c.id} className="text-slate-900">
+                      {c.nombre} — ${fmt(c.saldoActual)}
+                    </option>
+                  ))}
+                </select>
 
-                  {mixto && i === 0 && (
-                    <button
-                      onClick={toggleMixto}
-                      className="rounded-lg border border-slate-300 px-3 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                    >
-                      Simple
-                    </button>
-                  )}
-                  {!mixto && i === 0 && (
-                    <button
-                      onClick={toggleMixto}
-                      className="rounded-lg border border-slate-300 px-3 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                    >
-                      Mixto
-                    </button>
-                  )}
-                  {mixto && filas.length > 1 && (
-                    <button
-                      onClick={() => quitarFila(i)}
-                      className="px-2 text-slate-400 hover:text-red-500"
-                      aria-label="Quitar cuenta"
-                    >
-                      ✕
-                    </button>
-                  )}
-
-                  <div className={mixto ? "flex-1" : "hidden"}>
-                    {mixto && (
-                      <input
-                        type="number"
-                        value={fila.monto}
-                        onChange={(e) => actualizarFila(i, { monto: e.target.value })}
-                        className="w-full rounded-lg border border-slate-300 px-3 py-3 text-sm"
-                        placeholder="0"
-                      />
+                {mixto && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={fila.monto}
+                      onChange={(e) => actualizarFila(i, { monto: e.target.value })}
+                      className="flex-1 sm:w-32 rounded-lg border border-slate-300 px-3 py-3 text-sm"
+                      placeholder="0"
+                    />
+                    {filas.length > 1 && (
+                      <button
+                        onClick={() => quitarFila(i)}
+                        className="shrink-0 px-2 text-slate-400 hover:text-red-500"
+                        aria-label="Quitar cuenta"
+                      >
+                        ✕
+                      </button>
                     )}
                   </div>
-                </div>
-              );
-            })}
+                )}
+              </div>
+            ))}
 
             {mixto && (
               <button
@@ -204,12 +195,12 @@ export default function CobrarDeudaModal({
                 type="number"
                 value={filas[0]?.monto ?? "0"}
                 onChange={(e) => actualizarFila(0, { monto: e.target.value })}
-                className="flex-1 rounded-lg border border-slate-300 px-4 py-3 text-lg font-medium"
+                className="flex-1 rounded-lg border border-slate-300 px-4 py-3 text-lg font-medium min-w-0"
                 placeholder="0"
               />
               <button
                 onClick={ponerTodo}
-                className="rounded-lg bg-[#1A2B56] px-4 py-3 text-sm font-semibold text-white"
+                className="shrink-0 rounded-lg bg-[#1A2B56] px-4 py-3 text-sm font-semibold text-white"
               >
                 Todo
               </button>
@@ -217,12 +208,12 @@ export default function CobrarDeudaModal({
           )}
 
           {mixto && (
-            <div className="flex items-center justify-between text-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm">
               <span className="text-slate-500">
                 Total cargado: <span className="font-medium text-slate-900">${fmt(total)}</span>{" "}
                 / ${fmt(deudaTotal)}
               </span>
-              <button onClick={ponerTodo} className="font-medium text-[#1A2B56] hover:underline">
+              <button onClick={ponerTodo} className="text-left font-medium text-[#1A2B56] hover:underline">
                 Completar con la última cuenta
               </button>
             </div>

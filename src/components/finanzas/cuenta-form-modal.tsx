@@ -14,7 +14,7 @@ const TIPOS: { value: TipoCuenta; label: string }[] = [
 ];
 
 export interface CuentaFormData {
-  id?: string;
+  id?: number;
   nombre: string;
   tipo: TipoCuenta;
   titular: string;

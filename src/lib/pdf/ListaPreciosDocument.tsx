@@ -1,122 +1,140 @@
-import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import { BusinessHeader } from "./BusinessHeader";
 import { pdfStyles } from "./styles";
 import { formatCurrency } from "@/lib/currency";
+import { calcularPrecioDecant } from "@/lib/calculos/decant-pricing"
+import { PDF_BRAND } from "./brand";
 import type { Configuracion } from "@prisma/client";
 
 type ProductoLista = {
   id: number;
   nombre: string;
-  marca: { nombre: string } | null;
-  fotoUrl: string | null;
+  stockActual: number;
   precioVenta: number;
   precioMayorista: number | null;
+  precioCosto: number;
   monedaPrecio: "ARS" | "USD";
+  contenidoMl: number | null;
+  overrideDecant5ml: number | null;
+  overrideDecant10ml: number | null;
 };
 
-const tableStyles = StyleSheet.create({
-  headerRow: {
-    flexDirection: "row",
-    backgroundColor: "#F3F4F6",
-    paddingVertical: 6,
-    fontWeight: 700,
-    alignItems: "center",
+const listStyles = StyleSheet.create({
+  sectionSeparator: {
+    marginTop: 14,
+    marginBottom: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: PDF_BRAND.border,
   },
-  row: {
-    flexDirection: "row",
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#E5E7EB",
-    paddingVertical: 5,
-    alignItems: "center",
+  sectionLabel: { fontSize: 8.5, fontStyle: "italic", color: PDF_BRAND.textDim },
+  row: { flexDirection: "row", marginBottom: 3 },
+  cell: { width: "50%", flexDirection: "row", justifyContent: "space-between", paddingRight: 10 },
+  nombre: { fontSize: 8.5, flexShrink: 1, paddingRight: 6 },
+  precio: { fontSize: 8.5, fontFamily: "Helvetica-Bold" },
+  nombreSinStock: { fontSize: 8.5, flexShrink: 1, paddingRight: 6, color: "#DC2626" },
+  precioSinStock: {
+    fontSize: 8.5,
+    fontFamily: "Helvetica-Bold",
+    color: "#DC2626",
+    textDecoration: "line-through",
   },
-  colImagen: { width: "12%", paddingRight: 6 },
-  colProducto: { paddingRight: 6 },
-  colMarca: { width: "22%", paddingRight: 6 },
-  colPrecio: { width: "18%", textAlign: "right" },
-  colPrecioDoble: { width: "16%", textAlign: "right" },
-  thumb: { width: 26, height: 26, objectFit: "contain", borderRadius: 2 },
-  thumbPlaceholder: { width: 26, height: 26, backgroundColor: "#F3F4F6", borderRadius: 2 },
 });
 
-function tituloPorTipo(tipoPrecio: "MINORISTA" | "MAYORISTA" | "AMBOS") {
-  if (tipoPrecio === "MINORISTA") return "Lista de Precios";
-  if (tipoPrecio === "MAYORISTA") return "Lista de Precios Mayorista";
-  return "Lista de Precios (Minorista y Mayorista)";
+function convertir(valor: number, monedaOrigen: "ARS" | "USD", monedaDestino: "ARS" | "USD", cotizacionUSD: number) {
+  if (monedaOrigen === monedaDestino) return valor;
+  return monedaDestino === "ARS" ? valor * cotizacionUSD : valor / cotizacionUSD;
+}
+
+function chunkEnPares<T>(items: T[]): [T, T | null][] {
+  const pares: [T, T | null][] = [];
+  for (let i = 0; i < items.length; i += 2) {
+    pares.push([items[i], items[i + 1] ?? null]);
+  }
+  return pares;
 }
 
 export function ListaPreciosDocument({
   productos,
   configuracion,
   tipoPrecio,
-  conImagenes,
+  moneda,
+  modoDecant,
 }: {
   productos: ProductoLista[];
   configuracion: Configuracion;
   tipoPrecio: "MINORISTA" | "MAYORISTA" | "AMBOS";
-  conImagenes: boolean;
+  moneda: "ARS" | "USD";
+  modoDecant: boolean;
 }) {
-  const titulo = tituloPorTipo(tipoPrecio);
-  const esAmbos = tipoPrecio === "AMBOS";
+  const titulo = modoDecant
+    ? "Lista de Precios — Decants"
+    : tipoPrecio === "MINORISTA"
+    ? "Lista de Precios"
+    : tipoPrecio === "MAYORISTA"
+    ? "Lista de Precios Mayorista"
+    : "Lista de Precios (Minorista y Mayorista)";
 
-  const colProductoWidth = conImagenes
-    ? esAmbos
-      ? "32%"
-      : "43%"
-    : esAmbos
-    ? "44%"
-    : "55%";
+  function precioTexto(p: ProductoLista): string {
+    if (modoDecant) {
+      const { precio5ml, precio10ml } = calcularPrecioDecant(p, configuracion);
+      const p5 = precio5ml !== null ? convertir(precio5ml, "ARS", moneda, configuracion.cotizacionUSD) : null;
+      const p10 = precio10ml !== null ? convertir(precio10ml, "ARS", moneda, configuracion.cotizacionUSD) : null;
+      return `5ml ${p5 !== null ? formatCurrency(p5, moneda) : "N/D"} · 10ml ${p10 !== null ? formatCurrency(p10, moneda) : "N/D"}`;
+    }
+    if (tipoPrecio === "AMBOS") {
+      const min = formatCurrency(convertir(p.precioVenta, p.monedaPrecio, moneda, configuracion.cotizacionUSD), moneda);
+      const may =
+        p.precioMayorista !== null
+          ? formatCurrency(convertir(p.precioMayorista, p.monedaPrecio, moneda, configuracion.cotizacionUSD), moneda)
+          : "—";
+      return `Min ${min} · May ${may}`;
+    }
+    const valor = tipoPrecio === "MINORISTA" ? p.precioVenta : (p.precioMayorista as number);
+    return formatCurrency(convertir(valor, p.monedaPrecio, moneda, configuracion.cotizacionUSD), moneda);
+  }
+
+  const conStock = productos.filter((p) => p.stockActual > 0);
+  const sinStock = productos.filter((p) => p.stockActual <= 0);
+
+  function renderGrupo(items: ProductoLista[], sinStock: boolean = false) {
+    return chunkEnPares(items).map(([a, b], i) => (
+      <View key={i} style={listStyles.row}>
+        <View style={listStyles.cell}>
+          <Text style={sinStock ? listStyles.nombreSinStock : listStyles.nombre}>{a.nombre}</Text>
+          <Text style={sinStock ? listStyles.precioSinStock : [listStyles.precio, { color: PDF_BRAND.primary }]}>
+            {precioTexto(a)}
+          </Text>
+        </View>
+        <View style={listStyles.cell}>
+          {b && (
+            <>
+              <Text style={sinStock ? listStyles.nombreSinStock : listStyles.nombre}>{b.nombre}</Text>
+              <Text style={sinStock ? listStyles.precioSinStock : [listStyles.precio, { color: PDF_BRAND.primary }]}>
+                {precioTexto(b)}
+              </Text>
+            </>
+          )}
+        </View>
+      </View>
+    ));
+  }
 
   return (
     <Document>
       <Page size="A4" style={pdfStyles.page}>
         <BusinessHeader configuracion={configuracion} titulo={titulo} />
 
-        <View style={tableStyles.headerRow}>
-          {conImagenes && <Text style={tableStyles.colImagen}>Foto</Text>}
-          <Text style={[tableStyles.colProducto, { width: colProductoWidth }]}>Producto</Text>
-          <Text style={tableStyles.colMarca}>Marca</Text>
-          {esAmbos ? (
-            <>
-              <Text style={tableStyles.colPrecioDoble}>Minorista</Text>
-              <Text style={tableStyles.colPrecioDoble}>Mayorista</Text>
-            </>
-          ) : (
-            <Text style={tableStyles.colPrecio}>Precio</Text>
-          )}
-        </View>
+        {renderGrupo(conStock)}
 
-        {productos.map((p) => (
-          <View key={p.id} style={tableStyles.row} wrap={false}>
-            {conImagenes && (
-              <View style={tableStyles.colImagen}>
-                {p.fotoUrl ? (
-                  <Image src={p.fotoUrl} style={tableStyles.thumb} />
-                ) : (
-                  <View style={tableStyles.thumbPlaceholder} />
-                )}
-              </View>
-            )}
-            <Text style={[tableStyles.colProducto, { width: colProductoWidth }]}>{p.nombre}</Text>
-            <Text style={tableStyles.colMarca}>{p.marca?.nombre ?? "-"}</Text>
-            {esAmbos ? (
-              <>
-                <Text style={tableStyles.colPrecioDoble}>
-                  {formatCurrency(p.precioVenta, p.monedaPrecio)}
-                </Text>
-                <Text style={tableStyles.colPrecioDoble}>
-                  {p.precioMayorista !== null ? formatCurrency(p.precioMayorista, p.monedaPrecio) : "—"}
-                </Text>
-              </>
-            ) : (
-              <Text style={tableStyles.colPrecio}>
-                {formatCurrency(
-                  tipoPrecio === "MINORISTA" ? p.precioVenta : (p.precioMayorista as number),
-                  p.monedaPrecio
-                )}
-              </Text>
-            )}
-          </View>
-        ))}
+        {sinStock.length > 0 && (
+          <>
+            <View style={listStyles.sectionSeparator}>
+              <Text style={listStyles.sectionLabel}>Sin stock actualmente — consultar disponibilidad</Text>
+            </View>
+            {renderGrupo(sinStock, true)}
+          </>
+        )}
 
         <Text
           style={pdfStyles.footer}

@@ -9,6 +9,14 @@ import type { Prisma } from "@prisma/client";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+async function getVapersCategoriaId(): Promise<number | null> {
+  const categoria = await prisma.categoria.findFirst({
+    where: { nombre: { equals: "Vapers", mode: "insensitive" } },
+    select: { id: true },
+  });
+  return categoria?.id ?? null;
+}
+
 export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
 
@@ -17,23 +25,45 @@ export async function GET(request: NextRequest) {
   const categoriaId = sp.get("categoriaId");
   const precioMin = sp.get("precioMin");
   const precioMax = sp.get("precioMax");
-  const tipoPrecio = sp.get("tipoPrecio") === "MAYORISTA"
+
+  const tipoPrecio =
+    sp.get("tipoPrecio") === "MAYORISTA"
       ? "MAYORISTA"
       : sp.get("tipoPrecio") === "AMBOS"
       ? "AMBOS"
       : "MINORISTA";
-  const soloDecant = sp.get("soloDecant") === "true";
+
+  const tipoProducto =
+    sp.get("tipoProducto") === "VAPERS"
+      ? "VAPERS"
+      : sp.get("tipoProducto") === "DECANTS"
+      ? "DECANTS"
+      : "PERFUMES";
+
+  const moneda = sp.get("moneda") === "USD" ? "USD" : "ARS";
   const documento = sp.get("documento") === "CATALOGO" ? "CATALOGO" : "LISTA";
-  const conImagenes = sp.get("conImagenes") !== "false";
+  const modoDecant = tipoProducto === "DECANTS";
+
+  const vapersCategoriaId = await getVapersCategoriaId();
 
   const where: Prisma.ProductoWhereInput = {
     activo: true,
-    stockActual: { gt: 0 },
     ...(q ? { nombre: { contains: q, mode: "insensitive" } } : {}),
     ...(marcaId ? { marcaId: Number(marcaId) } : {}),
     ...(categoriaId ? { categoriaId: Number(categoriaId) } : {}),
-    ...(soloDecant ? { seVendePorDecant: true } : {}),
-    ...((tipoPrecio === "MINORISTA" || tipoPrecio === "AMBOS") && (precioMin || precioMax)
+    ...(tipoProducto === "VAPERS"
+      ? { categoriaId: vapersCategoriaId ?? -1 }
+      : tipoProducto === "PERFUMES"
+      ? vapersCategoriaId !== null
+        ? { OR: [{ categoriaId: { not: vapersCategoriaId } }, { categoriaId: null }] }
+        : {}
+      : {
+          seVendePorDecant: true,
+          ...(vapersCategoriaId !== null
+            ? { OR: [{ categoriaId: { not: vapersCategoriaId } }, { categoriaId: null }] }
+            : {}),
+        }),
+    ...(!modoDecant && (tipoPrecio === "MINORISTA" || tipoPrecio === "AMBOS") && (precioMin || precioMax)
       ? {
           precioVenta: {
             ...(precioMin ? { gte: Number(precioMin) } : {}),
@@ -41,7 +71,7 @@ export async function GET(request: NextRequest) {
           },
         }
       : {}),
-    ...(tipoPrecio === "MAYORISTA"
+    ...(!modoDecant && tipoPrecio === "MAYORISTA"
       ? {
           precioMayorista: {
             not: null,
@@ -60,40 +90,47 @@ export async function GET(request: NextRequest) {
         id: true,
         nombre: true,
         fotoUrl: true,
+        stockActual: true,
         precioVenta: true,
         precioMayorista: true,
+        precioCosto: true,
         monedaPrecio: true,
-        marca: { select: { nombre: true } },
+        contenidoMl: true,
+        overrideDecant5ml: true,
+        overrideDecant10ml: true,
       },
     }),
     obtenerConfiguracion(),
   ]);
 
-  const buffer =
-    documento === "LISTA"
-      ? await renderToBuffer(
-          <ListaPreciosDocument
-            productos={productos}
-            configuracion={configuracion}
-            tipoPrecio={tipoPrecio}
-            conImagenes={conImagenes}
-          />
-        )
-      : await renderToBuffer(
-          <CatalogoDocument
-            productos={productos}
-            configuracion={configuracion}
-            tipoPrecio={tipoPrecio}
-            conImagenes={conImagenes}
-          />
-        );
+  const documentoPdf =
+    documento === "LISTA" ? (
+      <ListaPreciosDocument
+        productos={productos}
+        configuracion={configuracion}
+        tipoPrecio={tipoPrecio}
+        moneda={moneda}
+        modoDecant={modoDecant}
+      />
+    ) : (
+      <CatalogoDocument
+        productos={productos}
+        configuracion={configuracion}
+        tipoPrecio={tipoPrecio}
+        moneda={moneda}
+        modoDecant={modoDecant}
+      />
+    );
 
-  const filename = `${documento === "LISTA" ? "lista-precios" : "catalogo"}-${tipoPrecio.toLowerCase()}.pdf`;
+  const buffer = await renderToBuffer(documentoPdf);
+
+  const nombreTipo = tipoProducto.toLowerCase();
+  const filename = `${documento === "LISTA" ? "lista-precios" : "catalogo"}-${nombreTipo}-${moneda.toLowerCase()}.pdf`;
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Disposition": `inline; filename="${filename}"`,
     },
   });
 }

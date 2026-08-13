@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Search, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { listarVentas } from "../actions";
 import type { EstadoPago } from "@prisma/client";
 import type { FiltroEstado, VentaListItem } from "@/types/venta";
+import { Search, ChevronLeft, ChevronRight, RefreshCw, Download, Loader2 } from "lucide-react";
 
 const PAGE_SIZE = 15;
 
@@ -54,6 +54,31 @@ export default function HistorialVentasPage() {
   const [fechaHasta, setFechaHasta] = useState("");
   const [orden, setOrden] = useState<"MAS_NUEVO" | "MAS_VIEJO">("MAS_NUEVO");
   const [page, setPage] = useState(1);
+  const [descargando, setDescargando] = useState<number | null>(null);
+
+  async function descargarComprobante(ventaId: number) {
+    setDescargando(ventaId);
+    try {
+      const res = await fetch(`/api/ventas/${ventaId}/comprobante`);
+      if (!res.ok) throw new Error("No se pudo generar el comprobante.");
+
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `comprobante-venta-${String(ventaId).padStart(6, "0")}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDescargando(null);
+    }
+  }
 
   // Debounce del buscador de cliente
   useEffect(() => {
@@ -179,6 +204,7 @@ export default function HistorialVentasPage() {
                 <th className="px-4 py-3 font-medium">Ganancia</th>
                 <th className="px-4 py-3 font-medium">Fecha</th>
                 <th className="px-4 py-3 font-medium">Estado</th>
+                <th className="px-4 py-3 font-medium text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -215,12 +241,27 @@ export default function HistorialVentasPage() {
                       {ESTADO_LABEL[venta.estado]}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => descargarComprobante(venta.id)}
+                      disabled={descargando === venta.id}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-text-dim hover:bg-surface-hover hover:text-text disabled:opacity-50"
+                      aria-label={`Descargar comprobante de la venta #${venta.id}`}
+                    >
+                      {descargando === venta.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
+                    </button>
+                  </td>
                 </tr>
               ))}
 
               {!isPending && ventas.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-text-dim">
+                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-text-dim">
                     No se encontraron ventas con estos filtros.
                   </td>
                 </tr>

@@ -1,5 +1,7 @@
 export type TipoPrecio = "MINORISTA" | "MAYORISTA" | "AMBOS";
 export type TipoDocumento = "LISTA" | "CATALOGO";
+export type TipoProducto = "PERFUMES" | "VAPERS" | "DECANTS";
+export type Moneda = "ARS" | "USD";
 
 export type PdfFiltros = {
   busqueda: string;
@@ -8,9 +10,9 @@ export type PdfFiltros = {
   precioMin: string;
   precioMax: string;
   tipoPrecio: TipoPrecio;
-  soloDecant: boolean;
+  tipoProducto: TipoProducto;
+  moneda: Moneda;
   documento: TipoDocumento;
-  conImagenes: boolean;
 };
 
 export const FILTROS_INICIALES: PdfFiltros = {
@@ -20,9 +22,9 @@ export const FILTROS_INICIALES: PdfFiltros = {
   precioMin: "",
   precioMax: "",
   tipoPrecio: "MINORISTA",
-  soloDecant: false,
+  tipoProducto: "PERFUMES",
+  moneda: "ARS",
   documento: "LISTA",
-  conImagenes: true,
 };
 
 export function buildPdfQueryString(filtros: PdfFiltros): string {
@@ -33,8 +35,8 @@ export function buildPdfQueryString(filtros: PdfFiltros): string {
   if (filtros.precioMin) params.set("precioMin", filtros.precioMin);
   if (filtros.precioMax) params.set("precioMax", filtros.precioMax);
   params.set("tipoPrecio", filtros.tipoPrecio);
-  if (filtros.soloDecant) params.set("soloDecant", "true");
+  params.set("tipoProducto", filtros.tipoProducto);
+  params.set("moneda", filtros.moneda);
   params.set("documento", filtros.documento);
-  params.set("conImagenes", String(filtros.conImagenes));
   return params.toString();
 }

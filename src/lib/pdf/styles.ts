@@ -1,4 +1,5 @@
 import { StyleSheet } from "@react-pdf/renderer";
+import { PDF_BRAND } from "./brand";
 
 export const pdfStyles = StyleSheet.create({
   page: {
@@ -7,7 +8,7 @@ export const pdfStyles = StyleSheet.create({
     paddingHorizontal: 32,
     fontSize: 9,
     fontFamily: "Helvetica",
-    color: "#111827",
+    color: PDF_BRAND.text,
   },
   header: {
     position: "absolute",
@@ -21,19 +22,19 @@ export const pdfStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    borderBottomColor: PDF_BRAND.border,
   },
   logo: { width: 48, height: 48, objectFit: "contain" },
-  businessName: { fontSize: 14, fontWeight: 700 },
-  businessDetail: { fontSize: 8, color: "#4B5563" },
-  docTitle: { fontSize: 8, color: "#6B7280", textAlign: "right" },
+  businessName: { fontSize: 14, fontFamily: "Helvetica-Bold", color: PDF_BRAND.primary },
+  businessDetail: { fontSize: 8, color: PDF_BRAND.textDim },
+  docTitle: { fontSize: 8, color: PDF_BRAND.textDim, textAlign: "right" },
   footer: {
     position: "absolute",
     bottom: 16,
     left: 32,
     right: 32,
     fontSize: 7,
-    color: "#9CA3AF",
+    color: PDF_BRAND.textDim,
     textAlign: "center",
   },
 });

@@ -20,11 +20,13 @@ export async function GET(request: NextRequest) {
   let mesAncla: number; // 1-12, mes usado como ancla para "últimos 12 meses"
 
   if (modo === "mes") {
-    const hoy = new Date();
+    const hoyArgStr = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Argentina/Buenos_Aires",
+    }).format(new Date()); // "YYYY-MM-DD" ya en hora de Argentina
+    const [hoyAnioStr, hoyMesStr] = hoyArgStr.split("-");
+
     const mesParam = searchParams.get("mes"); // "YYYY-MM"
-    const [anioStr, mesStr] = (
-      mesParam ?? etiquetaMes(hoy.getUTCFullYear(), hoy.getUTCMonth() + 1)
-    ).split("-");
+    const [anioStr, mesStr] = (mesParam ?? `${hoyAnioStr}-${hoyMesStr}`).split("-");
     anioAncla = Number(anioStr);
     mesAncla = Number(mesStr);
 
@@ -46,9 +48,11 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
-    inicioSeleccion = new Date(`${desdeParam}T00:00:00.000Z`);
-    const hastaDate = new Date(`${hastaParam}T00:00:00.000Z`);
-    finSeleccion = new Date(hastaDate.getTime() + 24 * 60 * 60 * 1000); // fin exclusivo, incluye el día "hasta"
+    // Antes usaba "T00:00:00.000Z" (medianoche UTC). Usamos el offset de
+    // Argentina (-03:00) para que el rango sea el día real en ART.
+    inicioSeleccion = new Date(`${desdeParam}T00:00:00.000-03:00`);
+    const hastaDate = new Date(`${hastaParam}T00:00:00.000-03:00`);
+    finSeleccion = new Date(hastaDate.getTime() + 24 * 60 * 60 * 1000);
 
     if (isNaN(inicioSeleccion.getTime()) || isNaN(finSeleccion.getTime()) || inicioSeleccion >= finSeleccion) {
       return NextResponse.json({ error: "Rango de fechas inválido" }, { status: 400 });

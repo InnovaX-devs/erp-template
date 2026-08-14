@@ -244,10 +244,10 @@ export async function listarVentas(filtros: FiltrosVentas): Promise<ResultadoLis
   }
 
   if (fechaDesde || fechaHasta) {
-    where.fecha = {};
-    if (fechaDesde) where.fecha.gte = new Date(`${fechaDesde}T00:00:00`);
-    if (fechaHasta) where.fecha.lte = new Date(`${fechaHasta}T23:59:59`);
-  }
+      where.fecha = {};
+      if (fechaDesde) where.fecha.gte = new Date(`${fechaDesde}T00:00:00-03:00`);
+      if (fechaHasta) where.fecha.lte = new Date(`${fechaHasta}T23:59:59-03:00`);
+    }
 
   const [ventas, totalRegistros, configuracion] = await Promise.all([
     prisma.venta.findMany({
@@ -409,8 +409,8 @@ export async function listarPedidos(filtros: FiltrosPedidos): Promise<ResultadoL
 
   if (fechaDesde || fechaHasta) {
     where.fecha = {};
-    if (fechaDesde) where.fecha.gte = new Date(`${fechaDesde}T00:00:00`);
-    if (fechaHasta) where.fecha.lte = new Date(`${fechaHasta}T23:59:59`);
+    if (fechaDesde) where.fecha.gte = new Date(`${fechaDesde}T00:00:00-03:00`);
+    if (fechaHasta) where.fecha.lte = new Date(`${fechaHasta}T23:59:59-03:00`);
   }
 
   const ventas = await prisma.venta.findMany({

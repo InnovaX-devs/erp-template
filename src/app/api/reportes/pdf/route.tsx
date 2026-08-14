@@ -37,12 +37,6 @@ export async function GET(req: NextRequest) {
 
   const nombreArchivo = `reporte-${tab}-${rango.desde.toISOString().slice(0, 10)}.pdf`;
 
-  const buffer = await renderToBuffer(
-    <ReporteDocument reporte={reporte} configuracion={configuracion} titulo={TITULOS[tab]} />
-  );
-
-  const nombreArchivo = `reporte-${tab}-${rango.desde.toISOString().slice(0, 10)}.pdf`;
-
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",

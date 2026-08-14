@@ -45,3 +45,13 @@ export async function guardarConfiguracion(formData: FormData) {
 
   revalidatePath("/", "layout");
 }
+
+export async function actualizarCotizacionRapida(cotizacionUSD: number) {
+  if (!cotizacionUSD || Number.isNaN(cotizacionUSD) || cotizacionUSD <= 0) {
+    throw new Error("Cotización USD inválida");
+  }
+
+  await actualizarConfiguracion({ cotizacionUSD });
+
+  revalidatePath("/", "layout");
+}

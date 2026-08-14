@@ -133,9 +133,9 @@ export function ModalPresentacion({ producto, onElegir, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
       <div ref={contenedorRef} className="w-full max-w-sm rounded-2xl border border-border bg-surface p-5 shadow-2xl">
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold text-text">{producto.nombre}</h3>
-          <button onClick={onClose} className="text-text-dim hover:text-text" aria-label="Cerrar">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="min-w-0 flex-1 truncate text-base font-semibold text-text">{producto.nombre}</h3>
+          <button onClick={onClose} className="shrink-0 text-text-dim hover:text-text" aria-label="Cerrar">
             ✕
           </button>
         </div>

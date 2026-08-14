@@ -51,15 +51,15 @@ export function CardPedido({ pedido, onCambio }: Props) {
 
   return (
     <div className="rounded-lg border border-border bg-surface px-3 py-2.5 shadow-sm">
-      <div className="flex items-start justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
           <p className="text-xs font-mono text-text-dim">#{pedido.id}</p>
-          <p className="text-sm font-semibold text-text">{pedido.clienteNombre ?? "Sin cliente"}</p>
+          <p className="truncate text-sm font-semibold text-text">{pedido.clienteNombre ?? "Sin cliente"}</p>
         </div>
-        <p className="text-xs text-text-dim">{formatoFecha.format(new Date(pedido.fecha))}</p>
+        <p className="shrink-0 text-xs text-text-dim">{formatoFecha.format(new Date(pedido.fecha))}</p>
       </div>
 
-      <div className="mt-1.5 flex items-center justify-between gap-2">
+      <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="text-base font-bold text-text">{formatCurrency(pedido.totalARS, "ARS")}</span>
           <span

@@ -192,9 +192,8 @@ export default function HistorialVentasPage() {
         </div>
       </div>
 
-      {/* Tabla */}
       <div className="overflow-hidden rounded-xl border border-border bg-surface">
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b border-border bg-bg/50 text-left text-xs uppercase tracking-wide text-text-dim">
@@ -225,9 +224,7 @@ export default function HistorialVentasPage() {
                     <span className="font-mono font-medium text-success">
                       {formatoMoneda.format(venta.gananciaARS)}
                     </span>{" "}
-                    <span className="text-xs text-text-dim">
-                      {venta.gananciaPorcentaje.toFixed(2)}%
-                    </span>
+                    <span className="text-xs text-text-dim">{venta.gananciaPorcentaje.toFixed(2)}%</span>
                   </td>
                   <td className="px-4 py-3 text-text-dim">{formatoFecha.format(new Date(venta.fecha))}</td>
                   <td className="px-4 py-3">
@@ -268,6 +265,66 @@ export default function HistorialVentasPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile: tarjetas */}
+        <div className="divide-y divide-border md:hidden">
+          {ventas.map((venta) => (
+            <div key={venta.id} className="p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-mono text-xs text-text-dim">#{venta.id}</p>
+                  {venta.clienteNombre ? (
+                    <p className="truncate font-medium text-text">{venta.clienteNombre}</p>
+                  ) : (
+                    <p className="italic text-text-dim">Sin cliente</p>
+                  )}
+                </div>
+                <span
+                  className={cn(
+                    "shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
+                    ESTADO_STYLE[venta.estado]
+                  )}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                  {ESTADO_LABEL[venta.estado]}
+                </span>
+              </div>
+
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="font-mono font-semibold text-text">{formatoMoneda.format(venta.totalARS)}</p>
+                  <p className="text-xs">
+                    <span className="font-mono font-medium text-success">
+                      {formatoMoneda.format(venta.gananciaARS)}
+                    </span>{" "}
+                    <span className="text-text-dim">{venta.gananciaPorcentaje.toFixed(2)}%</span>
+                  </p>
+                </div>
+                <p className="text-xs text-text-dim">{formatoFecha.format(new Date(venta.fecha))}</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => descargarComprobante(venta.id)}
+                disabled={descargando === venta.id}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-border py-2 text-sm font-medium text-text-dim hover:bg-surface-hover hover:text-text disabled:opacity-50"
+              >
+                {descargando === venta.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                Comprobante
+              </button>
+            </div>
+          ))}
+
+          {!isPending && ventas.length === 0 && (
+            <div className="px-4 py-10 text-center text-sm text-text-dim">
+              No se encontraron ventas con estos filtros.
+            </div>
+          )}
         </div>
 
         {/* Paginación */}

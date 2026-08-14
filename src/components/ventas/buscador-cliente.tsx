@@ -132,7 +132,7 @@ export function BuscadorCliente() {
         <button
           type="button"
           onClick={() => setMostrarAlta(true)}
-          className="flex items-center gap-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-primary hover:bg-surface-hover"
+          className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-primary hover:bg-surface-hover"
         >
           <Plus size={14} /> Nuevo
         </button>
@@ -153,10 +153,10 @@ export function BuscadorCliente() {
                 i === activeIndex ? "bg-surface-hover" : ""
               }`}
             >
-              <span className="font-medium text-text">
-                {c.nombre} {c.apellido ?? ""}
+              <span className="flex w-full flex-wrap items-center gap-x-2 font-medium text-text">
+                <span className="truncate">{c.nombre} {c.apellido ?? ""}</span>
                 {c.esMayorista && (
-                  <span className="ml-2 rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent">
+                  <span className="shrink-0 rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent">
                     MAYORISTA
                   </span>
                 )}

@@ -106,12 +106,14 @@ export function ProveedorDetalleModal({ isOpen, onClose, proveedor, onSuccess }:
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm overflow-y-auto">
-      <div className="w-full max-w-lg rounded-2xl border border-border bg-surface p-6 shadow-2xl my-8">
-        <div className="flex items-center justify-between border-b border-border pb-4">
-          <h2 className="text-xl font-semibold text-text">{valores.nombre}</h2>
+      <div className="w-full max-w-lg rounded-2xl border border-border bg-surface p-4 sm:p-6 shadow-2xl my-8">
+        <div className="flex items-center justify-between gap-3 border-b border-border pb-4">
+          <h2 className="min-w-0 truncate text-lg sm:text-xl font-semibold text-text">
+            {valores.nombre}
+          </h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1 text-text-dim hover:bg-surface-hover hover:text-text"
+            className="shrink-0 rounded-lg p-1 text-text-dim hover:bg-surface-hover hover:text-text"
           >
             ✕
           </button>

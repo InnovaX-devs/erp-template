@@ -32,7 +32,7 @@ export function SelectorCuentaModal({ onSeleccionar, onClose }: Props) {
   const filtradas = cuentas.filter((c) => c.nombre.toLowerCase().includes(query.toLowerCase()));
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/60 p-4 pt-20 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/60 p-4 pt-8 sm:pt-20 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-2xl border border-border bg-surface shadow-2xl">
         <div className="flex items-center justify-between border-b border-border p-4">
           <h3 className="text-base font-semibold text-text">Seleccionar cuenta</h3>
@@ -69,8 +69,8 @@ export function SelectorCuentaModal({ onSeleccionar, onClose }: Props) {
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 {c.tipo.startsWith("EFECTIVO") ? <Wallet size={16} /> : <Landmark size={16} />}
               </span>
-              <span className="flex flex-col">
-                <span className="text-sm font-medium text-text">{c.nombre}</span>
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate text-sm font-medium text-text">{c.nombre}</span>
                 <span className="text-xs text-text-dim">{ETIQUETAS_TIPO_CUENTA[c.tipo] ?? c.tipo}</span>
               </span>
             </button>

@@ -3,7 +3,16 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Receipt, PackagePlus, FlaskConical, Users, Wallet, Droplets } from "lucide-react";
+import {
+  Receipt,
+  PackagePlus,
+  FlaskConical,
+  Users,
+  Wallet,
+  Droplets,
+  TrendingUp,
+  Settings,
+} from "lucide-react";
 import { TodasCuentasModal } from "@/components/dashboard/todas-cuentas-modal";
 import { formatCurrency } from "@/lib/currency";
 
@@ -73,7 +82,16 @@ export default function DashboardPage() {
 
       {/* Saldo total */}
       <div className="rounded-2xl bg-ink p-6 text-ivory">
-        <p className="text-xs uppercase tracking-widest text-ivory/50">Saldo Total</p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs uppercase tracking-widest text-ivory/50">Saldo Total</p>
+          <Link
+            href="/finanzas"
+            className="rounded-lg bg-white/10 p-2 hover:bg-white/15"
+            title="Ir a Contabilidad"
+          >
+            <Settings size={16} />
+          </Link>
+        </div>
         <p className="mt-1 font-display text-3xl font-semibold">
           {cargando ? "..." : formatCurrency(datos?.cuentas.saldoTotal ?? 0, "ARS")}
         </p>
@@ -99,13 +117,29 @@ export default function DashboardPage() {
       {/* Hoy + Pedidos */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-border bg-surface p-4">
-          <p className="text-xs uppercase tracking-wide text-text-dim">Ganancia de hoy</p>
-          <p className="mt-1 text-2xl font-semibold text-text">
+          <div className="flex items-center justify-between">
+            <p className="text-xs uppercase tracking-wide text-text-dim">Hoy</p>
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-success/10 text-success">
+              <TrendingUp size={14} />
+            </span>
+          </div>
+          <p className="mt-1 text-2xl font-bold text-text">
             {cargando ? "..." : formatCurrency(datos?.hoy.gananciaARS ?? 0, "ARS")}
           </p>
-          <p className="mt-1 text-xs text-text-dim">
-            {cargando ? "" : `${datos?.hoy.cantidadVentas ?? 0} ventas hoy`}
-          </p>
+          <div className="mt-3 flex items-center gap-6 border-t border-border pt-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-wide text-text-dim">Ganancia</p>
+              <p className="text-sm font-semibold text-success">
+                {cargando ? "..." : formatCurrency(datos?.hoy.gananciaARS ?? 0, "ARS")}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wide text-text-dim">Ventas</p>
+              <p className="text-sm font-semibold text-text">
+                {cargando ? "..." : datos?.hoy.cantidadVentas ?? 0}
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="rounded-xl border border-border bg-surface p-4">

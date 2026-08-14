@@ -49,17 +49,22 @@ export function ModalCobrarPedido({ pedido, tieneCliente, onClose, onCobrado }: 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-border pb-4">
-          <div>
+        <div className="flex items-start justify-between gap-2 border-b border-border pb-4">
+          <div className="min-w-0">
             <h2 className="text-lg font-semibold text-text">Cobrar pedido</h2>
-            {pedido.clienteNombre && <p className="text-sm text-text-dim">Cliente: {pedido.clienteNombre}</p>}
+            {pedido.clienteNombre && (
+              <p className="truncate text-sm text-text-dim">Cliente: {pedido.clienteNombre}</p>
+            )}
           </div>
-          <button onClick={onClose} className="rounded-lg p-1 text-text-dim hover:bg-surface-hover hover:text-text">
+          <button
+            onClick={onClose}
+            className="shrink-0 rounded-lg p-1 text-text-dim hover:bg-surface-hover hover:text-text"
+          >
             ✕
           </button>
         </div>
 
-        <div className="mt-4 flex items-center justify-between">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
           <span className="text-sm text-text-dim">
             {pedido.montoPagado > 0 ? "Saldo pendiente" : "Total del pedido"}
           </span>

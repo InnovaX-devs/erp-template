@@ -51,6 +51,7 @@ export function costoHistoricoDelProducto(
   fechaVenta: Date
 ): number {
   if (!historial || historial.length === 0) return costoActual;
+  if (historial[0].fecha > fechaVenta) return costoActual;
   let costo = historial[0].valorNuevo;
   for (const entrada of historial) {
     if (entrada.fecha > fechaVenta) break;
@@ -103,7 +104,7 @@ export function calcularReporte(ventas: VentaParaReporte[], egresosARS: number):
     }
   }
 
-  const gananciaNetaARS = ingresosARS - costoVentaARS;
+  const gananciaNetaARS = ingresosARS - egresosARS;
   const margenPorcentaje = ingresosARS > 0 ? (gananciaNetaARS / ingresosARS) * 100 : 0;
 
   // Los porcentajes usan como denominador la suma de sus propios grupos (no

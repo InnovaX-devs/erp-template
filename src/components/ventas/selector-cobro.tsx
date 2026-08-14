@@ -111,17 +111,19 @@ export function SelectorCobro({ total, tieneCliente, modo, pagos, onCambiarModo,
 
       <div className="space-y-2">
         {pagos.map((pago) => (
-          <div key={pago.id} className="flex items-center gap-2">
+          <div key={pago.id} className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
             <button
               type="button"
               onClick={() => abrirSelectorCuenta(pago.id)}
-              className="flex flex-1 items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-left text-sm text-text hover:bg-surface-hover"
+              className="flex min-w-[140px] flex-1 items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-left text-sm text-text hover:bg-surface-hover"
             >
-              <CreditCard size={14} className="text-text-dim" />
-              {pago.cuentaId != null ? cuentasCache[pago.cuentaId]?.nombre ?? "Cuenta" : "Seleccionar cuenta..."}
+              <CreditCard size={14} className="text-text-dim shrink-0" />
+              <span className="truncate">
+                {pago.cuentaId != null ? cuentasCache[pago.cuentaId]?.nombre ?? "Cuenta" : "Seleccionar cuenta..."}
+              </span>
             </button>
 
-            <div className="relative w-32">
+            <div className="relative w-24 shrink-0 sm:w-32">
               <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-text-dim">$</span>
               <input
                 type="number"
@@ -137,7 +139,7 @@ export function SelectorCobro({ total, tieneCliente, modo, pagos, onCambiarModo,
               <button
                 type="button"
                 onClick={() => completarResto(pago.id)}
-                className="whitespace-nowrap rounded-lg border border-border bg-surface px-2 py-2 text-xs font-medium text-text-dim hover:bg-surface-hover"
+                className="shrink-0 whitespace-nowrap rounded-lg border border-border bg-surface px-2 py-2 text-xs font-medium text-text-dim hover:bg-surface-hover"
               >
                 Resto
               </button>
@@ -147,7 +149,7 @@ export function SelectorCobro({ total, tieneCliente, modo, pagos, onCambiarModo,
               <button
                 type="button"
                 onClick={() => eliminarFila(pago.id)}
-                className="text-text-dim hover:text-danger"
+                className="shrink-0 text-text-dim hover:text-danger"
                 aria-label="Quitar fila"
               >
                 <X size={16} />

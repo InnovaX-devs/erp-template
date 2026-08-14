@@ -51,9 +51,9 @@ export const NAV_ITEMS: NavItem[] = [
       { label: "Nueva Venta", href: "/ventas", icon: ShoppingCart },
       { label: "Historial de Ventas", href: "/ventas/historial", icon: Receipt },
       { label: "Pedidos", href: "/ventas/pedidos", icon: Package },
-      { label: "Presupuestos", href: "/presupuestos", icon: FileText },
     ],
   },
+  { label: "Presupuestos", href: "/presupuestos", icon: FileText  },
   {
     label: "Finanzas",
     icon: Calculator,

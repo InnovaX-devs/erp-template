@@ -79,7 +79,7 @@ export function ModalDescuento({ descuentoActual, onAplicar, onClose }: Props) {
           />
         </div>
 
-        <div className="mt-5 flex justify-end gap-2">
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
           {descuentoActual && (
             <button
               type="button"

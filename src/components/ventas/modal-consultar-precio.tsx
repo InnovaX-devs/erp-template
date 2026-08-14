@@ -53,7 +53,7 @@ export function ModalConsultarPrecio({ onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-20 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-8 sm:pt-20 backdrop-blur-sm">
       <div className="w-full max-w-xl rounded-2xl border border-border bg-surface shadow-2xl">
         <div className="flex items-center gap-2 border-b border-border p-4">
           <Search size={18} className="text-text-dim" />
@@ -103,7 +103,7 @@ export function ModalConsultarPrecio({ onClose }: Props) {
                   </div>
                 </div>
 
-                <div className="mt-2 grid grid-cols-2 gap-3">
+                <div className="mt-2 grid grid-cols-1 gap-2 xs:grid-cols-2 sm:gap-3">
                   <div className="rounded-lg bg-surface-hover/50 p-2">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-text-dim">
                       Minorista

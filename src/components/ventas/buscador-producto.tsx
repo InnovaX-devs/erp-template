@@ -144,18 +144,18 @@ export function BuscadorProducto({ onSeleccionar }: Props) {
               type="button"
               onClick={() => seleccionar(p)}
               onMouseEnter={() => setActiveIndex(i)}
-              className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm ${i === activeIndex ? "bg-surface-hover" : ""}`}
+              className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm ${i === activeIndex ? "bg-surface-hover" : ""}`}
             >
-              <span className="flex flex-col">
-                <span className="font-medium text-text">
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate font-medium text-text">
                   {p.nombre}
                   {p.marca && <span className="ml-1 text-text-dim">· {p.marca.nombre}</span>}
                 </span>
-                <span className="text-xs text-text-dim">
+                <span className="truncate text-xs text-text-dim">
                   Stock: {p.stockActual}{p.codigoBarras ? ` · ${p.codigoBarras}` : ""}
                 </span>
               </span>
-              <span className="text-sm font-semibold text-text">
+              <span className="shrink-0 text-sm font-semibold text-text">
                 {formatCurrency(toArs(p.precioVenta, p.monedaPrecio), "ARS")}
               </span>
             </button>

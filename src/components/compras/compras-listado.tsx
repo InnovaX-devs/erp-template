@@ -98,16 +98,16 @@ export function ComprasListado() {
         </Link>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <input
           type="text"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
           placeholder="Buscar por proveedor..."
-          className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-text placeholder:text-text-dim focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-full rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-text placeholder:text-text-dim focus:outline-none focus:ring-1 focus:ring-primary sm:w-auto"
         />
 
-        <div className="ml-auto flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
           {FILTROS.map((f) => (
             <button
               key={f.key}
@@ -138,88 +138,143 @@ export function ComprasListado() {
               : "No hay compras para este filtro."}
           </p>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-text-dim">
-                <th className="px-4 py-3 font-medium">#</th>
-                <th className="px-4 py-3 font-medium">Proveedor</th>
-                <th className="px-4 py-3 font-medium">Cuenta</th>
-                <th className="px-4 py-3 font-medium">Total</th>
-                <th className="px-4 py-3 font-medium">Estado</th>
-                <th className="px-4 py-3 font-medium">Fecha</th>
-                <th className="px-4 py-3 font-medium">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            {/* Desktop / tablet: tabla */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-text-dim">
+                    <th className="px-4 py-3 font-medium">#</th>
+                    <th className="px-4 py-3 font-medium">Proveedor</th>
+                    <th className="px-4 py-3 font-medium">Cuenta</th>
+                    <th className="px-4 py-3 font-medium">Total</th>
+                    <th className="px-4 py-3 font-medium">Estado</th>
+                    <th className="px-4 py-3 font-medium">Fecha</th>
+                    <th className="px-4 py-3 font-medium">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comprasFiltradas.map((compra) => {
+                    const estado = estadoDeCompra(compra);
+                    const puedeAccionar = !compra.confirmada && !compra.cancelada;
+                    const cargandoFila = accionandoId === compra.id;
+                    return (
+                      <tr key={compra.id} className="border-b border-border last:border-0">
+                        <td className="px-4 py-3 text-text">#{compra.id}</td>
+                        <td className="px-4 py-3 text-text">{compra.proveedor?.nombre ?? "Sin especificar"}</td>
+                        <td className="px-4 py-3 text-text-dim">{compra.cuenta?.nombre ?? "—"}</td>
+                        <td className="px-4 py-3 font-medium text-text">
+                          USD {compra.totalUSD.toFixed(2)}
+                          {compra.totalARS != null && (
+                            <span className="ml-1 text-xs font-normal text-text-dim">
+                              (ARS {compra.totalARS.toLocaleString("es-AR", { maximumFractionDigits: 0 })})
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={cn("rounded-full px-2.5 py-1 text-xs font-medium", estado.className)}>
+                            {estado.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-text-dim">{new Date(compra.fecha).toLocaleDateString("es-AR")}</td>
+                        <td className="px-4 py-3">
+                          {puedeAccionar ? (
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                title="Confirmar compra"
+                                aria-label="Confirmar compra"
+                                disabled={cargandoFila}
+                                onClick={() => ejecutarAccion(compra.id, "confirmar")}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-primary text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
+                              >
+                                ✓
+                              </button>
+                              <button
+                                type="button"
+                                title="Cancelar compra"
+                                aria-label="Cancelar compra"
+                                disabled={cargandoFila}
+                                onClick={() => ejecutarAccion(compra.id, "cancelar")}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-danger text-danger transition-colors hover:bg-danger/10 disabled:opacity-50"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-text-dim">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile: tarjetas */}
+            <div className="divide-y divide-border md:hidden">
               {comprasFiltradas.map((compra) => {
                 const estado = estadoDeCompra(compra);
                 const puedeAccionar = !compra.confirmada && !compra.cancelada;
                 const cargandoFila = accionandoId === compra.id;
                 return (
-                  <tr key={compra.id} className="border-b border-border last:border-0">
-                    <td className="px-4 py-3 text-text">#{compra.id}</td>
-                    <td className="px-4 py-3 text-text">
-                      {compra.proveedor?.nombre ?? "Sin especificar"}
-                    </td>
-                    <td className="px-4 py-3 text-text-dim">{compra.cuenta?.nombre ?? "—"}</td>
-                    <td className="px-4 py-3 font-medium text-text">
-                      USD {compra.totalUSD.toFixed(2)}
-                      {compra.totalARS != null && (
-                        <span className="ml-1 text-xs font-normal text-text-dim">
-                          (ARS{" "}
-                          {compra.totalARS.toLocaleString("es-AR", {
-                            maximumFractionDigits: 0,
-                          })}
-                          )
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
+                  <div key={compra.id} className="p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-mono text-xs text-text-dim">#{compra.id}</p>
+                        <p className="truncate font-medium text-text">
+                          {compra.proveedor?.nombre ?? "Sin especificar"}
+                        </p>
+                        <p className="text-xs text-text-dim">{compra.cuenta?.nombre ?? "—"}</p>
+                      </div>
                       <span
                         className={cn(
-                          "rounded-full px-2.5 py-1 text-xs font-medium",
+                          "shrink-0 rounded-full px-2.5 py-1 text-xs font-medium",
                           estado.className
                         )}
                       >
                         {estado.label}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 text-text-dim">
-                      {new Date(compra.fecha).toLocaleDateString("es-AR")}
-                    </td>
-                    <td className="px-4 py-3">
-                      {puedeAccionar ? (
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            title="Confirmar compra"
-                            aria-label="Confirmar compra"
-                            disabled={cargandoFila}
-                            onClick={() => ejecutarAccion(compra.id, "confirmar")}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-primary text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
-                          >
-                            ✓
-                          </button>
-                          <button
-                            type="button"
-                            title="Cancelar compra"
-                            aria-label="Cancelar compra"
-                            disabled={cargandoFila}
-                            onClick={() => ejecutarAccion(compra.id, "cancelar")}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-danger text-danger transition-colors hover:bg-danger/10 disabled:opacity-50"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-text-dim">—</span>
-                      )}
-                    </td>
-                  </tr>
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-medium text-text">
+                        USD {compra.totalUSD.toFixed(2)}
+                        {compra.totalARS != null && (
+                          <span className="ml-1 text-xs font-normal text-text-dim">
+                            (ARS {compra.totalARS.toLocaleString("es-AR", { maximumFractionDigits: 0 })})
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs text-text-dim">{new Date(compra.fecha).toLocaleDateString("es-AR")}</p>
+                    </div>
+
+                    {puedeAccionar && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={cargandoFila}
+                          onClick={() => ejecutarAccion(compra.id, "confirmar")}
+                          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-primary py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10 disabled:opacity-50"
+                        >
+                          ✓ Confirmar
+                        </button>
+                        <button
+                          type="button"
+                          disabled={cargandoFila}
+                          onClick={() => ejecutarAccion(compra.id, "cancelar")}
+                          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-danger py-2 text-sm font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-50"
+                        >
+                          ✕ Cancelar
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
     </div>

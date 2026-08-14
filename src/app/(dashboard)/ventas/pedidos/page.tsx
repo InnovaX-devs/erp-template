@@ -60,7 +60,7 @@ export default function PedidosPage() {
   const pendienteRetirar = pedidos.filter((p) => p.armado && !p.retirado);
 
   return (
-    <div className="space-y-4 p-6">
+    <div className="space-y-4 p-4 sm:p-6">
       <div>
         <h1 className="text-xl font-semibold text-text">Pedidos</h1>
         <p className="text-sm text-text-dim">Tablero de preparación y entrega</p>
@@ -128,7 +128,7 @@ export default function PedidosPage() {
           Cargando...
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Columna
             titulo="Por armar"
             subtitulo="Recibidos y pendientes de preparar"
@@ -180,7 +180,7 @@ function Columna({
       </div>
       <p className={cn("mb-3 text-xs", estilo.texto)}>{subtitulo}</p>
 
-      <div className="max-h-[600px] space-y-2 overflow-y-auto">
+      <div className="space-y-2 lg:max-h-[600px] lg:overflow-y-auto">
         {pedidos.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-text-dim">
             No hay pedidos acá 🎉

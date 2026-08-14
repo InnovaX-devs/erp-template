@@ -299,11 +299,11 @@ export default function NuevaCompraPage() {
       <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
         <p className="text-xs uppercase tracking-wide text-text-dim">Proveedor (opcional)</p>
         {!altaRapidaAbierta ? (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <select
               value={proveedorId}
               onChange={(e) => setProveedorId(e.target.value)}
-              className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none sm:flex-1"
             >
               <option value="">Sin especificar</option>
               {proveedores.map((p) => (
@@ -321,30 +321,32 @@ export default function NuevaCompraPage() {
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <input
               type="text"
               autoFocus
               placeholder="Nombre del proveedor"
               value={nombreProveedorNuevo}
               onChange={(e) => setNombreProveedorNuevo(e.target.value)}
-              className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none sm:flex-1"
             />
-            <button
-              type="button"
-              disabled={creandoProveedor || !nombreProveedorNuevo.trim()}
-              onClick={crearProveedorRapido}
-              className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-            >
-              Guardar
-            </button>
-            <button
-              type="button"
-              onClick={() => setAltaRapidaAbierta(false)}
-              className="rounded-lg border border-border px-3 py-2 text-sm text-text-dim hover:text-text"
-            >
-              Cancelar
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={creandoProveedor || !nombreProveedorNuevo.trim()}
+                onClick={crearProveedorRapido}
+                className="flex-1 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white disabled:opacity-50 sm:flex-none"
+              >
+                Guardar
+              </button>
+              <button
+                type="button"
+                onClick={() => setAltaRapidaAbierta(false)}
+                className="flex-1 rounded-lg border border-border px-3 py-2 text-sm text-text-dim hover:text-text sm:flex-none"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -399,13 +401,13 @@ export default function NuevaCompraPage() {
                     key={p.id}
                     type="button"
                     onClick={() => agregarAlCarrito(p)}
-                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-surface-hover"
+                    className="flex w-full flex-col gap-0.5 px-3 py-2 text-left text-sm hover:bg-surface-hover sm:flex-row sm:items-center sm:justify-between sm:gap-2"
                   >
-                    <span className="text-text">
+                    <span className="truncate text-text">
                       {p.nombre}
                       {p.marca?.nombre ? ` — ${p.marca.nombre}` : ""}
                     </span>
-                    <span className="text-xs text-text-dim">
+                    <span className="shrink-0 text-xs text-text-dim">
                       Stock: {p.stockActual} · Costo: {p.precioCosto} {p.monedaPrecio}
                     </span>
                   </button>
@@ -420,83 +422,131 @@ export default function NuevaCompraPage() {
       <div className="rounded-xl border border-border bg-surface p-4">
         <p className="mb-3 text-xs uppercase tracking-wide text-text-dim">Ítems de la compra</p>
         {carrito.length === 0 ? (
-          <p className="py-6 text-center text-sm text-text-dim">
-            Todavía no agregaste productos.
-          </p>
+          <p className="py-6 text-center text-sm text-text-dim">Todavía no agregaste productos.</p>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-text-dim">
-                <th className="pb-2 pr-4 font-medium">Producto</th>
-                <th className="pb-2 pr-4 font-medium">Cantidad</th>
-                <th className="pb-2 pr-4 font-medium">Costo unit. (USD)</th>
-                <th className="pb-2 pr-4 font-medium">Subtotal USD</th>
-                <th className="pb-2 font-medium" />
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            {/* Desktop / tablet: tabla */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-text-dim">
+                    <th className="pb-2 pr-4 font-medium">Producto</th>
+                    <th className="pb-2 pr-4 font-medium">Cantidad</th>
+                    <th className="pb-2 pr-4 font-medium">Costo unit. (USD)</th>
+                    <th className="pb-2 pr-4 font-medium">Subtotal USD</th>
+                    <th className="pb-2 font-medium" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {carrito.map((it) => (
+                    <tr key={it.productoId} className="border-b border-border last:border-0">
+                      <td className="py-2 pr-4 text-text">{it.nombre}</td>
+                      <td className="py-2 pr-4">
+                        <input
+                          type="number"
+                          min={1}
+                          value={it.cantidad}
+                          onChange={(e) =>
+                            actualizarItem(it.productoId, "cantidad", Math.max(1, Number(e.target.value)))
+                          }
+                          className="w-20 rounded-md border border-border bg-surface px-2 py-1 text-text focus:border-primary focus:outline-none"
+                        />
+                      </td>
+                      <td className="py-2 pr-4">
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={it.costoUnitarioUSD}
+                          onChange={(e) =>
+                            actualizarItem(it.productoId, "costoUnitarioUSD", Math.max(0, Number(e.target.value)))
+                          }
+                          className="w-24 rounded-md border border-border bg-surface px-2 py-1 text-text focus:border-primary focus:outline-none"
+                        />
+                      </td>
+                      <td className="py-2 pr-4 font-medium text-text">
+                        {(it.cantidad * it.costoUnitarioUSD).toFixed(2)}
+                      </td>
+                      <td className="py-2">
+                        <button
+                          type="button"
+                          onClick={() => quitarItem(it.productoId)}
+                          className="text-text-dim hover:text-danger"
+                        >
+                          ✕
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile: tarjetas */}
+            <div className="space-y-2 md:hidden">
               {carrito.map((it) => (
-                <tr key={it.productoId} className="border-b border-border last:border-0">
-                  <td className="py-2 pr-4 text-text">{it.nombre}</td>
-                  <td className="py-2 pr-4">
-                    <input
-                      type="number"
-                      min={1}
-                      value={it.cantidad}
-                      onChange={(e) =>
-                        actualizarItem(it.productoId, "cantidad", Math.max(1, Number(e.target.value)))
-                      }
-                      className="w-20 rounded-md border border-border bg-surface px-2 py-1 text-text focus:border-primary focus:outline-none"
-                    />
-                  </td>
-                  <td className="py-2 pr-4">
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={it.costoUnitarioUSD}
-                      onChange={(e) =>
-                        actualizarItem(
-                          it.productoId,
-                          "costoUnitarioUSD",
-                          Math.max(0, Number(e.target.value))
-                        )
-                      }
-                      className="w-24 rounded-md border border-border bg-surface px-2 py-1 text-text focus:border-primary focus:outline-none"
-                    />
-                  </td>
-                  <td className="py-2 pr-4 font-medium text-text">
-                    {(it.cantidad * it.costoUnitarioUSD).toFixed(2)}
-                  </td>
-                  <td className="py-2">
+                <div key={it.productoId} className="rounded-lg border border-border p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="min-w-0 flex-1 truncate font-medium text-text">{it.nombre}</span>
                     <button
                       type="button"
                       onClick={() => quitarItem(it.productoId)}
-                      className="text-text-dim hover:text-danger"
+                      className="shrink-0 text-text-dim hover:text-danger"
+                      aria-label="Quitar producto"
                     >
                       ✕
                     </button>
-                  </td>
-                </tr>
+                  </div>
+
+                  <div className="mt-2 grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] text-text-dim">Cantidad</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={it.cantidad}
+                        onChange={(e) =>
+                          actualizarItem(it.productoId, "cantidad", Math.max(1, Number(e.target.value)))
+                        }
+                        className="mt-0.5 w-full rounded-md border border-border bg-surface px-2 py-1.5 text-text focus:border-primary focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-text-dim">Costo unit. (USD)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={it.costoUnitarioUSD}
+                        onChange={(e) =>
+                          actualizarItem(it.productoId, "costoUnitarioUSD", Math.max(0, Number(e.target.value)))
+                        }
+                        className="mt-0.5 w-full rounded-md border border-border bg-surface px-2 py-1.5 text-text focus:border-primary focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <p className="mt-2 text-right text-sm">
+                    <span className="text-text-dim">Subtotal: </span>
+                    <span className="font-medium text-text">USD {(it.cantidad * it.costoUnitarioUSD).toFixed(2)}</span>
+                  </p>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
 
       {/* Total + guardar */}
       <div className="rounded-xl border border-border bg-surface p-4 space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs uppercase tracking-wide text-text-dim">Total</p>
             <p className="text-2xl font-semibold text-text">USD {totalUSD.toFixed(2)}</p>
             <p className="text-sm text-text-dim">
               ≈ ARS {totalARS.toLocaleString("es-AR", { maximumFractionDigits: 2 })}
               {cuentaSeleccionada && (
-                <span>
-                  {" "}
-                  · se debitará en {TIPO_CUENTA_LABEL[cuentaSeleccionada.tipo]} al confirmar
-                </span>
+                <span> · se debitará en {TIPO_CUENTA_LABEL[cuentaSeleccionada.tipo]} al confirmar</span>
               )}
             </p>
           </div>
@@ -504,7 +554,7 @@ export default function NuevaCompraPage() {
             type="button"
             disabled={enviando || carrito.length === 0}
             onClick={guardarCompra}
-            className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="w-full rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 sm:w-auto"
           >
             {enviando ? "Guardando..." : "Guardar Compra"}
           </button>

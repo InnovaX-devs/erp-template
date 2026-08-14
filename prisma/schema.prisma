@@ -125,6 +125,7 @@ model Cliente {
   presupuestos Presupuesto[]
 
   @@index([nombre])
+  @@index([apellido])
 }
 
 enum EstadoPago {
@@ -176,6 +177,11 @@ model Venta {
 
   @@index([clienteId])
   @@index([fecha])
+  @@index([estadoPago])
+  @@index([estadoPago, fecha])   // cubre filtro por estado + orden por fecha juntos
+  @@index([retirado, estadoPago]) // la pantalla de Pedidos siempre filtra por estos dos
+  @@index([armado])
+  @@index([enviado])
 }
 
 model ItemVenta {

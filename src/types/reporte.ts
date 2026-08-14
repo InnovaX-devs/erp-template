@@ -3,12 +3,13 @@ import type { TipoCuenta } from "@prisma/client";
 export type TipoPeriodoReporte = "DIARIO" | "SEMANAL" | "MENSUAL" | "PERIODO";
 
 export interface ReporteKPIs {
-  ingresosARS: number;
+  ingresosARS: number; // COBRADO (suma de montoPagado). Antes era totalARS facturado.
+  ingresosFacturadosARS: number; // Informativo: total facturado, cobrado o no.
   ingresosUSD: number;
-  costoVentaARS: number;
-  gananciaNetaARS: number;
+  costoVentaARS: number; // Prorrateado por lo efectivamente cobrado de cada venta.
+  gananciaNetaARS: number; // ingresosARS - costoVentaARS - egresosARS(gastos)
   margenPorcentaje: number;
-  egresosARS: number;
+  egresosARS: number; // SOLO gastos operativos (concepto GASTO). No incluye compras.
   cantidadVentas: number;
   itemsVendidos: number;
 }
@@ -37,24 +38,4 @@ export interface ReporteData {
   desgloseMetodoCobro: DesgloseMetodoCobroItem[];
 }
 
-export interface ReportePorCuentaItem {
-  cuentaId: number;
-  cuentaNombre: string;
-  tipoCuenta: TipoCuenta;
-  ingresos: number;
-  egresos: number;
-  saldoActual: number;
-  cantidadMovimientos: number;
-}
-
-export interface ReportePorCuentaData {
-  fechaInicio: string;
-  fechaFin: string;
-  cuentas: ReportePorCuentaItem[];
-}
-
 export type ResultadoReporte = { success: true; data: ReporteData } | { success: false; error: string };
-
-export type ResultadoReportePorCuenta =
-  | { success: true; data: ReportePorCuentaData }
-  | { success: false; error: string };

@@ -1,11 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import {
   calcularReporte,
-  calcularReportePorCuenta,
   costoHistoricoDelProducto,
   type VentaParaReporte,
 } from "@/lib/reportes";
-import type { ReporteData, ReportePorCuentaData } from "@/types/reporte";
+import type { ReporteData } from "@/types/reporte";
 
 export type RangoFechas = { desde: Date; hasta: Date };
 
@@ -25,6 +24,7 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
         id: true,
         totalARS: true,
         totalUSD: true,
+        montoPagado: true,
         cotizacionUsada: true,
         fecha: true,
         items: {
@@ -46,9 +46,7 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
 
   const cotizacionActual = config?.cotizacionUSD ?? 1000;
 
-  // Reconstrucción de costo histórico (ver lib/reportes.ts): buscamos, por
-  // producto, todas las entradas de HistorialPrecio campo COSTO en el rango
-  // relevante y se las pasamos a la función pura de cálculo.
+  // Reconstrucción de costo histórico (ver lib/reportes.ts).
   const productoIds = Array.from(
     new Set(ventasRaw.flatMap((v) => v.items.map((i) => i.productoId).filter((id): id is number => id != null)))
   );
@@ -70,6 +68,7 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
     id: v.id,
     totalARS: v.totalARS,
     totalUSD: v.totalUSD,
+    montoPagado: v.montoPagado,
     cotizacionUsada: v.cotizacionUsada,
     items: v.items.map((item) => {
       let costoUnitarioARS = 0;
@@ -97,19 +96,16 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
     })),
   }));
 
-  // Egresos del período (gastos, pagos a proveedores, etc). Las cuentas en USD
-  // se convierten con la cotización actual: el schema no guarda una cotización
-  // histórica por MovimientoCaja.
   const movimientosEgreso = await prisma.movimientoCaja.findMany({
-    where: { tipo: "EGRESO", fecha: { gte: desde, lte: hasta } },
+    where: { tipo: "EGRESO", concepto: "GASTO", fecha: { gte: desde, lte: hasta } },
     select: { monto: true, cuenta: { select: { tipo: true } } },
   });
-  const egresosARS = movimientosEgreso.reduce((acc, m) => {
+  const egresosGastosARS = movimientosEgreso.reduce((acc, m) => {
     const esUSD = m.cuenta.tipo === "EFECTIVO_USD" || m.cuenta.tipo === "BANCO_USD";
     return acc + (esUSD ? m.monto * cotizacionActual : m.monto);
   }, 0);
 
-  const { kpis, desgloseTipoPrecio, desgloseMetodoCobro } = calcularReporte(ventas, egresosARS);
+  const { kpis, desgloseTipoPrecio, desgloseMetodoCobro } = calcularReporte(ventas, egresosGastosARS);
 
   return {
     fechaInicio: desde.toISOString(),
@@ -117,29 +113,5 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
     kpis,
     desgloseTipoPrecio,
     desgloseMetodoCobro,
-  };
-}
-
-export async function obtenerReportePorCuenta(rango: RangoFechas): Promise<ReportePorCuentaData> {
-  const { desde, hasta } = rango;
-
-  const [cuentas, movimientos] = await Promise.all([
-    prisma.cuenta.findMany({
-      where: { activa: true },
-      select: { id: true, nombre: true, tipo: true, saldoActual: true },
-      orderBy: { nombre: "asc" },
-    }),
-    prisma.movimientoCaja.findMany({
-      where: { fecha: { gte: desde, lte: hasta } },
-      select: { cuentaId: true, tipo: true, monto: true },
-    }),
-  ]);
-
-  const cuentasResultado = calcularReportePorCuenta(cuentas, movimientos);
-
-  return {
-    fechaInicio: desde.toISOString(),
-    fechaFin: hasta.toISOString(),
-    cuentas: cuentasResultado,
   };
 }

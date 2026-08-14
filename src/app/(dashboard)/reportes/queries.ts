@@ -11,6 +11,13 @@ export type RangoFechas = { desde: Date; hasta: Date };
 // Estados de venta que no representan ingreso real y se excluyen de todos los cálculos.
 const ESTADOS_EXCLUIDOS = ["ANULADA", "CANCELADA"] as const;
 
+// ml que consume cada presentación de decant. FRASCO no está acá porque
+// representa el producto entero (no se prorratea).
+const ML_POR_PRESENTACION: Record<"DECANT_5ML" | "DECANT_10ML", number> = {
+  DECANT_5ML: 5,
+  DECANT_10ML: 10,
+};
+
 export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
   const { desde, hasta } = rango;
 
@@ -33,7 +40,10 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
             cantidad: true,
             precioUnitarioUSD: true,
             tipoPrecio: true,
-            producto: { select: { id: true, precioCosto: true, monedaPrecio: true } },
+            presentacion: true,
+            producto: {
+              select: { id: true, precioCosto: true, monedaPrecio: true, contenidoMl: true },
+            },
           },
         },
         pagos: {
@@ -72,14 +82,33 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
     cotizacionUsada: v.cotizacionUsada,
     items: v.items.map((item) => {
       let costoUnitarioARS = 0;
+
       if (item.producto) {
         const costoBase = costoHistoricoDelProducto(
           historialPorProducto.get(item.producto.id),
           item.producto.precioCosto,
           v.fecha
         );
-        costoUnitarioARS = item.producto.monedaPrecio === "USD" ? costoBase * v.cotizacionUsada : costoBase;
+        const costoFrascoARS =
+          item.producto.monedaPrecio === "USD" ? costoBase * v.cotizacionUsada : costoBase;
+
+        const mlDecant =
+          item.presentacion === "DECANT_5ML" || item.presentacion === "DECANT_10ML"
+            ? ML_POR_PRESENTACION[item.presentacion]
+            : null;
+
+        if (mlDecant && item.producto.contenidoMl) {
+          // Decant: costo proporcional a los ml vendidos, no el frasco entero.
+          costoUnitarioARS = (costoFrascoARS / item.producto.contenidoMl) * mlDecant;
+        } else {
+          // FRASCO completo, o decant con producto sin contenidoMl cargado
+          // (fallback defensivo: mejor sobreestimar el costo que dividir por
+          // cero. Esto último señala un producto mal cargado: tiene
+          // seVendePorDecant activado pero le falta contenidoMl).
+          costoUnitarioARS = costoFrascoARS;
+        }
       }
+
       return {
         productoId: item.productoId,
         cantidad: item.cantidad,

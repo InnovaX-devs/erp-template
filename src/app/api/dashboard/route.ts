@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { calcularGananciaVentas } from "@/lib/dashboard";
+import { obtenerReporte } from "../../(dashboard)/reportes/queries";
+import { rangoParaTab } from "@/lib/reportes";
 
 export const dynamic = "force-dynamic";
 
@@ -46,20 +47,12 @@ export async function GET() {
     saldoTotal += c.tipo.endsWith("USD") ? c.saldoActual * cotizacionActual : c.saldoActual;
   }
 
-  // --- Ventas de hoy (excluye anuladas/canceladas) — para la ganancia ---
-  const ventasHoy = await prisma.venta.findMany({
-    where: {
-      fecha: { gte: inicioHoy, lt: finHoy },
-      estadoPago: { notIn: ["ANULADA", "CANCELADA"] },
-    },
-    include: {
-      items: {
-        include: { producto: { select: { precioCosto: true, monedaPrecio: true } } },
-      },
-    },
-  });
-
-  const gananciaHoyARS = calcularGananciaVentas(ventasHoy);
+  // --- Ganancia de hoy: MISMA lógica que Reportes (prorrateada por lo
+  // efectivamente cobrado, neta de gastos GASTO del día). No se recalcula acá
+  // aparte para evitar que dashboard y reportes puedan desincronizarse. ---
+  const reporteHoy = await obtenerReporte(rangoParaTab("diario"));
+  const gananciaHoyARS = reporteHoy.kpis.gananciaNetaARS;
+  const cantidadVentasHoy = reporteHoy.kpis.cantidadVentas;
 
   // --- Movimientos de caja de hoy (ingresos/egresos reales) ---
   const movimientosHoy = await prisma.movimientoCaja.findMany({
@@ -108,7 +101,7 @@ export async function GET() {
     },
     hoy: {
       gananciaARS: gananciaHoyARS,
-      cantidadVentas: ventasHoy.length,
+      cantidadVentas: cantidadVentasHoy,
       ingresosARS: ingresosHoyARS,
       egresosARS: egresosHoyARS,
     },

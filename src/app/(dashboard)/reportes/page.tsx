@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { Droplets } from "lucide-react";
 import { rangoParaTab, type TabReporte } from "@/lib/reportes";
-import { obtenerReporte, obtenerReportePorCuenta } from "./queries";
+import { obtenerReporte } from "./queries";
 import { TabsReportes } from "./TabsReportes";
 import { BotonImprimir } from "./BotonImprimir";
 import { KpiCards } from "./components/kpi-cards";
 import { DesgloseTipoPrecio } from "./components/desglose-tipo-precio";
 import { DesgloseMetodoCobro } from "./components/desglose-metodo-cobro";
-import { TablaPorCuenta } from "./components/tabla-por-cuenta";
+import { BotonExportarPdf } from "./BotonExportarPdf";
 
 type SearchParams = {
   tab?: string;
@@ -39,22 +39,21 @@ export default async function ReportesPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href="/reportes/decants"
-            className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text hover:bg-surface-hover"
-          >
-            <Droplets size={14} /> Reporte de Decants
-          </Link>
-          <BotonImprimir />
-        </div>
+        <Link
+          href="/reportes/decants"
+          className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text hover:bg-surface-hover"
+        >
+          <Droplets size={14} /> Reporte de Decants
+        </Link>
+        <BotonExportarPdf tab={tab} desde={params.desde} hasta={params.hasta} />
+        <BotonImprimir />
+      </div>
       </div>
 
       <TabsReportes tabActual={tab} desde={params.desde} hasta={params.hasta} />
 
       {faltaPeriodo ? (
         <p className="text-sm text-text-dim">Elegí un rango de fechas para ver el reporte.</p>
-      ) : tab === "cuenta" ? (
-        <ReporteCuentaSection rango={rango} />
       ) : (
         <ReportePeriodoSection rango={rango} />
       )}
@@ -75,7 +74,3 @@ async function ReportePeriodoSection({ rango }: { rango: { desde: Date; hasta: D
   );
 }
 
-async function ReporteCuentaSection({ rango }: { rango: { desde: Date; hasta: Date } }) {
-  const reporte = await obtenerReportePorCuenta(rango);
-  return <TablaPorCuenta cuentas={reporte.cuentas} />;
-}

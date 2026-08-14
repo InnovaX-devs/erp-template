@@ -3,7 +3,6 @@ import type {
   DesgloseMetodoCobroItem,
   DesgloseTipoPrecioItem,
   ReporteKPIs,
-  ReportePorCuentaItem,
 } from "@/types/reporte";
 
 // --- Tipos de entrada ya "aplanados" desde Prisma (ver queries.ts) ---
@@ -27,6 +26,7 @@ export type VentaParaReporte = {
   id: number;
   totalARS: number;
   totalUSD: number;
+  montoPagado: number;
   cotizacionUsada: number;
   items: ItemVentaParaReporte[];
   pagos: PagoParaReporte[];
@@ -60,8 +60,14 @@ export function costoHistoricoDelProducto(
   return costo;
 }
 
-export function calcularReporte(ventas: VentaParaReporte[], egresosARS: number): ReporteCalculado {
-  let ingresosARS = 0;
+/**
+ * egresosGastosARS: SOLO movimientos de caja con concepto GASTO. No incluye
+ * pagos a proveedores (eso es conversión de efectivo en stock, no una pérdida
+ * del período) — esos se reflejan aparte en calcularFlujoCaja.
+ */
+export function calcularReporte(ventas: VentaParaReporte[], egresosGastosARS: number): ReporteCalculado {
+  let ingresosARS = 0; // cobrado
+  let ingresosFacturadosARS = 0; // facturado (informativo)
   let ingresosUSD = 0;
   let costoVentaARS = 0;
   let itemsVendidos = 0;
@@ -77,21 +83,43 @@ export function calcularReporte(ventas: VentaParaReporte[], egresosARS: number):
   >();
 
   for (const venta of ventas) {
-    ingresosARS += venta.totalARS;
+    ingresosFacturadosARS += venta.totalARS;
+    ingresosARS += venta.montoPagado;
     ingresosUSD += venta.totalUSD;
+
+    // Proporción de la venta que efectivamente se cobró (0 a 1, con clamp por
+    // las dudas de redondeos). Se usa para reconocer ingreso/costo/desglose
+    // solo por la parte que realmente entró — así una venta A_CUENTA pagada a
+    // la mitad no infla el resultado con plata que todavía no cobraste.
+    const proporcionCobrada = venta.totalARS > 0 ? Math.min(venta.montoPagado / venta.totalARS, 1) : 0;
+
+    // Precio de lista (sin descuento) de todos los ítems de la venta, para
+    // poder prorratear el descuento global de la venta a nivel ítem.
+    const montoListaVentaARS = venta.items.reduce(
+      (acc, item) => acc + item.cantidad * item.precioUnitarioUSD * venta.cotizacionUsada,
+      0
+    );
+    // Factor que absorbe el descuento: precio real facturado / precio de lista.
+    // Sin descuento, factor = 1. Si no hay monto de lista (caso borde), no corrige.
+    const factorDescuento = montoListaVentaARS > 0 ? venta.totalARS / montoListaVentaARS : 1;
 
     for (const item of venta.items) {
       itemsVendidos += item.cantidad;
 
-      const montoItemARS = item.cantidad * item.precioUnitarioUSD * venta.cotizacionUsada;
+      const montoListaItemARS = item.cantidad * item.precioUnitarioUSD * venta.cotizacionUsada;
+      const montoItemConDescuentoARS = montoListaItemARS * factorDescuento;
+
       const grupo = totalesTipoPrecio[item.tipoPrecio];
-      grupo.montoARS += montoItemARS;
+      // El desglose solo refleja lo efectivamente cobrado, igual que ingresosARS.
+      grupo.montoARS += montoItemConDescuentoARS * proporcionCobrada;
       grupo.ventas.add(venta.id);
 
-      costoVentaARS += item.costoUnitarioARS * item.cantidad;
+      // El costo también se reconoce proporcional a lo cobrado.
+      costoVentaARS += item.costoUnitarioARS * item.cantidad * proporcionCobrada;
     }
 
     for (const pago of venta.pagos) {
+      // Los pagos ya son plata real cobrada: no llevan descuento ni prorrateo.
       const actual = totalesPorCuenta.get(pago.cuentaId) ?? {
         cuentaNombre: pago.cuentaNombre,
         tipoCuenta: pago.tipoCuenta,
@@ -104,11 +132,9 @@ export function calcularReporte(ventas: VentaParaReporte[], egresosARS: number):
     }
   }
 
-  const gananciaNetaARS = ingresosARS - egresosARS;
+  const gananciaNetaARS = ingresosARS - costoVentaARS - egresosGastosARS;
   const margenPorcentaje = ingresosARS > 0 ? (gananciaNetaARS / ingresosARS) * 100 : 0;
 
-  // Los porcentajes usan como denominador la suma de sus propios grupos (no
-  // totalARS con descuento incluido), así siempre cierran en exactamente 100%.
   const totalTipoPrecio = totalesTipoPrecio.MINORISTA.montoARS + totalesTipoPrecio.MAYORISTA.montoARS;
   const desgloseTipoPrecio: DesgloseTipoPrecioItem[] = (["MINORISTA", "MAYORISTA"] as const).map((tipo) => ({
     tipoPrecio: tipo,
@@ -132,11 +158,12 @@ export function calcularReporte(ventas: VentaParaReporte[], egresosARS: number):
   return {
     kpis: {
       ingresosARS,
+      ingresosFacturadosARS,
       ingresosUSD,
       costoVentaARS,
       gananciaNetaARS,
       margenPorcentaje,
-      egresosARS,
+      egresosARS: egresosGastosARS,
       cantidadVentas: ventas.length,
       itemsVendidos,
     },
@@ -145,34 +172,7 @@ export function calcularReporte(ventas: VentaParaReporte[], egresosARS: number):
   };
 }
 
-export function calcularReportePorCuenta(
-  cuentas: { id: number; nombre: string; tipo: TipoCuenta; saldoActual: number }[],
-  movimientos: { cuentaId: number; tipo: "INGRESO" | "EGRESO"; monto: number }[]
-): ReportePorCuentaItem[] {
-  const agregados = new Map<number, { ingresos: number; egresos: number; cantidadMovimientos: number }>();
-  for (const m of movimientos) {
-    const actual = agregados.get(m.cuentaId) ?? { ingresos: 0, egresos: 0, cantidadMovimientos: 0 };
-    if (m.tipo === "INGRESO") actual.ingresos += m.monto;
-    else actual.egresos += m.monto;
-    actual.cantidadMovimientos += 1;
-    agregados.set(m.cuentaId, actual);
-  }
-
-  return cuentas.map((c) => {
-    const agr = agregados.get(c.id) ?? { ingresos: 0, egresos: 0, cantidadMovimientos: 0 };
-    return {
-      cuentaId: c.id,
-      cuentaNombre: c.nombre,
-      tipoCuenta: c.tipo,
-      ingresos: agr.ingresos,
-      egresos: agr.egresos,
-      saldoActual: c.saldoActual,
-      cantidadMovimientos: agr.cantidadMovimientos,
-    };
-  });
-}
-
-// --- Rango de fechas por tab ---
+// --- Rango de fechas por tab (sin cambios) ---
 
 export type TabReporte = "diario" | "semanal" | "mensual" | "periodo" | "cuenta";
 
@@ -188,8 +188,8 @@ function finDelDia(d: Date) {
 }
 function inicioDeSemana(d: Date) {
   const r = inicioDelDia(d);
-  const dia = r.getDay(); // 0 = domingo
-  const diff = dia === 0 ? 6 : dia - 1; // lunes como primer día
+  const dia = r.getDay();
+  const diff = dia === 0 ? 6 : dia - 1;
   r.setDate(r.getDate() - diff);
   return r;
 }

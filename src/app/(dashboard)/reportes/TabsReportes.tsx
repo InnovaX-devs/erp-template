@@ -9,7 +9,6 @@ const TABS: { value: TabReporte; label: string }[] = [
   { value: "semanal", label: "Semanal" },
   { value: "mensual", label: "Mensual" },
   { value: "periodo", label: "Período" },
-  { value: "cuenta", label: "Por Cuenta" },
 ];
 
 export function TabsReportes({

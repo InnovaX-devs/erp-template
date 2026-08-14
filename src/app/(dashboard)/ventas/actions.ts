@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import type { EstadoPago, TipoPrecioVenta } from "@prisma/client";
 import { Prisma } from "@prisma/client";
+import { unstable_cache } from "next/cache";
 import type {
   FiltrosVentas,
   ResultadoListadoVentas,
@@ -208,6 +209,12 @@ export async function registrarPedido(input: VentaInput): Promise<ResultadoVenta
   return crearVentaInterna(input, false);
 }
 
+const getConfiguracionCacheada = unstable_cache(
+  async () => prisma.configuracion.findUnique({ where: { id: "singleton" } }),
+  ["configuracion-singleton"],
+  { revalidate: 300 } // se refresca cada 5 min
+);
+
 export async function listarVentas(filtros: FiltrosVentas): Promise<ResultadoListadoVentas> {
   const { estado, clienteTexto, fechaDesde, fechaHasta, orden, page, pageSize } = filtros;
 
@@ -258,7 +265,7 @@ export async function listarVentas(filtros: FiltrosVentas): Promise<ResultadoLis
       },
     }),
     prisma.venta.count({ where }),
-    prisma.configuracion.findUnique({ where: { id: "singleton" } }),
+    getConfiguracionCacheada(),
   ]);
 
   const costoEnvaseDecantARS = configuracion?.costoEnvaseDecantARS ?? 0;

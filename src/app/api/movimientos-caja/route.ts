@@ -15,8 +15,8 @@ export async function GET(request: NextRequest) {
     ...(desde || hasta
       ? {
           fecha: {
-            ...(desde ? { gte: new Date(desde) } : {}),
-            ...(hasta ? { lte: new Date(`${hasta}T23:59:59`) } : {}),
+            ...(desde ? { gte: new Date(`${desde}T00:00:00-03:00`) } : {}),
+            ...(hasta ? { lte: new Date(`${hasta}T23:59:59-03:00`) } : {}),
           },
         }
       : {}),

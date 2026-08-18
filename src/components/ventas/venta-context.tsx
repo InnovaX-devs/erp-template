@@ -21,9 +21,17 @@ const VentaContext = createContext<VentaContextValue | null>(null);
 
 export function VentaProvider({ children }: { children: ReactNode }) {
   const [tipoPrecio, setTipoPrecio] = useState<TipoPrecio>("MINORISTA");
-  const [cliente, setCliente] = useState<ClienteBusquedaResult | null>(null);
+  const [cliente, setClienteState] = useState<ClienteBusquedaResult | null>(null);
   const [modoCobro, setModoCobro] = useState<ModoCobro>("UNICA");
   const [pagos, setPagos] = useState<PagoLinea[]>([{ id: "pago-unica", cuentaId: null, monto: 0 }]);
+
+  // Al seleccionar (o quitar) un cliente, el tipo de precio por defecto
+  // se ajusta solo: mayorista => MAYORISTA, si no => MINORISTA.
+  // El usuario puede seguir cambiándolo a mano con el toggle después.
+  function setCliente(nuevoCliente: ClienteBusquedaResult | null) {
+    setClienteState(nuevoCliente);
+    setTipoPrecio(nuevoCliente?.esMayorista ? "MAYORISTA" : "MINORISTA");
+  }
 
   return (
     <VentaContext.Provider

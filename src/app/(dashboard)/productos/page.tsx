@@ -8,7 +8,6 @@ import { PdfGeneratorModal } from "@/components/productos/pdf-generator-modal";
 import { FileText } from "lucide-react";
 import Link from "next/link";
 
-
 interface Producto {
   id: string;
   nombre: string;
@@ -170,7 +169,7 @@ export default function ProductosPage() {
       overrideDecant10ml: producto.overrideDecant10ml ?? "",
     };
   };
-  
+
 
   const handleAbrirEditar = (producto: Producto) => {
     setProductoEditar(mapProductoToFormData(producto));
@@ -190,32 +189,33 @@ export default function ProductosPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        {/* Acciones: en mobile ocupan todo el ancho en grilla de 2 columnas, en desktop en fila */}
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <button
             type="button"
             onClick={() => setIsPdfModalOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-medium text-text hover:bg-surface-hover"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 py-2.5 text-sm font-medium text-text hover:bg-surface-hover sm:px-4"
           >
-            <FileText className="h-4 w-4" />
-            Generar PDF
+            <FileText className="h-4 w-4 shrink-0" />
+            <span className="truncate">Generar PDF</span>
           </button>
           <Link
             href="/productos/actualizar-precios"
-            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+            className="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2.5 text-center text-sm font-medium text-white transition-opacity hover:opacity-90 sm:px-4"
           >
             + Actualizar Precios
           </Link>
           <button
             type="button"
             onClick={() => setIsFormulaDecantOpen(true)}
-            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+            className="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 sm:px-4"
           >
             Fórmula Decant
           </button>
           <button
             type="button"
             onClick={handleAbrirCrear}
-            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+            className="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 sm:px-4"
           >
             + Nuevo Producto
           </button>
@@ -228,7 +228,7 @@ export default function ProductosPage() {
           <p className="text-xs uppercase tracking-wide text-text-dim">
             Stock a Costo
           </p>
-          <p className="mt-1 text-2xl font-semibold text-text">
+          <p className="mt-1 text-xl font-semibold text-text sm:text-2xl">
             {formatMoney(resumen.costoARS, "ARS")}
           </p>
           <p className="mt-1 text-xs font-medium text-text-dim">
@@ -240,7 +240,7 @@ export default function ProductosPage() {
           <p className="text-xs uppercase tracking-wide text-text-dim">
             Stock a Precio Venta
           </p>
-          <p className="mt-1 text-2xl font-semibold text-text">
+          <p className="mt-1 text-xl font-semibold text-text sm:text-2xl">
             {formatMoney(resumen.ventaARS, "ARS")}
           </p>
           <p className="mt-1 text-xs font-medium text-text-dim">
@@ -252,7 +252,7 @@ export default function ProductosPage() {
           <p className="text-xs uppercase tracking-wide text-text-dim">
             Ganancia Potencial
           </p>
-          <p className="mt-1 text-2xl font-semibold text-success">
+          <p className="mt-1 text-xl font-semibold text-success sm:text-2xl">
             {formatMoney(resumen.gananciaARS, "ARS")}
           </p>
           <p className="mt-1 text-xs font-medium text-success/80">
@@ -263,7 +263,7 @@ export default function ProductosPage() {
 
       {/* Tabla y Filtros */}
       <div className="rounded-xl border border-border bg-surface p-4">
-        <div className="mb-4 flex items-center justify-between gap-4">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div className="relative w-full sm:w-80">
             <input
               type="text"
@@ -281,7 +281,8 @@ export default function ProductosPage() {
           </p>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* --- Vista de tabla: solo desktop/tablet (md en adelante) --- */}
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-text-dim">
@@ -347,7 +348,7 @@ export default function ProductosPage() {
                           : "-"}
                       </td>
                       <td className="py-3">
-                        <button 
+                        <button
                           onClick={() => handleAbrirEditar(p)}
                           className="text-text-dim hover:text-text"
                         >
@@ -368,9 +369,84 @@ export default function ProductosPage() {
           </table>
         </div>
 
+        {/* --- Vista de tarjetas: solo mobile (debajo de md) --- */}
+        <div className="space-y-3 md:hidden">
+          {cargando ? (
+            <p className="py-8 text-center text-sm text-text-dim">
+              Cargando productos...
+            </p>
+          ) : productosPaginados.length > 0 ? (
+            productosPaginados.map((p) => {
+              const porcentajeGanancia =
+                p.precioCosto > 0
+                  ? ((p.precioVenta - p.precioCosto) / p.precioCosto) * 100
+                  : 0;
+
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => handleAbrirEditar(p)}
+                  className="w-full rounded-lg border border-border bg-surface p-3 text-left active:bg-surface-hover"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-text">{p.nombre}</p>
+                      <p className="truncate text-xs text-text-dim">
+                        {p.marca?.nombre ?? "-"}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">
+                      +{porcentajeGanancia.toFixed(1)}%
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-y-2 text-sm">
+                    <div>
+                      <p className="text-xs text-text-dim">Stock</p>
+                      <p
+                        className={cn(
+                          "font-medium",
+                          p.stockActual <= 5 ? "text-danger" : "text-text"
+                        )}
+                      >
+                        {p.stockActual} u.
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-text-dim">Costo</p>
+                      <p className="text-text-dim">
+                        {formatMoney(p.precioCosto, p.monedaPrecio)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-text-dim">Venta</p>
+                      <p className="font-medium text-text">
+                        {formatMoney(p.precioVenta, p.monedaPrecio)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-text-dim">Mayorista</p>
+                      <p className="text-text-dim">
+                        {p.precioMayorista
+                          ? formatMoney(p.precioMayorista, p.monedaPrecio)
+                          : "-"}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })
+          ) : (
+            <p className="py-8 text-center text-sm text-text-dim">
+              No se encontraron productos que coincidan con la búsqueda.
+            </p>
+          )}
+        </div>
+
         {/* Paginación */}
         {totalPaginas > 1 && (
-          <div className="mt-4 flex items-center justify-between border-t border-border pt-4 text-xs text-text-dim">
+          <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4 text-xs text-text-dim sm:flex-row sm:items-center sm:justify-between">
             <span>
               Página {paginaActual} de {totalPaginas}
             </span>
@@ -378,14 +454,14 @@ export default function ProductosPage() {
               <button
                 disabled={paginaActual === 1}
                 onClick={() => setPaginaActual((prev) => prev - 1)}
-                className="rounded-md border border-border px-3 py-1 hover:bg-surface-hover disabled:opacity-50"
+                className="flex-1 rounded-md border border-border px-3 py-1.5 hover:bg-surface-hover disabled:opacity-50 sm:flex-none"
               >
                 Anterior
               </button>
               <button
                 disabled={paginaActual === totalPaginas}
                 onClick={() => setPaginaActual((prev) => prev + 1)}
-                className="rounded-md border border-border px-3 py-1 hover:bg-surface-hover disabled:opacity-50"
+                className="flex-1 rounded-md border border-border px-3 py-1.5 hover:bg-surface-hover disabled:opacity-50 sm:flex-none"
               >
                 Siguiente
               </button>

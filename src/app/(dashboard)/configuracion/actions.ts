@@ -3,6 +3,9 @@
 import { put } from "@vercel/blob";
 import { actualizarConfiguracion } from "@/lib/configuracion";
 import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
+import { auth } from "@/auth"; // ⚠️ ajustar si tu ruta real es otra
+import { prisma } from "@/lib/prisma";
 
 export async function guardarConfiguracion(formData: FormData) {
   const nombreNegocio = formData.get("nombreNegocio") as string;
@@ -54,4 +57,47 @@ export async function actualizarCotizacionRapida(cotizacionUSD: number) {
   await actualizarConfiguracion({ cotizacionUSD });
 
   revalidatePath("/", "layout");
+}
+
+export async function cambiarPassword(passwordActual: string, passwordNueva: string) {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    throw new Error("No autenticado");
+  }
+
+  if (!passwordActual || !passwordNueva) {
+    throw new Error("Completá ambos campos");
+  }
+
+  if (passwordNueva.length < 8) {
+    throw new Error("La nueva contraseña debe tener al menos 8 caracteres");
+  }
+
+  if (passwordActual === passwordNueva) {
+    throw new Error("La nueva contraseña debe ser diferente a la actual");
+  }
+
+  const usuarioId = Number(session.user.id);
+
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: usuarioId },
+  });
+
+  if (!usuario) {
+    throw new Error("Usuario no encontrado");
+  }
+
+  const passwordValida = await bcrypt.compare(passwordActual, usuario.passwordHash);
+
+  if (!passwordValida) {
+    throw new Error("La contraseña actual es incorrecta");
+  }
+
+  const nuevoHash = await bcrypt.hash(passwordNueva, 10);
+
+  await prisma.usuario.update({
+    where: { id: usuarioId },
+    data: { passwordHash: nuevoHash },
+  });
 }

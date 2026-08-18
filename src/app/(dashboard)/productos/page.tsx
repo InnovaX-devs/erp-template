@@ -1,300 +1,420 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { cn } from "@/lib/cn";
+import { ProductoFormModal, type ProductoFormData } from "@/components/productos/producto-form-modal";
+import { FormulaDecantModal } from "@/components/productos/formula-decant-modal";
+import { PdfGeneratorModal } from "@/components/productos/pdf-generator-modal";
+import { FileText } from "lucide-react";
 import Link from "next/link";
-import { toast } from "sonner";
-import {
-  Receipt,
-  PackagePlus,
-  FlaskConical,
-  Users,
-  Wallet,
-  Droplets,
-  TrendingUp,
-  Settings,
-  Eye,
-  Zap,
-  Package,
-} from "lucide-react";
-import { TodasCuentasModal } from "@/components/dashboard/todas-cuentas-modal";
-import { formatCurrency } from "@/lib/currency";
 
-interface CuentaPrincipal {
-  id: number;
+
+interface Producto {
+  id: string;
   nombre: string;
-  tipo: string;
-  saldoActual: number;
-  // Ej: "escriva.egreso28" — usuario/alias vinculado a la cuenta (opcional)
-  subtitulo?: string | null;
+  codigoBarras?: string | null;
+  ubicacionDeposito?: string | null;
+  fotoUrl?: string | null;
+  contenidoMl?: number | null;
+  marca?: { nombre: string } | null;
+  marcaId?: number | null;
+  categoriaId?: number | null;
+  stockActual: number;
+  stockMinimo?: number;
+  destacado?: boolean;
+  precioCosto: number;
+  precioVenta: number;
+  precioMayorista?: number | null;
+  precioOferta?: number | null;
+  monedaPrecio: "USD" | "ARS";
+  overrideDecant5ml?: number | null;
+  overrideDecant10ml?: number | null;
+  seVendePorDecant?: boolean;
+  activo: boolean;
 }
 
-interface Movimiento {
-  id: number;
-  hora: string; // ej: "06:52 p. m."
-  descripcion: string; // ej: "Venta #1039"
-  monto: number;
-  tipo: "ingreso" | "egreso";
-}
+const COTIZACION_USD = 1200;
 
-interface DashboardData {
-  cuentas: {
-    saldoTotal: number;
-    principales: CuentaPrincipal[];
-    totalCantidad: number;
-  };
-  hoy: {
-    gananciaARS: number;
-    cantidadVentas: number;
-    ingresosARS: number;
-    egresosARS: number;
-  };
-  pedidos: { porArmar: number; armados: number };
-  movimientos: Movimiento[];
-}
+export default function ProductosPage() {
+  const [busqueda, setBusqueda] = useState("");
+  const [paginaActual, setPaginaActual] = useState(1);
+  const elementosPorPagina = 15;
 
-const ACCESOS_RAPIDOS = [
-  { label: "Ventas", href: "/ventas", icon: Receipt },
-  { label: "Compras", href: "/compras", icon: PackagePlus },
-  { label: "Productos", href: "/productos", icon: FlaskConical },
-  { label: "Clientes", href: "/clientes", icon: Users },
-  { label: "Gastos", href: "/finanzas/gastos", icon: Wallet },
-  { label: "Reportes", href: "/reportes", icon: Droplets },
-];
-
-export default function DashboardPage() {
-  const [datos, setDatos] = useState<DashboardData | null>(null);
+  // Estados para manejo del Modal y la API
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [productoEditar, setProductoEditar] = useState<ProductoFormData | null>(null);
+  const [productos, setProductos] = useState<Producto[]>([]);
   const [cargando, setCargando] = useState(true);
-  const [modalCuentasAbierto, setModalCuentasAbierto] = useState(false);
 
-  const cargar = useCallback(async () => {
-    setCargando(true);
+  // Estados para el Modal de Fórmula Decant
+  const [isFormulaDecantOpen, setIsFormulaDecantOpen] = useState(false);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [configDecant, setConfigDecant] = useState({
+    costoEnvaseDecantARS: 1500,
+    multiplicadorInsumoDecant: 2.5,
+    cotizacionUSD: 1200,
+  });
+
+  useEffect(() => {
+    fetch("/api/configuracion")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setConfigDecant({
+            costoEnvaseDecantARS: data.costoEnvaseDecantARS ?? 1500,
+            multiplicadorInsumoDecant: data.multiplicadorInsumoDecant ?? 2.5,
+            cotizacionUSD: data.cotizacionUSD ?? 1200,
+          });
+        }
+      })
+      .catch((error) => console.error("Error al cargar configuración:", error));
+  }, []);
+
+  // Cargar productos desde la API
+  const cargarProductos = useCallback(async () => {
     try {
-      const res = await fetch("/api/dashboard");
-      if (!res.ok) throw new Error();
-      setDatos(await res.json());
-    } catch {
-      toast.error("No se pudo cargar el panorama general");
+      setCargando(true);
+      const res = await fetch("/api/productos");
+      if (res.ok) {
+        const data = await res.json();
+        // Si la API devuelve un objeto paginado { items, total }, tomamos items
+        setProductos(data.items || data);
+      }
+    } catch (error) {
+      console.error("Error al cargar productos:", error);
     } finally {
       setCargando(false);
     }
   }, []);
 
   useEffect(() => {
-    cargar();
-  }, [cargar]);
+    cargarProductos();
+  }, [cargarProductos]);
+
+  // 1. Filtrar productos por nombre o marca
+  const productosFiltrados = useMemo(() => {
+    return productos.filter(
+      (p) =>
+        p.activo &&
+        (p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+          p.marca?.nombre.toLowerCase().includes(busqueda.toLowerCase()))
+    );
+  }, [busqueda, productos]);
+
+  // 2. Cálculos para las 3 Tarjetas Resumen (ARS y USD)
+  const resumen = useMemo(() => {
+    let costoTotalUSD = 0;
+    let ventaTotalUSD = 0;
+
+    productosFiltrados.forEach((p) => {
+      const costoEnUSD =
+        p.monedaPrecio === "USD" ? p.precioCosto : p.precioCosto / COTIZACION_USD;
+      const ventaEnUSD =
+        p.monedaPrecio === "USD" ? p.precioVenta : p.precioVenta / COTIZACION_USD;
+
+      costoTotalUSD += costoEnUSD * p.stockActual;
+      ventaTotalUSD += ventaEnUSD * p.stockActual;
+    });
+
+    const gananciaTotalUSD = ventaTotalUSD - costoTotalUSD;
+
+    return {
+      costoUSD: costoTotalUSD,
+      costoARS: costoTotalUSD * COTIZACION_USD,
+      ventaUSD: ventaTotalUSD,
+      ventaARS: ventaTotalUSD * COTIZACION_USD,
+      gananciaUSD: gananciaTotalUSD,
+      gananciaARS: gananciaTotalUSD * COTIZACION_USD,
+    };
+  }, [productosFiltrados]);
+
+  // 3. Paginación
+  const totalPaginas = Math.ceil(productosFiltrados.length / elementosPorPagina) || 1;
+  const productosPaginados = useMemo(() => {
+    const inicio = (paginaActual - 1) * elementosPorPagina;
+    return productosFiltrados.slice(inicio, inicio + elementosPorPagina);
+  }, [productosFiltrados, paginaActual]);
+
+  const formatMoney = (amount: number, currency: "USD" | "ARS") => {
+    return new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
+
+  const handleAbrirCrear = () => {
+    setProductoEditar(null);
+    setIsModalOpen(true);
+  };
+
+  function mapProductoToFormData(producto: Producto): ProductoFormData {
+    return {
+      id: String(producto.id),
+      nombre: producto.nombre ?? "",
+      codigoBarras: producto.codigoBarras ?? "",
+      ubicacion: producto.ubicacionDeposito ?? "",
+      marcaId: producto.marcaId ? String(producto.marcaId) : "",
+      categoriaId: producto.categoriaId ? String(producto.categoriaId) : "",
+      contenidoMl: producto.contenidoMl ?? "",
+      stockActual: producto.stockActual ?? "",
+      stockMinimo: producto.stockMinimo ?? "",
+      destacado: producto.destacado ?? false,
+      monedaPrecio: producto.monedaPrecio ?? "USD",
+      precioCosto: producto.precioCosto ?? "",
+      precioVenta: producto.precioVenta ?? "",
+      precioMayorista: producto.precioMayorista ?? "",
+      precioOferta: producto.precioOferta ?? "",
+      esDecant: producto.seVendePorDecant ?? false,
+      overrideDecant5ml: producto.overrideDecant5ml ?? "",
+      overrideDecant10ml: producto.overrideDecant10ml ?? "",
+    };
+  };
+  
+
+  const handleAbrirEditar = (producto: Producto) => {
+    setProductoEditar(mapProductoToFormData(producto));
+    setIsModalOpen(true);
+};
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        <Link
-          href="/productos"
-          className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-text-dim hover:bg-surface-hover"
-        >
-          Consultar precio
-        </Link>
-        <Link
-          href="/ventas"
-          className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
-        >
-          + Nueva Venta
-        </Link>
-      </div>
-
-      {/* Saldo total + Hoy */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Saldo total */}
-        <div className="rounded-2xl bg-ink p-6 text-ivory">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <p className="text-xs uppercase tracking-widest text-ivory/50">Saldo Total</p>
-              <Eye size={13} className="text-ivory/40" />
-            </div>
-            <Link
-              href="/finanzas"
-              className="rounded-lg bg-white/10 p-2 hover:bg-white/15"
-              title="Ir a Contabilidad"
-            >
-              <Settings size={16} />
-            </Link>
-          </div>
-
-          {/* Ojo con el "$$": formatCurrency ya debería devolver el símbolo.
-              No antepongas un "$" adicional acá. */}
-          <p className="mt-1 font-display text-3xl font-semibold">
-            {cargando ? "..." : formatCurrency(datos?.cuentas.saldoTotal ?? 0, "ARS")}
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-semibold text-text">
+            Catálogo de Productos
+          </h1>
+          <p className="text-sm text-text-dim">
+            Gestión de inventario y valores de venta
           </p>
+        </div>
 
-          {!cargando && datos && datos.cuentas.principales.length > 0 && (
-            <div className="mt-6 grid grid-cols-2 gap-4 border-t border-white/10 pt-4 sm:grid-cols-5">
-              {datos.cuentas.principales.slice(0, 5).map((c) => (
-                <div key={c.id} className="min-w-0">
-                  <p className="truncate text-[11px] uppercase tracking-wide text-primary/60">
-                    {c.nombre}
-                  </p>
-                  <p className="truncate text-sm font-semibold text-white">
-                    {formatCurrency(c.saldoActual, c.tipo.endsWith("USD") ? "USD" : "ARS")}
-                  </p>
-                  {c.subtitulo && (
-                    <p className="truncate text-[11px] text-primary/50">{c.subtitulo}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
+        <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => setModalCuentasAbierto(true)}
-            className="mt-4 text-xs font-medium text-amber hover:underline"
+            type="button"
+            onClick={() => setIsPdfModalOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-medium text-text hover:bg-surface-hover"
           >
-            Ver todas ({datos?.cuentas.totalCantidad ?? 0}) →
+            <FileText className="h-4 w-4" />
+            Generar PDF
+          </button>
+          <Link
+            href="/productos/actualizar-precios"
+            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          >
+            + Actualizar Precios
+          </Link>
+          <button
+            type="button"
+            onClick={() => setIsFormulaDecantOpen(true)}
+            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          >
+            Fórmula Decant
+          </button>
+          <button
+            type="button"
+            onClick={handleAbrirCrear}
+            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          >
+            + Nuevo Producto
           </button>
         </div>
+      </div>
 
-        {/* Hoy */}
-        <div className="rounded-2xl border border-border bg-surface p-6">
-          <div className="flex items-center justify-between">
-            <p className="text-xs uppercase tracking-wide text-text-dim">Hoy</p>
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-success/10 text-success">
-              <TrendingUp size={14} />
-            </span>
-          </div>
-          <p className="mt-1 text-3xl font-bold text-text">
-            {cargando ? "..." : formatCurrency(datos?.hoy.gananciaARS ?? 0, "ARS")}
+      {/* Tarjetas Resumen */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <p className="text-xs uppercase tracking-wide text-text-dim">
+            Stock a Costo
           </p>
-          <div className="mt-6 flex items-center gap-10 border-t border-border pt-4">
-            <div>
-              <p className="text-[11px] uppercase tracking-wide text-text-dim">Ganancia</p>
-              <p className="text-lg font-semibold text-success">
-                {cargando ? "..." : formatCurrency(datos?.hoy.gananciaARS ?? 0, "ARS")}
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wide text-text-dim">Ventas</p>
-              <p className="text-lg font-semibold text-text">
-                {cargando ? "..." : datos?.hoy.cantidadVentas ?? 0}
-              </p>
-            </div>
-          </div>
+          <p className="mt-1 text-2xl font-semibold text-text">
+            {formatMoney(resumen.costoARS, "ARS")}
+          </p>
+          <p className="mt-1 text-xs font-medium text-text-dim">
+            {formatMoney(resumen.costoUSD, "USD")}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <p className="text-xs uppercase tracking-wide text-text-dim">
+            Stock a Precio Venta
+          </p>
+          <p className="mt-1 text-2xl font-semibold text-text">
+            {formatMoney(resumen.ventaARS, "ARS")}
+          </p>
+          <p className="mt-1 text-xs font-medium text-text-dim">
+            {formatMoney(resumen.ventaUSD, "USD")}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <p className="text-xs uppercase tracking-wide text-text-dim">
+            Ganancia Potencial
+          </p>
+          <p className="mt-1 text-2xl font-semibold text-success">
+            {formatMoney(resumen.gananciaARS, "ARS")}
+          </p>
+          <p className="mt-1 text-xs font-medium text-success/80">
+            {formatMoney(resumen.gananciaUSD, "USD")}
+          </p>
         </div>
       </div>
 
-      {/* Accesos rápidos */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {ACCESOS_RAPIDOS.map((a) => (
-          <Link
-            key={a.href}
-            href={a.href}
-            className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface p-4 text-center text-sm font-medium text-text-dim transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary"
-          >
-            <a.icon size={20} />
-            {a.label}
-          </Link>
-        ))}
-      </div>
+      {/* Tabla y Filtros */}
+      <div className="rounded-xl border border-border bg-surface p-4">
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <div className="relative w-full sm:w-80">
+            <input
+              type="text"
+              placeholder="Buscar por nombre o marca..."
+              value={busqueda}
+              onChange={(e) => {
+                setBusqueda(e.target.value);
+                setPaginaActual(1);
+              }}
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-text-dim focus:border-primary focus:outline-none"
+            />
+          </div>
+          <p className="text-xs text-text-dim">
+            Mostrando {productosFiltrados.length} productos
+          </p>
+        </div>
 
-      {/* Movimientos de hoy + Pedidos */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Movimientos de hoy */}
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Zap size={16} className="text-primary" />
-              <h2 className="font-medium text-text">Movimientos de hoy</h2>
-              {!!datos?.movimientos.length && (
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-white">
-                  {datos.movimientos.length}
-                </span>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-text-dim">
+                <th className="pb-3 pr-4 font-medium">Producto</th>
+                <th className="pb-3 pr-4 font-medium">Marca</th>
+                <th className="pb-3 pr-4 font-medium">Stock</th>
+                <th className="pb-3 pr-4 font-medium">Costo</th>
+                <th className="pb-3 pr-4 font-medium">Venta</th>
+                <th className="pb-3 pr-4 font-medium">% Ganancia</th>
+                <th className="pb-3 pr-4 font-medium">Mayorista</th>
+                <th className="pb-3 font-medium">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cargando ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-sm text-text-dim">
+                    Cargando productos...
+                  </td>
+                </tr>
+              ) : productosPaginados.length > 0 ? (
+                productosPaginados.map((p) => {
+                  const porcentajeGanancia =
+                    p.precioCosto > 0
+                      ? ((p.precioVenta - p.precioCosto) / p.precioCosto) * 100
+                      : 0;
+
+                  return (
+                    <tr
+                      key={p.id}
+                      className="border-b border-border last:border-0 hover:bg-surface-hover/50"
+                    >
+                      <td className="py-3 pr-4 font-medium text-text">
+                        {p.nombre}
+                      </td>
+                      <td className="py-3 pr-4 text-text-dim">
+                        {p.marca?.nombre ?? "-"}
+                      </td>
+                      <td className="py-3 pr-4">
+                        <span
+                          className={cn(
+                            "font-medium",
+                            p.stockActual <= 5 ? "text-danger" : "text-text"
+                          )}
+                        >
+                          {p.stockActual} u.
+                        </span>
+                      </td>
+                      <td className="py-3 pr-4 text-text-dim">
+                        {formatMoney(p.precioCosto, p.monedaPrecio)}
+                      </td>
+                      <td className="py-3 pr-4 font-medium text-text">
+                        {formatMoney(p.precioVenta, p.monedaPrecio)}
+                      </td>
+                      <td className="py-3 pr-4">
+                        <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">
+                          +{porcentajeGanancia.toFixed(1)}%
+                        </span>
+                      </td>
+                      <td className="py-3 pr-4 text-text-dim">
+                        {p.precioMayorista
+                          ? formatMoney(p.precioMayorista, p.monedaPrecio)
+                          : "-"}
+                      </td>
+                      <td className="py-3">
+                        <button 
+                          onClick={() => handleAbrirEditar(p)}
+                          className="text-text-dim hover:text-text"
+                        >
+                          ⋮
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-sm text-text-dim">
+                    No se encontraron productos que coincidan con la búsqueda.
+                  </td>
+                </tr>
               )}
-            </div>
-            <Link href="/finanzas/movimientos" className="text-xs font-medium text-primary hover:underline">
-              Ver todo →
-            </Link>
-          </div>
-
-          <div className="mt-4 flex items-center justify-between border-b border-border pb-3">
-            <div>
-              <p className="text-xs text-text-dim">Ingresos</p>
-              <p className="font-semibold text-success">
-                +{formatCurrency(datos?.hoy.ingresosARS ?? 0, "ARS")}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-text-dim">Egresos</p>
-              <p className="font-semibold text-danger">
-                -{formatCurrency(datos?.hoy.egresosARS ?? 0, "ARS")}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-1 divide-y divide-border">
-            {(datos?.movimientos ?? []).map((m) => (
-              <div key={m.id} className="flex items-center gap-3 py-2.5">
-                <span
-                  className={`h-2 w-2 shrink-0 rounded-full ${
-                    m.tipo === "ingreso" ? "bg-success" : "bg-danger"
-                  }`}
-                />
-                <span className="w-16 shrink-0 text-xs text-text-dim">{m.hora}</span>
-                <span className="flex-1 truncate text-sm text-text">{m.descripcion}</span>
-                <span
-                  className={`text-sm font-semibold ${
-                    m.tipo === "ingreso" ? "text-success" : "text-danger"
-                  }`}
-                >
-                  {m.tipo === "ingreso" ? "+" : "-"}
-                  {formatCurrency(m.monto, "ARS")}
-                </span>
-              </div>
-            ))}
-            {!cargando && !datos?.movimientos.length && (
-              <p className="py-4 text-center text-sm text-text-dim">Sin movimientos hoy</p>
-            )}
-          </div>
+            </tbody>
+          </table>
         </div>
 
-        {/* Pedidos */}
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Package size={16} className="text-warning" />
-              <h2 className="font-medium text-text">Pedidos</h2>
+        {/* Paginación */}
+        {totalPaginas > 1 && (
+          <div className="mt-4 flex items-center justify-between border-t border-border pt-4 text-xs text-text-dim">
+            <span>
+              Página {paginaActual} de {totalPaginas}
+            </span>
+            <div className="flex gap-2">
+              <button
+                disabled={paginaActual === 1}
+                onClick={() => setPaginaActual((prev) => prev - 1)}
+                className="rounded-md border border-border px-3 py-1 hover:bg-surface-hover disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <button
+                disabled={paginaActual === totalPaginas}
+                onClick={() => setPaginaActual((prev) => prev + 1)}
+                className="rounded-md border border-border px-3 py-1 hover:bg-surface-hover disabled:opacity-50"
+              >
+                Siguiente
+              </button>
             </div>
-            <Link href="/ventas/pedidos" className="text-xs font-medium text-primary hover:underline">
-              Ver todos →
-            </Link>
           </div>
-
-          <div className="mt-3 space-y-2">
-            {!!datos?.pedidos.porArmar && (
-              <div className="flex items-center justify-between rounded-lg bg-warning/10 px-3 py-2.5">
-                <span className="flex items-center gap-2 text-sm font-medium text-text">
-                  <span className="h-2 w-2 rounded-full bg-warning" />
-                  Por armar
-                </span>
-                <span className="rounded-full bg-warning px-2.5 py-0.5 text-xs font-semibold text-white">
-                  {datos.pedidos.porArmar}
-                </span>
-              </div>
-            )}
-            {!!datos?.pedidos.armados && (
-              <div className="flex items-center justify-between rounded-lg bg-success/10 px-3 py-2.5">
-                <span className="flex items-center gap-2 text-sm font-medium text-text">
-                  <span className="h-2 w-2 rounded-full bg-success" />
-                  Armados
-                </span>
-                <span className="rounded-full bg-success px-2.5 py-0.5 text-xs font-semibold text-white">
-                  {datos.pedidos.armados}
-                </span>
-              </div>
-            )}
-            {!cargando && !datos?.pedidos.porArmar && !datos?.pedidos.armados && (
-              <p className="py-4 text-center text-sm text-text-dim">Sin pedidos pendientes</p>
-            )}
-          </div>
-        </div>
+        )}
       </div>
 
-      <TodasCuentasModal isOpen={modalCuentasAbierto} onClose={() => setModalCuentasAbierto(false)} />
+      {/* Modal para Crear / Editar Producto */}
+      <ProductoFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        productoEditar={productoEditar}
+        onSuccess={cargarProductos}
+      />
+
+      {/* Modal para Fórmula Decant */}
+      <FormulaDecantModal
+        isOpen={isFormulaDecantOpen}
+        onClose={() => setIsFormulaDecantOpen(false)}
+        costoEnvaseDecantARSInicial={configDecant.costoEnvaseDecantARS}
+        multiplicadorInsumoDecantInicial={configDecant.multiplicadorInsumoDecant}
+        cotizacionUSD={configDecant.cotizacionUSD}
+      />
+
+      <PdfGeneratorModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+      />
     </div>
   );
 }

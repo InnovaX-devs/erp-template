@@ -37,7 +37,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         return {
-          id: usuario.id,
+          id: String(usuario.id),
           email: usuario.email,
           name: usuario.nombre,
         };

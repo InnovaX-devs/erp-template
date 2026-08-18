@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Tag } from "lucide-react";
 import { toast } from "sonner";
 import { VentaProvider, useVenta } from "@/components/ventas/venta-context";
 import { TogglePrecio } from "@/components/ventas/toggle-precio";
@@ -19,8 +18,9 @@ import { SelectorCobro } from "@/components/ventas/selector-cobro";
 import { obtenerPresupuestoParaConvertir } from "@/app/(dashboard)/presupuestos/actions";
 import { ModalPresentacion } from "@/components/ventas/modal-presentacion";
 import type { Presentacion } from "@/types/decant";
-import { confirmarVenta, registrarPedido, verificarStockDisponible, type StockDisponibilidad } from "./actions";
+import { confirmarVenta, registrarPedido, descontarStockSinVenta, verificarStockDisponible, type StockDisponibilidad } from "./actions";
 import { ModalStockComprometido } from "@/components/ventas/modal-stock-comprometido";
+import { Tag, Gift } from "lucide-react";
 
 export default function NuevaVentaPage() {
   return (
@@ -267,6 +267,30 @@ function NuevaVentaContenido() {
     limpiarVenta();
   }
 
+  async function handleDescontarStock() {
+    if (carrito.length === 0) {
+      toast.error("El carrito está vacío.");
+      return;
+    }
+    setProcesando(true);
+    const resultado = await descontarStockSinVenta(
+      carrito.map((it) => ({
+        productoId: it.producto.id,
+        cantidad: it.cantidad,
+        presentacion: it.presentacion,
+        abrioFrascoCerrado: it.abrioFrascoCerrado,
+      }))
+    );
+    setProcesando(false);
+
+    if (!resultado.success) {
+      toast.error(resultado.error);
+      return;
+    }
+    toast.success("Stock descontado");
+    limpiarVenta();
+  }
+
   async function handleRegistrarPedido() {
     if (carrito.length === 0) {
       toast.error("El carrito está vacío.");
@@ -356,6 +380,14 @@ function NuevaVentaContenido() {
                 className="w-full rounded-lg border border-primary px-4 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10 disabled:opacity-50"
               >
                 Registrar pedido
+              </button>
+              <button
+                type="button"
+                onClick={handleDescontarStock}
+                disabled={procesando}
+                className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-text hover:bg-surface-hover disabled:opacity-50"
+              >
+                <Gift size={14} /> Solo descontar stock
               </button>
             </div>
           </div>

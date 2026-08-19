@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { auth } from "@/auth"; // ⚠️ ajustar si tu ruta real es otra
 import { prisma } from "@/lib/prisma";
+import { isPasswordValid } from "@/lib/password-validation";
 
 export async function guardarConfiguracion(formData: FormData) {
   const nombreNegocio = formData.get("nombreNegocio") as string;
@@ -70,8 +71,8 @@ export async function cambiarPassword(passwordActual: string, passwordNueva: str
     throw new Error("Completá ambos campos");
   }
 
-  if (passwordNueva.length < 8) {
-    throw new Error("La nueva contraseña debe tener al menos 8 caracteres");
+  if (!isPasswordValid(passwordNueva)) {
+    throw new Error("La nueva contraseña no cumple con los requisitos de seguridad");
   }
 
   if (passwordActual === passwordNueva) {

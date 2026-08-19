@@ -16,9 +16,18 @@ export type ClientesFiltros = {
   busqueda?: string;
   tipo?: "mayorista" | "minorista";
   deuda?: "con-deuda" | "al-dia";
+  pagina?: number;
+};
+
+export type Paginacion = {
+  pagina: number;
+  totalPaginas: number;
+  totalItems: number;
+  pageSize: number;
 };
 
 const UMBRAL_AL_DIA = 0.01; // tolerancia por redondeo de floats
+const PAGE_SIZE = 25;
 
 export async function getClientesData(filtros: ClientesFiltros = {}) {
   const clientesAll = await prisma.cliente.findMany({
@@ -79,7 +88,23 @@ export async function getClientesData(filtros: ClientesFiltros = {}) {
     filtrados = filtrados.filter((c) => c.deuda <= UMBRAL_AL_DIA);
   }
 
-  return { clientes: filtrados, resumen, umbralAlDia: UMBRAL_AL_DIA };
+  // Paginado en memoria (post-filtro)
+  const totalItems = filtrados.length;
+  const totalPaginas = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const paginaSolicitada = filtros.pagina ?? 1;
+  const pagina = Math.min(Math.max(1, paginaSolicitada), totalPaginas);
+
+  const inicio = (pagina - 1) * PAGE_SIZE;
+  const clientesPagina = filtrados.slice(inicio, inicio + PAGE_SIZE);
+
+  const paginacion: Paginacion = {
+    pagina,
+    totalPaginas,
+    totalItems,
+    pageSize: PAGE_SIZE,
+  };
+
+  return { clientes: clientesPagina, resumen, umbralAlDia: UMBRAL_AL_DIA, paginacion };
 }
 
 export async function getCuentasActivas() {

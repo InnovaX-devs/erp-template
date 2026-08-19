@@ -2,12 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, Check, X as XIcon } from "lucide-react";
+import { Menu, Check, X as XIcon, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { NAV_ITEMS, esGrupo } from "@/lib/nav-items";
 import { LogoutButton } from "@/components/layout/logout-button";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { useSidebar } from "@/components/layout/sidebar-context";
+import { CambiarPasswordModal } from "@/components/layout/cambiar-password-modal"; // ⚠️ ajustar si tu ruta real es otra
 import { actualizarCotizacionRapida } from "@/app/(dashboard)/configuracion/actions"; // ⚠️ ajustar si tu ruta real es otra
 
 function useSectionTitle() {
@@ -30,6 +31,7 @@ export function Topbar({ cotizacionUSD }: { cotizacionUSD: number }) {
   const [editando, setEditando] = useState(false);
   const [valor, setValor] = useState(String(cotizacionUSD));
   const [pendiente, startTransition] = useTransition();
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
 
   const cotizacionFormateada = new Intl.NumberFormat("es-AR", {
     minimumFractionDigits: 0,
@@ -134,8 +136,21 @@ export function Topbar({ cotizacionUSD }: { cotizacionUSD: number }) {
             <span className="font-mono text-sm font-medium text-text">${cotizacionFormateada}</span>
           </button>
         )}
+
+        <button
+          type="button"
+          onClick={() => setPasswordModalOpen(true)}
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-text hover:bg-surface-hover"
+          title="Cambiar contraseña"
+          aria-label="Cambiar contraseña"
+        >
+          <KeyRound className="h-4 w-4" />
+        </button>
+
         <LogoutButton />
       </div>
+
+      <CambiarPasswordModal open={passwordModalOpen} onClose={() => setPasswordModalOpen(false)} />
     </header>
   );
 }

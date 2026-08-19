@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import ClienteModal from "@/components/clientes/ClienteModal";
 import ClientesTable from "./ClientesTable";
 import ResumenCards from "./ResumenCards";
 import ClientesFilters from "./ClientesFilters";
-import type { ClienteConDeuda } from "@/lib/clientes";
+import type { ClienteConDeuda, Paginacion } from "@/lib/clientes";
 import type { ClienteBasico } from "@/components/clientes/ClienteForm";
 import type { CuentaOption } from "./CobrarDeudaModal";
 
@@ -15,13 +15,16 @@ export default function ClientesContent({
   resumen,
   cuentas,
   umbralAlDia,
+  paginacion,
 }: {
   clientes: ClienteConDeuda[];
   resumen: { totalClientes: number; totalMayoristas: number; deudaTotal: number };
   cuentas: CuentaOption[];
   umbralAlDia: number;
+  paginacion: Paginacion;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [modalAbierto, setModalAbierto] = useState(false);
   const [clienteEditar, setClienteEditar] = useState<ClienteConDeuda | null>(null);
 
@@ -45,6 +48,14 @@ export default function ClientesContent({
     router.refresh(); // vuelve a pedir los datos al server component
   }
 
+  function irAPagina(pagina: number) {
+    const nuevosParams = new URLSearchParams(searchParams.toString());
+    nuevosParams.set("page", String(pagina));
+    router.push(`?${nuevosParams.toString()}`);
+  }
+
+  const { pagina, totalPaginas, totalItems } = paginacion;
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -65,6 +76,34 @@ export default function ClientesContent({
         umbralAlDia={umbralAlDia}
         onEditar={abrirEditar}
       />
+
+      {totalItems > 0 && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-[#45464f]">
+          <span>
+            Mostrando {(pagina - 1) * paginacion.pageSize + 1}–
+            {Math.min(pagina * paginacion.pageSize, totalItems)} de {totalItems}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => irAPagina(pagina - 1)}
+              disabled={pagina <= 1}
+              className="px-3 py-1.5 rounded-lg border border-[#c5c6d0] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#eceef0]"
+            >
+              Anterior
+            </button>
+            <span>
+              Página {pagina} de {totalPaginas}
+            </span>
+            <button
+              onClick={() => irAPagina(pagina + 1)}
+              disabled={pagina >= totalPaginas}
+              className="px-3 py-1.5 rounded-lg border border-[#c5c6d0] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#eceef0]"
+            >
+              Siguiente
+            </button>
+          </div>
+        </div>
+      )}
 
       {modalAbierto && (
         <ClienteModal

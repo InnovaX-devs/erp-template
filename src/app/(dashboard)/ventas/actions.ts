@@ -43,6 +43,66 @@ type ResultadoVenta =
   | { success: true; ventaId: number }
   | { success: false; error: string };
 
+  type DescontarStockItemInput = {
+  productoId: number;
+  cantidad: number;
+  presentacion: "FRASCO" | "DECANT_5ML" | "DECANT_10ML";
+  abrioFrascoCerrado: boolean;
+};
+
+type ResultadoDescontarStock =
+  | { success: true }
+  | { success: false; error: string };
+
+export async function descontarStockSinVenta(
+  items: DescontarStockItemInput[]
+): Promise<ResultadoDescontarStock> {
+  if (items.length === 0) {
+    return { success: false, error: "El carrito está vacío." };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      // 1. Validar stock (misma regla que ventas: FRASCO descuenta cantidad completa,
+      //    DECANT solo si se abrió un frasco cerrado)
+      for (const item of items) {
+        const unidades =
+          item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
+        if (unidades === 0) continue;
+
+        const producto = await tx.producto.findUnique({
+          where: { id: item.productoId },
+          select: { stockActual: true, nombre: true },
+        });
+        if (!producto || producto.stockActual < unidades) {
+          throw new Error(
+            `Stock insuficiente para "${producto?.nombre ?? "producto"}" (disponible: ${producto?.stockActual ?? 0})`
+          );
+        }
+      }
+
+      // 2. Descontar. Nada más: no se crea venta, ni pedido, ni movimiento de caja.
+      for (const item of items) {
+        const unidades =
+          item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
+        if (unidades === 0) continue;
+
+        await tx.producto.update({
+          where: { id: item.productoId },
+          data: { stockActual: { decrement: unidades } },
+        });
+      }
+    });
+
+    revalidatePath("/", "layout");
+    return { success: true };
+  } catch (e) {
+    console.error(e);
+    const mensaje = e instanceof Error ? e.message : "Ocurrió un error al descontar el stock.";
+    return { success: false, error: mensaje };
+  }
+}
+
 async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<ResultadoVenta> {
   if (input.items.length === 0) {
     return { success: false, error: "El carrito está vacío." };

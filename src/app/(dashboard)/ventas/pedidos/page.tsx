@@ -6,6 +6,8 @@ import { cn } from "@/lib/cn";
 import { listarPedidos } from "../actions";
 import { CardPedido } from "@/components/ventas/card-pedido";
 import type { FiltrosPedidos, PedidoListItem } from "@/types/venta";
+import Select from "@/components/ui/select";
+import { RangoFechas } from "@/components/ui/rango-fechas";
 
 const FILTROS_INICIALES: FiltrosPedidos = {
   clienteTexto: "",
@@ -68,57 +70,21 @@ export default function PedidosPage() {
 
       {/* Filtros */}
       <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="relative flex-1 sm:max-w-xs">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-dim" />
-            <input
-              value={clienteInput}
-              onChange={(e) => setClienteInput(e.target.value)}
-              placeholder="Cliente o Nº de pedido..."
-              className="w-full rounded-lg border border-border bg-bg py-2 pl-9 pr-3 text-sm text-text placeholder:text-text-dim focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {TOGGLES.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => toggleFiltro(t.key)}
-                className={cn(
-                  "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                  filtros[t.key]
-                    ? "bg-primary text-white"
-                    : "border border-border bg-bg text-text-dim hover:text-text"
-                )}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <input
-            type="date"
-            value={filtros.fechaDesde ?? ""}
-            onChange={(e) => setFiltros((f) => ({ ...f, fechaDesde: e.target.value || null }))}
-            className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary"
+        <div className="flex flex-wrap items-center gap-2">
+          <RangoFechas
+            desde={filtros.fechaDesde}
+            hasta={filtros.fechaHasta}
+            onCambiar={(fechaDesde, fechaHasta) => setFiltros((f) => ({ ...f, fechaDesde, fechaHasta }))}
           />
-          <span className="hidden text-text-dim sm:inline">—</span>
-          <input
-            type="date"
-            value={filtros.fechaHasta ?? ""}
-            onChange={(e) => setFiltros((f) => ({ ...f, fechaHasta: e.target.value || null }))}
-            className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-          <select
+          <Select
             value={filtros.orden}
-            onChange={(e) => setFiltros((f) => ({ ...f, orden: e.target.value as "MAS_NUEVO" | "MAS_VIEJO" }))}
-            className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            <option value="MAS_NUEVO">Más nuevo primero</option>
-            <option value="MAS_VIEJO">Más viejo primero</option>
-          </select>
+            onChange={(v) => setFiltros((f) => ({ ...f, orden: v as "MAS_NUEVO" | "MAS_VIEJO" }))}
+            options={[
+              { value: "MAS_NUEVO", label: "Más nuevo primero" },
+              { value: "MAS_VIEJO", label: "Más viejo primero" },
+            ]}
+            className="w-48"
+          />
         </div>
       </div>
 

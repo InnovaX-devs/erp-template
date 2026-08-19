@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { simularFormulaDecant } from "@/lib/calculos/decants";
-import { toUsd } from "@/lib/currency";
+import { calcularPreciosDecant } from "@/lib/calculos/decants";
 import { formatCurrency } from "@/lib/currency";
 import type { ProductoBusquedaDTO } from "@/types/producto";
 import type { OpcionPresentacion, Presentacion } from "@/types/decant";
@@ -34,7 +33,33 @@ export function ModalPresentacion({ producto, onElegir, onClose }: Props) {
         },
       ];
 
-      // Decant 5ml
+      // Costo del frasco en USD, usando SIEMPRE la cotización actual de Configuración
+      // (no la función toUsd, que usa una constante USD_RATE distinta y desactualizada).
+      const costoFrascoUSD =
+        producto.monedaPrecio === "USD"
+          ? producto.precioCosto
+          : producto.precioCosto / config.cotizacionUSD;
+
+      const formulaDisponible =
+        Number.isFinite(costoFrascoUSD) &&
+        costoFrascoUSD > 0 &&
+        config.costoEnvaseDecantARS != null &&
+        config.multiplicadorInsumoDecant != null &&
+        config.divisorFrascoDecant != null &&
+        config.offsetDecant5mlARS != null;
+
+      const resultado = formulaDisponible
+        ? calcularPreciosDecant({
+            costoFrascoUSD,
+            cotizacionUSD: config.cotizacionUSD,
+            costoEnvaseDecantARS: config.costoEnvaseDecantARS,
+            multiplicadorInsumoDecant: config.multiplicadorInsumoDecant,
+            divisorFrascoDecant: config.divisorFrascoDecant,
+            offsetDecant5mlARS: config.offsetDecant5mlARS,
+          })
+        : null;
+
+      // Decant 5ml — el override manual del producto pisa el cálculo por fórmula
       if (producto.overrideDecant5ml != null) {
         opcionesCalculadas.push({
           presentacion: "DECANT_5ML",
@@ -42,19 +67,11 @@ export function ModalPresentacion({ producto, onElegir, onClose }: Props) {
           precio: producto.overrideDecant5ml,
           disponible: true,
         });
-      } else if (producto.contenidoMl && producto.contenidoMl > 0) {
-        const precioTotalUSD = toUsd(producto.precioCosto, producto.monedaPrecio);
-        const sim = simularFormulaDecant({
-          mlPerfume: producto.contenidoMl,
-          precioTotalUSD,
-          cotizacionUSD: config.cotizacionUSD,
-          costoEnvaseDecantARS: config.costoEnvaseDecantARS,
-          multiplicadorInsumoDecant: config.multiplicadorInsumoDecant,
-        });
+      } else if (resultado) {
         opcionesCalculadas.push({
           presentacion: "DECANT_5ML",
           etiqueta: "Decant 5ml",
-          precio: sim.decant5ml.precioSugerido,
+          precio: resultado.decant5ml,
           disponible: true,
         });
       } else {
@@ -63,11 +80,11 @@ export function ModalPresentacion({ producto, onElegir, onClose }: Props) {
           etiqueta: "Decant 5ml",
           precio: 0,
           disponible: false,
-          motivoNoDisponible: "Precio no configurado (falta contenidoMl u override)",
+          motivoNoDisponible: "Precio no configurado (falta costo o parámetros de fórmula)",
         });
       }
 
-      // Decant 10ml (misma lógica)
+      // Decant 10ml — misma lógica, mismo resultado ya calculado arriba
       if (producto.overrideDecant10ml != null) {
         opcionesCalculadas.push({
           presentacion: "DECANT_10ML",
@@ -75,19 +92,11 @@ export function ModalPresentacion({ producto, onElegir, onClose }: Props) {
           precio: producto.overrideDecant10ml,
           disponible: true,
         });
-      } else if (producto.contenidoMl && producto.contenidoMl > 0) {
-        const precioTotalUSD = toUsd(producto.precioCosto, producto.monedaPrecio);
-        const sim = simularFormulaDecant({
-          mlPerfume: producto.contenidoMl,
-          precioTotalUSD,
-          cotizacionUSD: config.cotizacionUSD,
-          costoEnvaseDecantARS: config.costoEnvaseDecantARS,
-          multiplicadorInsumoDecant: config.multiplicadorInsumoDecant,
-        });
+      } else if (resultado) {
         opcionesCalculadas.push({
           presentacion: "DECANT_10ML",
           etiqueta: "Decant 10ml",
-          precio: sim.decant10ml.precioSugerido,
+          precio: resultado.decant10ml,
           disponible: true,
         });
       } else {
@@ -96,7 +105,7 @@ export function ModalPresentacion({ producto, onElegir, onClose }: Props) {
           etiqueta: "Decant 10ml",
           precio: 0,
           disponible: false,
-          motivoNoDisponible: "Precio no configurado (falta contenidoMl u override)",
+          motivoNoDisponible: "Precio no configurado (falta costo o parámetros de fórmula)",
         });
       }
 

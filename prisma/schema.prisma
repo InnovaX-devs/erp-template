@@ -429,6 +429,8 @@ model Configuracion {
   // Fórmula de decants
   costoEnvaseDecantARS      Float?
   multiplicadorInsumoDecant Float?
+  divisorFrascoDecant       Float?  @default(9)
+  offsetDecant5mlARS        Float?  @default(200)
 
   updatedAt DateTime @updatedAt
 }

@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
-import Select from "@/components/ui/Select";
+import Select from "@/components/ui/select";
 
 const OPCIONES_TIPO = [
   { value: "", label: "Todos los tipos" },

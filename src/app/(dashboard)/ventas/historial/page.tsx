@@ -6,6 +6,8 @@ import { listarVentas } from "../actions";
 import type { EstadoPago } from "@prisma/client";
 import type { FiltroEstado, VentaListItem } from "@/types/venta";
 import { Search, ChevronLeft, ChevronRight, RefreshCw, Download, Loader2, X } from "lucide-react";
+import Select from "@/components/ui/select"; // ajustá el path a donde tengas tu componente
+import { RangoFechas } from "@/components/ui/rango-fechas"; // ajustá el path
 
 const PAGE_SIZE = 15;
 
@@ -14,6 +16,11 @@ const FILTROS_ESTADO: { label: string; value: FiltroEstado }[] = [
   { label: "Pagadas", value: "PAGADA" },
   { label: "A cuenta", value: "A_CUENTA" },
   { label: "Canceladas", value: "CANCELADA" },
+];
+
+const OPCIONES_ORDEN = [
+  { value: "MAS_NUEVO", label: "Más nuevo primero" },
+  { value: "MAS_VIEJO", label: "Más viejo primero" },
 ];
 
 const ESTADO_STYLE: Record<EstadoPago, string> = {
@@ -50,21 +57,27 @@ export default function HistorialVentasPage() {
   const [estado, setEstado] = useState<FiltroEstado>("TODOS");
   const [clienteInput, setClienteInput] = useState("");
   const [clienteTexto, setClienteTexto] = useState("");
-  const [fechaDesde, setFechaDesde] = useState("");
-  const [fechaHasta, setFechaHasta] = useState("");
+  const [fechaDesde, setFechaDesde] = useState<string | null>(null);
+  const [fechaHasta, setFechaHasta] = useState<string | null>(null);
   const [orden, setOrden] = useState<"MAS_NUEVO" | "MAS_VIEJO">("MAS_NUEVO");
   const [page, setPage] = useState(1);
   const [descargando, setDescargando] = useState<number | null>(null);
 
   const hayFiltrosActivos =
-    estado !== "TODOS" || clienteTexto !== "" || fechaDesde !== "" || fechaHasta !== "";
+    estado !== "TODOS" || clienteTexto !== "" || !!fechaDesde || !!fechaHasta;
 
   function limpiarFiltros() {
     setEstado("TODOS");
     setClienteInput("");
     setClienteTexto("");
-    setFechaDesde("");
-    setFechaHasta("");
+    setFechaDesde(null);
+    setFechaHasta(null);
+    setPage(1);
+  }
+
+  function handleCambiarFechas(desde: string | null, hasta: string | null) {
+    setFechaDesde(desde);
+    setFechaHasta(hasta);
     setPage(1);
   }
 
@@ -126,8 +139,9 @@ export default function HistorialVentasPage() {
   return (
     <div className="space-y-4">
       {/* Filtros */}
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-3">
-        <div className="relative min-w-[220px] flex-1">
+      <div className="space-y-3 rounded-xl border border-border bg-surface p-3">
+        {/* Buscador — siempre a full width */}
+        <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-dim" />
           <input
             value={clienteInput}
@@ -137,77 +151,60 @@ export default function HistorialVentasPage() {
           />
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          {FILTROS_ESTADO.map((f) => (
+        {/* Fila de filtros: pills scrolleables a la izq, fecha/orden/acciones a la der */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:pb-0">
+            {FILTROS_ESTADO.map((f) => (
+              <button
+                key={f.value}
+                type="button"
+                onClick={() => {
+                  setEstado(f.value);
+                  setPage(1);
+                }}
+                className={cn(
+                  "shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  estado === f.value
+                    ? "bg-primary text-white"
+                    : "border border-border bg-surface text-text-dim hover:border-primary/40 hover:text-text"
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <RangoFechas desde={fechaDesde} hasta={fechaHasta} onCambiar={handleCambiarFechas} />
+
+            <Select
+              value={orden}
+              onChange={(v) => setOrden(v as "MAS_NUEVO" | "MAS_VIEJO")}
+              options={OPCIONES_ORDEN}
+              className="w-full min-w-[9rem] sm:w-auto"
+            />
+
+            {hayFiltrosActivos && (
+              <button
+                type="button"
+                onClick={limpiarFiltros}
+                className="flex items-center gap-1 whitespace-nowrap rounded-lg px-2 py-2 text-xs font-medium text-primary hover:underline"
+              >
+                <X className="h-3.5 w-3.5" />
+                Limpiar
+              </button>
+            )}
+
             <button
-              key={f.value}
               type="button"
-              onClick={() => {
-                setEstado(f.value);
-                setPage(1);
-              }}
-              className={cn(
-                "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                estado === f.value
-                  ? "bg-primary text-white"
-                  : "border border-border bg-surface text-text-dim hover:border-primary/40 hover:text-text"
-              )}
+              onClick={cargar}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border text-text-dim hover:text-text"
+              aria-label="Actualizar"
             >
-              {f.label}
+              <RefreshCw className={cn("h-4 w-4", isPending && "animate-spin")} />
             </button>
-          ))}
+          </div>
         </div>
-
-        <div className="flex items-center gap-1.5">
-          <input
-            type="date"
-            value={fechaDesde}
-            onChange={(e) => {
-              setFechaDesde(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-lg border border-border bg-bg px-2 py-2 text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-          <span className="text-text-dim">—</span>
-          <input
-            type="date"
-            value={fechaHasta}
-            onChange={(e) => {
-              setFechaHasta(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-lg border border-border bg-bg px-2 py-2 text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-        </div>
-
-        {hayFiltrosActivos && (
-          <button
-            type="button"
-            onClick={limpiarFiltros}
-            className="flex items-center gap-1 whitespace-nowrap text-xs font-medium text-primary hover:underline"
-          >
-            <X className="h-3.5 w-3.5" />
-            Limpiar
-          </button>
-        )}
-
-        <select
-          value={orden}
-          onChange={(e) => setOrden(e.target.value as "MAS_NUEVO" | "MAS_VIEJO")}
-          className="rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary"
-        >
-          <option value="MAS_NUEVO">Más nuevo primero</option>
-          <option value="MAS_VIEJO">Más viejo primero</option>
-        </select>
-
-        <button
-          type="button"
-          onClick={cargar}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border text-text-dim hover:text-text"
-          aria-label="Actualizar"
-        >
-          <RefreshCw className={cn("h-4 w-4", isPending && "animate-spin")} />
-        </button>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border bg-surface">
@@ -356,7 +353,7 @@ export default function HistorialVentasPage() {
         </div>
 
         {/* Paginación */}
-        <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
+        <div className="flex flex-col items-center gap-2 border-t border-border px-4 py-3 sm:flex-row sm:justify-between">
           <p className="text-xs text-text-dim">
             {totalRegistros} venta{totalRegistros !== 1 ? "s" : ""}
           </p>

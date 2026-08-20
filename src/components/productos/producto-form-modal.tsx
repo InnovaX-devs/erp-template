@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { BarcodeInput } from "@/components/ui/barcode-input";
-import Select  from "@/components/ui/Select";
+import Select  from "@/components/ui/select";
 
 export interface ProductoFormData {
   id?: string;

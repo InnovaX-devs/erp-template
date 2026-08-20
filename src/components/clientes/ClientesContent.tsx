@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ClienteModal from "@/components/clientes/ClienteModal";
-import ClientesTable from "./ClientesTable";
 import ResumenCards from "./ResumenCards";
 import ClientesFilters from "./ClientesFilters";
 import type { ClienteConDeuda, Paginacion } from "@/lib/clientes";
 import type { ClienteBasico } from "@/components/clientes/ClienteForm";
+import ClientesTable from "./ClientesTable";
 import type { CuentaOption } from "./CobrarDeudaModal";
 
 export default function ClientesContent({

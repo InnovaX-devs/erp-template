@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import BuscadorProducto from "./BuscadorProducto";
 import BuscadorCliente from "./BuscadorCliente";
 import ItemsPresupuestoTable from "./ItemsPresupuestoTable";
-import { crearPresupuesto } from "./actions";
+import { crearPresupuesto } from "../../app/(dashboard)/presupuestos/actions";
 import { calcularFechaVencimiento, calcularTotalPresupuesto } from "@/lib/presupuestos";
 import { toArs } from "@/lib/currency";
-import type { ItemPresupuestoLocal, ProductoBusqueda } from "./types";
+import type { ItemPresupuestoLocal, ProductoBusqueda } from "../../types/presupuesto";
 import type { ClienteBasico } from "@/components/clientes/ClienteForm";
 
 const VIGENCIAS = [7, 15, 30] as const;

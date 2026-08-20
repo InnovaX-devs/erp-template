@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { guardarFormulaDecant } from "@/app/(dashboard)/productos/formula-decant/actions";
+import { guardarFormulaDecant } from "@/app/(dashboard)/productos/actions";
 import { calcularPreciosDecant } from "@/lib/calculos/decants";
 
 interface FormulaDecantModalProps {

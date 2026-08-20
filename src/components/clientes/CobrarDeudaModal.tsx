@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { cobrarDeuda } from "./actions";
+// src/components/clientes/CobrarDeudaModal.tsx — línea 4
+import { cobrarDeuda } from "@/app/(dashboard)/clientes/actions";
 
 export interface CuentaOption {
   id: number;

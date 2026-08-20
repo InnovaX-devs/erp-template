@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { eliminarCliente } from "./actions";
+import { eliminarCliente } from "@/app/(dashboard)/clientes/actions";
 import DeudaCell from "./DeudaCell";
 import type { ClienteConDeuda } from "@/lib/clientes";
 import type { CuentaOption } from "./CobrarDeudaModal";

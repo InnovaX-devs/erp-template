@@ -1,4 +1,4 @@
-import PresupuestoForm from "../PresupuestoForm";
+import PresupuestoForm from "../../../../components/presupuestos/PresupuestoForm";
 import Link from "next/link";
 
 export default function NuevoPresupuestoPage() {

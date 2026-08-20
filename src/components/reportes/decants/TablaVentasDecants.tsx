@@ -1,5 +1,5 @@
 import type { EstadoPago } from "@prisma/client";
-import type { VentaDecantListado } from "./queries";
+import type { VentaDecantListado } from "@/app/(dashboard)/reportes/decants/queries";
 
 function formatearARS(valor: number): string {
   return new Intl.NumberFormat("es-AR", {

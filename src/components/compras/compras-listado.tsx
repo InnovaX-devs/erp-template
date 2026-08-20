@@ -117,7 +117,7 @@ export function ComprasListado() {
                 "rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors",
                 filtro === f.key
                   ? "border-primary bg-primary/10 text-primary"
-                  : "border-border text-text-dim hover:text-text"
+                  : "border-border text-text-dim hover:text-text cursor-pointer"
               )}
             >
               {f.label}

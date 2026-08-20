@@ -177,13 +177,13 @@ export function CatalogoDocument({
   function renderGrid(items: ProductoCatalogo[], sinStockFlag: boolean) {
     return items.map((p) => (
       <View key={p.id} style={sinStockFlag ? cardStyles.cardSinStock : cardStyles.card} wrap={false}>
-        <View style={cardStyles.imageBox}>
-          {p.fotoUrl ? (
-            <Image src={p.fotoUrl} style={cardStyles.image} />
-          ) : (
-            <Text style={cardStyles.placeholderText}>Sin foto</Text>
-          )}
-        </View>
+        <View style={p.fotoUrl ? cardStyles.imageBox : cardStyles.imageBoxPlaceholder}>
+            {p.fotoUrl ? (
+                <Image src={p.fotoUrl} style={cardStyles.image} />
+              ) : (
+                <Text style={cardStyles.placeholderText}>Sin foto</Text>
+              )}
+          </View>
         <Text style={sinStockFlag ? cardStyles.nombreSinStock : cardStyles.nombre}>{p.nombre}</Text>
         {renderPrecios(p, sinStockFlag ? "#DC2626" : accent)}
       </View>

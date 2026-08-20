@@ -78,7 +78,7 @@ export async function POST(
             stockActual: producto.stockActual,
             costoActual: producto.precioCosto,
             cantidadNueva: item.cantidad,
-            costoNuevo: item.costoUnitario,
+            costoNuevo: item.costoUnitarioUSD,
           });
 
           if (nuevoCosto !== producto.precioCosto) {

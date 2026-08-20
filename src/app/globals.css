@@ -22,6 +22,10 @@
   --clay-soft: #FBEDE8;
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 .dark {
   --bg: #0B0E14;
   --surface: #121722;

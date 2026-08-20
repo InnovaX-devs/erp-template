@@ -20,7 +20,7 @@ export default function ComprasPage() {
               "px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
               tab === "compras"
                 ? "border-primary text-text"
-                : "border-transparent text-text-dim hover:text-text"
+                : "border-transparent text-text-dim hover:text-text cursor-pointer"
             )}
           >
             Compras
@@ -31,7 +31,7 @@ export default function ComprasPage() {
               "px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
               tab === "proveedores"
                 ? "border-primary text-text"
-                : "border-transparent text-text-dim hover:text-text"
+                : "border-transparent text-text-dim hover:text-text cursor-pointer"
             )}
           >
             Proveedores

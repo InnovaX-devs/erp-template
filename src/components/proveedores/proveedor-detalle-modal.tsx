@@ -113,7 +113,7 @@ export function ProveedorDetalleModal({ isOpen, onClose, proveedor, onSuccess }:
           </h2>
           <button
             onClick={onClose}
-            className="shrink-0 rounded-lg p-1 text-text-dim hover:bg-surface-hover hover:text-text"
+            className="shrink-0 rounded-lg p-1 text-text-dim hover:bg-surface-hover hover:text-text cursor-pointer"
           >
             ✕
           </button>

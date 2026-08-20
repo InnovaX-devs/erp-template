@@ -2,7 +2,9 @@ import type { TipoCuenta } from "@prisma/client";
 import type {
   DesgloseMetodoCobroItem,
   DesgloseTipoPrecioItem,
+  IngresoPorDia,
   ReporteKPIs,
+  TopProductoItem,
 } from "@/types/reporte";
 
 // --- Tipos de entrada ya "aplanados" desde Prisma (ver queries.ts) ---
@@ -12,7 +14,21 @@ export type ItemVentaParaReporte = {
   cantidad: number;
   precioUnitarioUSD: number;
   tipoPrecio: "MINORISTA" | "MAYORISTA";
-  costoUnitarioARS: number; // 0 si no hay producto de catálogo (ítem "Varios / Muestra")
+  costoUnitarioARS: number;
+  presentacion: "FRASCO" | "DECANT_5ML" | "DECANT_10ML"; // NUEVO
+  nombreProducto: string | null; // NUEVO — null si es ítem "Varios/Muestra"
+  fotoUrl: string | null; // NUEVO
+};
+
+export type VentaParaReporte = {
+  id: number;
+  fecha: Date; // NUEVO — necesario para agrupar por día
+  totalARS: number;
+  totalUSD: number;
+  montoPagado: number;
+  cotizacionUsada: number;
+  items: ItemVentaParaReporte[];
+  pagos: PagoParaReporte[];
 };
 
 export type PagoParaReporte = {
@@ -20,16 +36,6 @@ export type PagoParaReporte = {
   cuentaNombre: string;
   tipoCuenta: TipoCuenta;
   monto: number;
-};
-
-export type VentaParaReporte = {
-  id: number;
-  totalARS: number;
-  totalUSD: number;
-  montoPagado: number;
-  cotizacionUsada: number;
-  items: ItemVentaParaReporte[];
-  pagos: PagoParaReporte[];
 };
 
 export type ReporteCalculado = {
@@ -199,6 +205,14 @@ function inicioDeMes(d: Date) {
   return r;
 }
 
+/** Parsea "yyyy-mm-dd" como fecha LOCAL. A diferencia de `new Date(str)`,
+ * que interpreta un string sin hora como medianoche UTC y puede devolver
+ * el día anterior en husos negativos como Argentina (UTC-3). */
+function parseFechaLocal(fechaStr: string): Date {
+  const [anio, mes, dia] = fechaStr.split("-").map(Number);
+  return new Date(anio, mes - 1, dia);
+}
+
 export function rangoParaTab(
   tab: TabReporte,
   desdeParam?: string,
@@ -216,8 +230,102 @@ export function rangoParaTab(
     case "cuenta":
     default:
       return {
-        desde: desdeParam ? inicioDelDia(new Date(desdeParam)) : inicioDeMes(ahora),
-        hasta: hastaParam ? finDelDia(new Date(hastaParam)) : finDelDia(ahora),
+        desde: desdeParam ? inicioDelDia(parseFechaLocal(desdeParam)) : inicioDeMes(ahora),
+        hasta: hastaParam ? finDelDia(parseFechaLocal(hastaParam)) : finDelDia(ahora),
       };
   }
+}
+
+/** Clave "yyyy-mm-dd" en hora local, para agrupar por día calendario. */
+export function claveFecha(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Ingresos/ganancia/ítems por día calendario dentro de [desde, hasta].
+ * Incluye días sin ventas con valores en cero, así el gráfico no salta fechas.
+ * Usa el mismo criterio "cobrado" que calcularReporte: ingresosARS = suma de
+ * montoPagado (no hay fecha de pago en el schema, así que el pago se atribuye
+ * al día de la venta, igual que en el resto del reporte).
+ */
+export function calcularIngresosPorDia(
+  ventas: VentaParaReporte[],
+  egresosGastosPorDiaARS: Map<string, number>,
+  desde: Date,
+  hasta: Date
+): IngresoPorDia[] {
+  const porDia = new Map<string, { ingresosARS: number; costoARS: number; items: number }>();
+
+  const cursor = new Date(desde);
+  cursor.setHours(0, 0, 0, 0);
+  const fin = new Date(hasta);
+  fin.setHours(0, 0, 0, 0);
+  while (cursor <= fin) {
+    porDia.set(claveFecha(cursor), { ingresosARS: 0, costoARS: 0, items: 0 });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  for (const venta of ventas) {
+    const clave = claveFecha(venta.fecha);
+    const bucket = porDia.get(clave) ?? { ingresosARS: 0, costoARS: 0, items: 0 };
+    const proporcionCobrada = venta.totalARS > 0 ? Math.min(venta.montoPagado / venta.totalARS, 1) : 0;
+
+    bucket.ingresosARS += venta.montoPagado;
+    for (const item of venta.items) {
+      bucket.items += item.cantidad;
+      bucket.costoARS += item.costoUnitarioARS * item.cantidad * proporcionCobrada;
+    }
+    porDia.set(clave, bucket);
+  }
+
+  return Array.from(porDia.entries())
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([fecha, v]) => ({
+      fecha,
+      ingresosARS: v.ingresosARS,
+      gananciaARS: v.ingresosARS - v.costoARS - (egresosGastosPorDiaARS.get(fecha) ?? 0),
+      items: v.items,
+    }));
+}
+
+/**
+ * Ranking de productos por monto cobrado, agrupado por (producto, presentación).
+ * Los ítems "Varios / Muestra" (sin productoId) quedan afuera: no tienen
+ * catálogo, foto ni nombre para mostrar en el ranking.
+ */
+export function calcularTopProductos(ventas: VentaParaReporte[], limite = 10): TopProductoItem[] {
+  const acumulado = new Map<string, TopProductoItem>();
+
+  for (const venta of ventas) {
+    const proporcionCobrada = venta.totalARS > 0 ? Math.min(venta.montoPagado / venta.totalARS, 1) : 0;
+    const montoListaVentaARS = venta.items.reduce(
+      (acc, item) => acc + item.cantidad * item.precioUnitarioUSD * venta.cotizacionUsada,
+      0
+    );
+    const factorDescuento = montoListaVentaARS > 0 ? venta.totalARS / montoListaVentaARS : 1;
+
+    for (const item of venta.items) {
+      if (item.productoId == null) continue;
+
+      const clave = `${item.productoId}-${item.presentacion}`;
+      const montoListaItemARS = item.cantidad * item.precioUnitarioUSD * venta.cotizacionUsada;
+      const montoItemARS = montoListaItemARS * factorDescuento * proporcionCobrada;
+
+      const actual = acumulado.get(clave) ?? {
+        productoId: item.productoId,
+        nombre: item.nombreProducto ?? "(producto sin nombre)",
+        fotoUrl: item.fotoUrl,
+        presentacion: item.presentacion,
+        cantidad: 0,
+        montoARS: 0,
+      };
+      actual.cantidad += item.cantidad;
+      actual.montoARS += montoItemARS;
+      acumulado.set(clave, actual);
+    }
+  }
+
+  return Array.from(acumulado.values())
+    .sort((a, b) => b.montoARS - a.montoARS)
+    .slice(0, limite);
 }

@@ -7,6 +7,8 @@ import { KpiCards } from "./components/kpi-cards";
 import { DesgloseTipoPrecio } from "./components/desglose-tipo-precio";
 import { DesgloseMetodoCobro } from "./components/desglose-metodo-cobro";
 import { BotonExportarPdf } from "./BotonExportarPdf";
+import { IngresosPorDia } from "./components/ingresos-por-dia";
+import { TopProductos } from "./components/top-productos";
 
 type SearchParams = {
   tab?: string;
@@ -67,6 +69,10 @@ async function ReportePeriodoSection({ rango }: { rango: { desde: Date; hasta: D
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <DesgloseTipoPrecio items={reporte.desgloseTipoPrecio} />
         <DesgloseMetodoCobro items={reporte.desgloseMetodoCobro} />
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <IngresosPorDia datos={reporte.ingresosPorDia} />
+        <TopProductos items={reporte.topProductos} />
       </div>
     </div>
   );

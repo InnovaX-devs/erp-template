@@ -51,6 +51,8 @@ export default function ProductosPage() {
   const [configDecant, setConfigDecant] = useState({
     costoEnvaseDecantARS: 1500,
     multiplicadorInsumoDecant: 2.5,
+    divisorFrascoDecant: 9,
+    offsetDecant5mlARS: 200,
     cotizacionUSD: 1200,
   });
 
@@ -62,6 +64,8 @@ export default function ProductosPage() {
           setConfigDecant({
             costoEnvaseDecantARS: data.costoEnvaseDecantARS ?? 1500,
             multiplicadorInsumoDecant: data.multiplicadorInsumoDecant ?? 2.5,
+            divisorFrascoDecant: data.divisorFrascoDecant ?? 9,
+            offsetDecant5mlARS: data.offsetDecant5mlARS ?? 200,
             cotizacionUSD: data.cotizacionUSD ?? 1200,
           });
         }
@@ -484,6 +488,8 @@ export default function ProductosPage() {
         onClose={() => setIsFormulaDecantOpen(false)}
         costoEnvaseDecantARSInicial={configDecant.costoEnvaseDecantARS}
         multiplicadorInsumoDecantInicial={configDecant.multiplicadorInsumoDecant}
+        divisorFrascoDecantInicial={configDecant.divisorFrascoDecant}
+        offsetDecant5mlARSInicial={configDecant.offsetDecant5mlARS}
         cotizacionUSD={configDecant.cotizacionUSD}
       />
 

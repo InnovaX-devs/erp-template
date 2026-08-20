@@ -43,8 +43,8 @@ export default function GastosPage() {
   }, [pestana, cargarGastos]);
 
   return (
-    <div className="space-y-4 p-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 p-4 sm:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-text">Gastos</h1>
           <p className="text-sm text-text-dim">{gastos.length} gastos registrados</p>
@@ -52,7 +52,7 @@ export default function GastosPage() {
         {pestana === "listado" && (
           <button
             onClick={() => setModalFormAbierto(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+            className="flex items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90"
           >
             <Plus size={16} /> Nuevo gasto
           </button>

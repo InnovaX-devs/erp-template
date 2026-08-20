@@ -3,7 +3,6 @@ import { Droplets } from "lucide-react";
 import { rangoParaTab, type TabReporte } from "@/lib/reportes";
 import { obtenerReporte } from "./queries";
 import { TabsReportes } from "./TabsReportes";
-import { BotonImprimir } from "./BotonImprimir";
 import { KpiCards } from "./components/kpi-cards";
 import { DesgloseTipoPrecio } from "./components/desglose-tipo-precio";
 import { DesgloseMetodoCobro } from "./components/desglose-metodo-cobro";
@@ -46,7 +45,6 @@ export default async function ReportesPage({
           <Droplets size={14} /> Reporte de Decants
         </Link>
         <BotonExportarPdf tab={tab} desde={params.desde} hasta={params.hasta} />
-        <BotonImprimir />
       </div>
       </div>
 

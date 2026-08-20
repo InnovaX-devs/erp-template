@@ -11,7 +11,6 @@ export async function obtenerConfiguracion() {
     return configuracion;
   }
 
-  // Si todavía no existe ninguna fila, se crea una con valores por defecto
   return prisma.configuracion.create({
     data: {
       id: CONFIGURACION_ID,
@@ -34,6 +33,8 @@ export async function actualizarConfiguracion(
     costoPromedioPonderado: boolean;
     costoEnvaseDecantARS: number;
     multiplicadorInsumoDecant: number;
+    divisorFrascoDecant: number;
+    offsetDecant5mlARS: number;
   }>
 ) {
   return prisma.configuracion.update({

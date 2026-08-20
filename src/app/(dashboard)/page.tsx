@@ -15,8 +15,10 @@ import {
   Eye,
   Zap,
   Package,
+  Tag,
 } from "lucide-react";
 import { TodasCuentasModal } from "@/components/dashboard/todas-cuentas-modal";
+import { ModalConsultarPrecio } from "@/components/ventas/modal-consultar-precio";
 import { formatCurrency } from "@/lib/currency";
 
 interface CuentaPrincipal {
@@ -65,6 +67,7 @@ export default function DashboardPage() {
   const [datos, setDatos] = useState<DashboardData | null>(null);
   const [cargando, setCargando] = useState(true);
   const [modalCuentasAbierto, setModalCuentasAbierto] = useState(false);
+  const [modalPrecioAbierto, setModalPrecioAbierto] = useState(false);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -86,12 +89,13 @@ export default function DashboardPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-end gap-3">
-        <Link
-          href="/productos"
-          className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-text-dim hover:bg-surface-hover"
+        <button
+          type="button"
+          onClick={() => setModalPrecioAbierto(true)}
+          className="flex items-center gap-1.5 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-text-dim hover:bg-surface-hover"
         >
-          Consultar precio
-        </Link>
+          <Tag size={14} /> Consultar precio
+        </button>
         <Link
           href="/ventas"
           className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
@@ -296,6 +300,7 @@ export default function DashboardPage() {
       </div>
 
       <TodasCuentasModal isOpen={modalCuentasAbierto} onClose={() => setModalCuentasAbierto(false)} />
+          {modalPrecioAbierto && <ModalConsultarPrecio onClose={() => setModalPrecioAbierto(false)} />}
     </div>
   );
 }

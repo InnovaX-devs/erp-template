@@ -45,6 +45,15 @@ const cardStyles = StyleSheet.create({
     width: "100%",
     height: 75,
     marginBottom: 5,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  imageBoxPlaceholder: {
+    width: "100%",
+    height: 75,
+    marginBottom: 5,
     backgroundColor: PDF_BRAND.surfaceHover,
     alignItems: "center",
     justifyContent: "center",
@@ -168,13 +177,13 @@ export function CatalogoDocument({
   function renderGrid(items: ProductoCatalogo[], sinStockFlag: boolean) {
     return items.map((p) => (
       <View key={p.id} style={sinStockFlag ? cardStyles.cardSinStock : cardStyles.card} wrap={false}>
-        <View style={cardStyles.imageBox}>
-          {p.fotoUrl ? (
-            <Image src={p.fotoUrl} style={cardStyles.image} />
-          ) : (
-            <Text style={cardStyles.placeholderText}>Sin foto</Text>
-          )}
-        </View>
+        <View style={p.fotoUrl ? cardStyles.imageBox : cardStyles.imageBoxPlaceholder}>
+            {p.fotoUrl ? (
+                <Image src={p.fotoUrl} style={cardStyles.image} />
+              ) : (
+                <Text style={cardStyles.placeholderText}>Sin foto</Text>
+              )}
+          </View>
         <Text style={sinStockFlag ? cardStyles.nombreSinStock : cardStyles.nombre}>{p.nombre}</Text>
         {renderPrecios(p, sinStockFlag ? "#DC2626" : accent)}
       </View>

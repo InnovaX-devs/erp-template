@@ -1,7 +1,8 @@
 import { View, Text, Image } from "@react-pdf/renderer";
 import { pdfStyles } from "./styles";
-import { PDF_BRAND } from "./brand";
 import type { Configuracion } from "@prisma/client";
+
+const INSTAGRAM_HANDLE = "@importtados.kj";
 
 export function BusinessHeader({
   configuracion,
@@ -10,7 +11,7 @@ export function BusinessHeader({
   configuracion: Configuracion;
   titulo: string;
 }) {
-  const detalle = [configuracion.telefono, configuracion.email].filter(Boolean).join("  ·  ");
+  const detalle = [INSTAGRAM_HANDLE, configuracion.telefono].filter(Boolean).join("  ·  ");
 
   return (
     <View style={pdfStyles.header} fixed>
@@ -20,22 +21,12 @@ export function BusinessHeader({
         )}
         <View>
           <Text style={pdfStyles.businessName}>{configuracion.nombreNegocio}</Text>
-          {configuracion.direccion && (
-            <Text style={pdfStyles.businessDetail}>{configuracion.direccion}</Text>
-          )}
           {detalle && <Text style={pdfStyles.businessDetail}>{detalle}</Text>}
         </View>
       </View>
       <View>
-        <Text
-          style={[
-            pdfStyles.docTitle,
-            { color: PDF_BRAND.primary, fontFamily: "Helvetica-Bold", fontSize: 11 },
-          ]}
-        >
-          {titulo}
-        </Text>
-        <Text style={pdfStyles.docTitle}>
+        <Text style={pdfStyles.docTitle}>{titulo.toUpperCase()}</Text>
+        <Text style={[pdfStyles.docTitle, { marginTop: 2, color: "#8B93A3", fontSize: 8 }]}>
           {new Intl.DateTimeFormat("es-AR", { dateStyle: "short" }).format(new Date())}
         </Text>
       </View>

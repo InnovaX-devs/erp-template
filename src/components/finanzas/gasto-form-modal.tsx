@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import Select from "@/components/ui/select";
 import type { CategoriaGastoDTO } from "@/types/gasto";
 import type { CuentaDTO } from "@/types/cuenta";
 
@@ -65,6 +66,16 @@ export function GastoFormModal({ isOpen, onClose, onSuccess }: Props) {
   }, [busquedaProveedor, proveedorSeleccionado, isOpen]);
 
   if (!isOpen) return null;
+
+  const opcionesCategoria = [
+    { value: "", label: "Sin categoría" },
+    ...categorias.map((c) => ({ value: String(c.id), label: c.nombre })),
+  ];
+
+  const opcionesCuenta = [
+    { value: "", label: "Seleccionar cuenta..." },
+    ...cuentas.map((c) => ({ value: String(c.id), label: `${c.nombre} — ${c.tipo.replace("_", " ")}` })),
+  ];
 
   async function crearCategoria() {
     if (!nuevaCategoria.trim()) return;
@@ -179,23 +190,19 @@ export function GastoFormModal({ isOpen, onClose, onSuccess }: Props) {
 
           <div>
             <label className="block text-xs font-medium text-text-dim">Categoría</label>
-            <select
+            <Select
               value={categoriaId}
-              onChange={(e) => setCategoriaId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
-            >
-              <option value="">Sin categoría</option>
-              {categorias.map((c) => (
-                <option key={c.id} value={c.id}>{c.nombre}</option>
-              ))}
-            </select>
+              onChange={(value) => setCategoriaId(value)}
+              options={opcionesCategoria}
+              className="mt-1 w-full"
+            />
             <div className="mt-2 flex gap-2">
               <input
                 type="text"
                 placeholder="Nueva categoría..."
                 value={nuevaCategoria}
                 onChange={(e) => setNuevaCategoria(e.target.value)}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-text focus:border-primary focus:outline-none"
+                className="w-full min-w-0 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-text focus:border-primary focus:outline-none"
               />
               <button
                 type="button"
@@ -264,19 +271,12 @@ export function GastoFormModal({ isOpen, onClose, onSuccess }: Props) {
 
           <div>
             <label className="block text-xs font-medium text-text-dim">Cuenta de origen *</label>
-            <select
-              required
+            <Select
               value={cuentaId}
-              onChange={(e) => setCuentaId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
-            >
-              <option value="">Seleccionar cuenta...</option>
-              {cuentas.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre} — {c.tipo.replace("_", " ")}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setCuentaId(value)}
+              options={opcionesCuenta}
+              className="mt-1 w-full"
+            />
           </div>
 
           <div className="flex justify-end gap-3 border-t border-border pt-4">

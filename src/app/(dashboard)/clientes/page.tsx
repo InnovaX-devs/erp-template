@@ -1,5 +1,5 @@
 import { getClientesData, getCuentasActivas } from "@/lib/clientes";
-import ClientesContent from "./ClientesContent";
+import ClientesContent from "../../../components/clientes/ClientesContent";
 
 export default async function ClientesPage({
   searchParams,

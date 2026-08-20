@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { buscarClientes } from "./actions";
 import ClienteForm, { type ClienteBasico } from "@/components/clientes/ClienteForm";
-import type { ClienteBusqueda } from "./types";
+import { buscarClientes } from "@/app/(dashboard)/presupuestos/actions";
+import type { ClienteBusqueda } from "@/types/presupuesto";
 
 export default function BuscadorCliente({
   clienteSeleccionado,

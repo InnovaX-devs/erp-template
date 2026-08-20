@@ -1,6 +1,6 @@
 "use client";
 
-import type { ItemPresupuestoLocal } from "./types";
+import type { ItemPresupuestoLocal } from "@/types/presupuesto";
 
 export default function ItemsPresupuestoTable({
   items,

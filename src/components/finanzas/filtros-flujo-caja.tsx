@@ -86,17 +86,23 @@ export function FiltrosFlujoCaja({ filtros, onChange, cuentas }: Props) {
         ))}
       </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        <DateInput
-          value={filtros.desde}
-          onChange={(valor) => onChange({ ...filtros, periodoRapido: "PERSONALIZADO", desde: valor })}
-          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none sm:w-auto"
-        />
-        <DateInput
-          value={filtros.hasta}
-          onChange={(valor) => onChange({ ...filtros, periodoRapido: "PERSONALIZADO", hasta: valor })}
-          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none sm:w-auto"
-        />
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <div className="flex w-full flex-col gap-1 sm:w-auto">
+          <label className="text-xs font-medium uppercase tracking-wider text-text-dim">Desde</label>
+          <DateInput
+            value={filtros.desde}
+            onChange={(valor) => onChange({ ...filtros, periodoRapido: "PERSONALIZADO", desde: valor })}
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none sm:w-auto"
+          />
+        </div>
+        <div className="flex w-full flex-col gap-1 sm:w-auto">
+          <label className="text-xs font-medium uppercase tracking-wider text-text-dim">Hasta</label>
+          <DateInput
+            value={filtros.hasta}
+            onChange={(valor) => onChange({ ...filtros, periodoRapido: "PERSONALIZADO", hasta: valor })}
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none sm:w-auto"
+          />
+        </div>
         <Select
           value={filtros.tipo}
           onChange={(value) => onChange({ ...filtros, tipo: value as FiltrosFlujo["tipo"] })}

@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
+import DateInput from "@/components/ui/date-input";
 import type { TabReporte } from "@/lib/reportes";
 
 const TABS: { value: TabReporte; label: string }[] = [
@@ -64,19 +65,17 @@ export function TabsReportes({
         <div className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-surface p-3">
           <label className="flex flex-col gap-1 text-sm text-text-dim">
             Desde
-            <input
-              type="date"
+            <DateInput
               defaultValue={desde ?? ""}
-              onChange={(e) => actualizarFecha("desde", e.target.value)}
+              onChange={(valor) => actualizarFecha("desde", valor)}
               className="rounded-md border border-border bg-white px-3 py-2 text-sm text-text"
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-text-dim">
             Hasta
-            <input
-              type="date"
+            <DateInput
               defaultValue={hasta ?? ""}
-              onChange={(e) => actualizarFecha("hasta", e.target.value)}
+              onChange={(valor) => actualizarFecha("hasta", valor)}
               className="rounded-md border border-border bg-white px-3 py-2 text-sm text-text"
             />
           </label>

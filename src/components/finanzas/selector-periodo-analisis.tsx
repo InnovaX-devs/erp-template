@@ -2,6 +2,7 @@
 "use client";
 
 import { useMemo } from "react";
+import DateInput from "@/components/ui/date-input";
 
 export type PeriodoAnalisis =
   | { modo: "mes"; mes: string } // YYYY-MM
@@ -82,17 +83,17 @@ export function SelectorPeriodoAnalisis({ periodo, onChange }: Props) {
         </>
       ) : (
         <div className="flex items-center gap-2 text-sm">
-          <input
-            type="date"
+          <DateInput
             value={periodo.desde}
-            onChange={(e) => onChange({ ...periodo, desde: e.target.value })}
+            onChange={(valor) => onChange({ ...periodo, desde: valor })}
+            max={periodo.hasta || undefined}
             className="rounded-lg border border-border bg-transparent px-2 py-1.5 text-text"
           />
           <span className="text-text-dim">a</span>
-          <input
-            type="date"
+          <DateInput
             value={periodo.hasta}
-            onChange={(e) => onChange({ ...periodo, hasta: e.target.value })}
+            onChange={(valor) => onChange({ ...periodo, hasta: valor })}
+            min={periodo.desde || undefined}
             className="rounded-lg border border-border bg-transparent px-2 py-1.5 text-text"
           />
         </div>

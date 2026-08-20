@@ -1,6 +1,7 @@
 "use client";
 
 import Select from "@/components/ui/select";
+import DateInput from "@/components/ui/date-input";
 import type { CuentaDTO } from "@/types/cuenta";
 import { ETIQUETAS_CONCEPTO, type ConceptoMovimientoCaja } from "@/types/movimiento-caja";
 
@@ -86,17 +87,15 @@ export function FiltrosFlujoCaja({ filtros, onChange, cuentas }: Props) {
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-        <input
-          type="date"
+        <DateInput
           value={filtros.desde}
-          onChange={(e) => onChange({ ...filtros, periodoRapido: "PERSONALIZADO", desde: e.target.value })}
-          className="w-full min-w-0 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none sm:w-auto"
+          onChange={(valor) => onChange({ ...filtros, periodoRapido: "PERSONALIZADO", desde: valor })}
+          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none sm:w-auto"
         />
-        <input
-          type="date"
+        <DateInput
           value={filtros.hasta}
-          onChange={(e) => onChange({ ...filtros, periodoRapido: "PERSONALIZADO", hasta: e.target.value })}
-          className="w-full min-w-0 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none sm:w-auto"
+          onChange={(valor) => onChange({ ...filtros, periodoRapido: "PERSONALIZADO", hasta: valor })}
+          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none sm:w-auto"
         />
         <Select
           value={filtros.tipo}

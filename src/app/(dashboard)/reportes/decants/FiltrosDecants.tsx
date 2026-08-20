@@ -3,6 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import Select from "@/components/ui/select";
+import DateInput from "@/components/ui/date-input";
 import type { FiltrosReporteDecants } from "./queries";
 
 const ESTADOS: { value: "TODOS" | "PAGADA" | "A_CUENTA" | "ANULADA"; label: string }[] = [
@@ -78,11 +79,9 @@ export function FiltrosDecants({
         <label className="text-xs font-semibold uppercase tracking-wide text-text-dim">
           Desde
         </label>
-        <input
-          type="date"
+        <DateInput
           defaultValue={filtrosActuales.desde ?? ""}
-          onChange={(e) => actualizarParam("desde", e.target.value || undefined)}
-          className="w-full min-w-0 rounded-md border border-border bg-white px-3 py-2 text-sm text-text"
+          onChange={(value) => actualizarParam("desde", value || undefined)}
         />
       </div>
 
@@ -90,11 +89,9 @@ export function FiltrosDecants({
         <label className="text-xs font-semibold uppercase tracking-wide text-text-dim">
           Hasta
         </label>
-        <input
-          type="date"
+        <DateInput
           defaultValue={filtrosActuales.hasta ?? ""}
-          onChange={(e) => actualizarParam("hasta", e.target.value || undefined)}
-          className="w-full min-w-0 rounded-md border border-border bg-white px-3 py-2 text-sm text-text"
+          onChange={(value) => actualizarParam("hasta", value || undefined)}
         />
       </div>
     </div>

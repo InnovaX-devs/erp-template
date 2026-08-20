@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { toArs } from "@/lib/currency";
-import type { ProductoBusqueda } from "./types";
+import type { ProductoBusqueda } from "@/types/presupuesto";
 
 export default function BuscadorProducto({
   tipoPrecio,

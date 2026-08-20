@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { PresupuestoListado } from "./queries";
+import type { PresupuestoListado } from "../../app/(dashboard)/presupuestos/queries";
 import DetallePresupuestoModal from "@/components/presupuestos/DetallePresupuestoModal";
 
 const ESTADO_STYLES: Record<string, string> = {

@@ -2,11 +2,11 @@ import Link from "next/link";
 import { Droplets } from "lucide-react";
 import { rangoParaTab, esMismoDia, type TabReporte } from "@/lib/reportes";
 import { obtenerReporte } from "./queries";
-import { TabsReportes } from "./TabsReportes";
+import { TabsReportes } from "../../../components/reportes/TabsReportes";
 import { KpiCards } from "@/components/reportes/kpi-cards";
 import { DesgloseTipoPrecio } from "@/components/reportes/desglose-tipo-precio";
 import { DesgloseMetodoCobro } from "@/components/reportes/desglose-metodo-cobro";
-import { BotonExportarPdf } from "./BotonExportarPdf";
+import { BotonExportarPdf } from "../../../components/reportes/BotonExportarPdf";
 import { IngresosPorDia } from "@/components/reportes/ingresos-por-dia";
 import { TopProductos } from "@/components/reportes/top-productos";
 

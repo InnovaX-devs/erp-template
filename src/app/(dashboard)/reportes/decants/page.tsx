@@ -2,9 +2,9 @@ import type { EstadoPago } from "@prisma/client";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { obtenerReporteDecants, type FiltrosReporteDecants } from "./queries";
-import { FiltrosDecants } from "./FiltrosDecants";
-import { KpiCardsDecants } from "./KpiCards";
-import { TablaVentasDecants } from "./TablaVentasDecants";
+import { KpiCardsDecants } from "../../../../components/reportes/decants/KpiCards";
+import { FiltrosDecants } from "@/components/reportes/decants/FiltrosDecants";
+import { TablaVentasDecants } from "@/components/reportes/decants/TablaVentasDecants";
 
 type SearchParams = {
   estado?: string;

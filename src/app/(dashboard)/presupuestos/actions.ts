@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import type { TipoPrecioVenta } from "@prisma/client";
 import { calcularFechaVencimiento, calcularTotalPresupuesto, calcularEstadoEfectivo } from "@/lib/presupuestos";
-import type { ProductoBusqueda, ClienteBusqueda, ItemPresupuestoLocal } from "./types";
+import type { ProductoBusqueda, ClienteBusqueda, ItemPresupuestoLocal } from "../../../types/presupuesto";
 import type { ProductoBusquedaDTO } from "@/types/producto";
 import type { ClienteBusquedaResult } from "@/lib/clientes-busqueda";
 

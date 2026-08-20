@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import Select from "@/components/ui/select";
 import DateInput from "@/components/ui/date-input";
-import type { FiltrosReporteDecants } from "./queries";
+import type { FiltrosReporteDecants } from "@/app/(dashboard)/reportes/decants/queries";
 
 const ESTADOS: { value: "TODOS" | "PAGADA" | "A_CUENTA" | "ANULADA"; label: string }[] = [
   { value: "TODOS", label: "Todos" },

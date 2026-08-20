@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { obtenerPresupuestos } from "./queries";
-import PresupuestosFiltros from "./PresupuestosFiltros";
-import PresupuestosTable from "./PresupuestosTable";
+import PresupuestosFiltros from "../../../components/presupuestos/PresupuestosFiltros";
+import PresupuestosTable from "../../../components/presupuestos/PresupuestosTable";
 import type { EstadoPresupuesto } from "@/lib/presupuestos";
 
 export default async function PresupuestosPage({

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { BarcodeInput } from "@/components/ui/barcode-input";
+import Select  from "@/components/ui/select";
 
 export interface ProductoFormData {
   id?: string;
@@ -464,20 +465,15 @@ const handleRemoveImage = () => {
                   + Nueva
                 </button>
               </div>
-              <select
+              <Select
                 value={formData.marcaId}
-                onChange={(e) =>
-                  setFormData({ ...formData, marcaId: e.target.value })
-                }
-                className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
-              >
-                <option value="">Seleccionar marca...</option>
-                {marcas.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.nombre}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setFormData({ ...formData, marcaId: v })}
+                options={[
+                  { value: "", label: "Seleccionar marca..." },
+                  ...marcas.map((m) => ({ value: m.id, label: m.nombre })),
+                ]}
+                className="mt-1"
+              />
             </div>
 
             {/* Categoría */}
@@ -494,20 +490,15 @@ const handleRemoveImage = () => {
                   + Nueva
                 </button>
               </div>
-              <select
+              <Select
                 value={formData.categoriaId}
-                onChange={(e) =>
-                  setFormData({ ...formData, categoriaId: e.target.value })
-                }
-                className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
-              >
-                <option value="">Seleccionar categoría...</option>
-                {categorias.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nombre}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setFormData({ ...formData, categoriaId: v })}
+                options={[
+                  { value: "", label: "Seleccionar categoría..." },
+                  ...categorias.map((c) => ({ value: c.id, label: c.nombre })),
+                ]}
+                className="mt-1"
+              />
             </div>
           </div>
 

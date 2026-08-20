@@ -30,12 +30,30 @@ export interface DesgloseMetodoCobroItem {
   porcentaje: number;
 }
 
+export type ResultadoReporte = { success: true; data: ReporteData } | { success: false; error: string };
+
+export interface IngresoPorDia {
+  fecha: string; // "yyyy-mm-dd", día calendario dentro del rango seleccionado
+  ingresosARS: number; // cobrado, mismo criterio que kpis.ingresosARS
+  gananciaARS: number; // ingresosARS - costo - egresos(gastos) del día
+  items: number;
+}
+
+export interface TopProductoItem {
+  productoId: number;
+  nombre: string;
+  fotoUrl: string | null;
+  presentacion: "FRASCO" | "DECANT_5ML" | "DECANT_10ML";
+  cantidad: number;
+  montoARS: number; // cobrado, prorrateado igual que el resto del reporte
+}
+
 export interface ReporteData {
   fechaInicio: string;
   fechaFin: string;
   kpis: ReporteKPIs;
   desgloseTipoPrecio: DesgloseTipoPrecioItem[];
   desgloseMetodoCobro: DesgloseMetodoCobroItem[];
+  ingresosPorDia: IngresoPorDia[]; 
+  topProductos: TopProductoItem[]; 
 }
-
-export type ResultadoReporte = { success: true; data: ReporteData } | { success: false; error: string };

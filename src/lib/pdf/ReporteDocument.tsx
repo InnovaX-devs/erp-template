@@ -1,4 +1,4 @@
-import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 import { BusinessHeader } from "./BusinessHeader";
 import { pdfStyles } from "./styles";
 import { PDF_BRAND } from "./brand";
@@ -16,6 +16,12 @@ const LABEL_TIPO_CUENTA: Record<TipoCuenta, string> = {
 const LABEL_TIPO_PRECIO: Record<"MINORISTA" | "MAYORISTA", string> = {
   MINORISTA: "Minorista",
   MAYORISTA: "Mayorista",
+};
+
+const LABEL_PRESENTACION: Record<"FRASCO" | "DECANT_5ML" | "DECANT_10ML", string> = {
+  FRASCO: "Frasco",
+  DECANT_5ML: "Decant 5ml",
+  DECANT_10ML: "Decant 10ml",
 };
 
 const s = StyleSheet.create({
@@ -73,6 +79,39 @@ const s = StyleSheet.create({
   colTotal: { width: "20%", textAlign: "right", fontSize: 9, fontFamily: "Helvetica-Bold" },
 
   vacioTexto: { fontSize: 8.5, color: PDF_BRAND.textDim, fontStyle: "italic", paddingVertical: 6 },
+
+  // --- Ingresos por día ---
+  barraFila: { flexDirection: "row", alignItems: "center", paddingVertical: 3 },
+  barraFecha: { width: "18%", fontSize: 7.5, color: PDF_BRAND.textDim },
+  barraTrack: { flex: 1, height: 6, backgroundColor: PDF_BRAND.surfaceHover, borderRadius: 3, marginRight: 6 },
+  barraFill: { height: 6, backgroundColor: PDF_BRAND.primary, borderRadius: 3 },
+  barraValor: { width: "22%", fontSize: 7.5, textAlign: "right", color: PDF_BRAND.text },
+
+  // --- Top productos ---
+  topFila: {
+    flexDirection: "row",
+    paddingVertical: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: PDF_BRAND.surfaceHover,
+    alignItems: "center",
+  },
+  topRank: { width: "6%", fontSize: 8, color: PDF_BRAND.textDim },
+  topNombreWrap: { flexDirection: "row", alignItems: "center", width: "49%" },
+  topImagenBox: {
+    width: 26,
+    height: 26,
+    marginRight: 6,
+    borderRadius: 3,
+    overflow: "hidden",
+    backgroundColor: PDF_BRAND.surfaceHover,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  topImagen: { width: 26, height: 26, objectFit: "contain" },
+  topPlaceholderText: { fontSize: 5, color: PDF_BRAND.textDim, textAlign: "center" },
+  topNombreCol: { flex: 1 },
+  topCant: { width: "20%", textAlign: "right", fontSize: 9 },
+  topMonto: { width: "25%", textAlign: "right", fontSize: 9, fontFamily: "Helvetica-Bold" },
 });
 
 export function ReporteDocument({
@@ -84,7 +123,7 @@ export function ReporteDocument({
   configuracion: Configuracion;
   titulo?: string;
 }) {
-  const { kpis, desgloseTipoPrecio, desgloseMetodoCobro } = reporte;
+  const { kpis, desgloseTipoPrecio, desgloseMetodoCobro, ingresosPorDia, topProductos } = reporte;
 
   const rangoTexto = `${new Intl.DateTimeFormat("es-AR", { dateStyle: "long" }).format(
     new Date(reporte.fechaInicio)
@@ -110,6 +149,8 @@ export function ReporteDocument({
     { label: "Cantidad de ventas", valor: kpis.cantidadVentas.toString() },
     { label: "Ítems vendidos", valor: kpis.itemsVendidos.toString() },
   ];
+
+  const maximoIngresoDia = Math.max(...ingresosPorDia.map((d) => d.ingresosARS), 1);
 
   return (
     <Document>
@@ -176,6 +217,80 @@ export function ReporteDocument({
             ))}
           </>
         )}
+
+        {ingresosPorDia.length > 0 && (
+          <>
+            <Text style={s.seccionTitulo}>Ingresos por día</Text>
+            {ingresosPorDia.map((d) => {
+              const pct = Math.max((d.ingresosARS / maximoIngresoDia) * 100, d.ingresosARS > 0 ? 2 : 0);
+              // "T00:00:00" evita el mismo corrimiento UTC que arreglamos en rangoParaTab
+              const fechaLabel = new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit" }).format(
+                new Date(`${d.fecha}T00:00:00`)
+              );
+              return (
+                <View key={d.fecha} style={s.barraFila}>
+                  <Text style={s.barraFecha}>{fechaLabel}</Text>
+                  <View style={s.barraTrack}>
+                    <View style={[s.barraFill, { width: `${pct}%` }]} />
+                  </View>
+                  <Text style={s.barraValor}>{formatCurrency(d.ingresosARS, "ARS")}</Text>
+                </View>
+              );
+            })}
+          </>
+        )}
+
+        <View wrap={false}>
+          <Text style={s.seccionTitulo}>Top productos</Text>
+          {topProductos.length === 0 && (
+            <Text style={s.vacioTexto}>Sin ventas de catálogo en el período.</Text>
+          )}
+          {topProductos.length > 0 &&
+            topProductos.slice(0, 1).map((p, i) => (
+              <View key={`${p.productoId}-${p.presentacion}`} style={s.topFila} wrap={false}>
+                <Text style={s.topRank}>{i + 1}</Text>
+                <View style={s.topNombreWrap}>
+                  <View style={s.topImagenBox}>
+                    {p.fotoUrl ? (
+                      <Image src={p.fotoUrl} style={s.topImagen} />
+                    ) : (
+                      <Text style={s.topPlaceholderText}>Sin foto</Text>
+                    )}
+                  </View>
+                  <View style={s.topNombreCol}>
+                    <Text style={{ fontSize: 9 }}>{p.nombre}</Text>
+                    <Text style={{ fontSize: 6.5, color: PDF_BRAND.textDim, marginTop: 1 }}>
+                      {LABEL_PRESENTACION[p.presentacion]}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={s.topCant}>{p.cantidad}</Text>
+                <Text style={[s.topMonto, { color: PDF_BRAND.primary }]}>{formatCurrency(p.montoARS, "ARS")}</Text>
+              </View>
+            ))}
+        </View>
+        {topProductos.slice(1).map((p, i) => (
+          <View key={`${p.productoId}-${p.presentacion}`} style={s.topFila} wrap={false}>
+            <Text style={s.topRank}>{i + 2}</Text>
+            <View style={s.topNombreWrap}>
+              <View style={s.topImagenBox}>
+                {p.fotoUrl ? (
+                  <Image src={p.fotoUrl} style={s.topImagen} />
+                ) : (
+                  <Text style={s.topPlaceholderText}>Sin foto</Text>
+                )}
+              </View>
+              <View style={s.topNombreCol}>
+                <Text style={{ fontSize: 9 }}>{p.nombre}</Text>
+                <Text style={{ fontSize: 6.5, color: PDF_BRAND.textDim, marginTop: 1 }}>
+                  {LABEL_PRESENTACION[p.presentacion]}
+                </Text>
+              </View>
+            </View>
+            <Text style={s.topCant}>{p.cantidad}</Text>
+            <Text style={[s.topMonto, { color: PDF_BRAND.primary }]}>{formatCurrency(p.montoARS, "ARS")}</Text>
+          </View>
+        ))}
 
         <Text
           style={pdfStyles.footer}

@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { Droplets } from "lucide-react";
-import { rangoParaTab, type TabReporte } from "@/lib/reportes";
+import { rangoParaTab, esMismoDia, type TabReporte } from "@/lib/reportes";
 import { obtenerReporte } from "./queries";
 import { TabsReportes } from "./TabsReportes";
 import { KpiCards } from "./components/kpi-cards";
 import { DesgloseTipoPrecio } from "./components/desglose-tipo-precio";
 import { DesgloseMetodoCobro } from "./components/desglose-metodo-cobro";
 import { BotonExportarPdf } from "./BotonExportarPdf";
+import { IngresosPorDia } from "./components/ingresos-por-dia";
+import { TopProductos } from "./components/top-productos";
 
 type SearchParams = {
   tab?: string;
@@ -28,14 +30,16 @@ export default async function ReportesPage({
   const rango = rangoParaTab(tab, params.desde, params.hasta);
   const faltaPeriodo = tab === "periodo" && (!params.desde || !params.hasta);
 
+  const rangoTexto = esMismoDia(rango.desde, rango.hasta)
+    ? rango.desde.toLocaleDateString("es-AR")
+    : `${rango.desde.toLocaleDateString("es-AR")} — ${rango.hasta.toLocaleDateString("es-AR")}`;
+
   return (
     <div className="flex flex-col gap-6 p-6 print:p-0">
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <div>
           <h1 className="font-display text-2xl text-text">Reportes</h1>
-          <p className="text-sm text-text-dim">
-            {rango.desde.toLocaleDateString("es-AR")} — {rango.hasta.toLocaleDateString("es-AR")}
-          </p>
+          <p className="text-sm text-text-dim">{rangoTexto}</p>
         </div>
         <div className="flex items-center gap-2">
         <Link
@@ -68,7 +72,10 @@ async function ReportePeriodoSection({ rango }: { rango: { desde: Date; hasta: D
         <DesgloseTipoPrecio items={reporte.desgloseTipoPrecio} />
         <DesgloseMetodoCobro items={reporte.desgloseMetodoCobro} />
       </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <IngresosPorDia datos={reporte.ingresosPorDia} />
+        <TopProductos items={reporte.topProductos} />
+      </div>
     </div>
   );
 }
-

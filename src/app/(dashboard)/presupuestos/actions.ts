@@ -125,7 +125,7 @@ export async function obtenerPresupuestoParaConvertir(id: number): Promise<Resul
   }
 
   const productoIds = presupuesto.items.map((item) => item.productoId as number);
-  const productos = await prisma.producto.findMany({
+    const productos = await prisma.producto.findMany({
     where: { id: { in: productoIds } },
     select: {
       id: true,
@@ -137,6 +137,9 @@ export async function obtenerPresupuestoParaConvertir(id: number): Promise<Resul
       precioVenta: true,
       precioMayorista: true,
       seVendePorDecant: true,
+      contenidoMl: true,
+      overrideDecant5ml: true,
+      overrideDecant10ml: true,
       marca: { select: { nombre: true } },
     },
   });

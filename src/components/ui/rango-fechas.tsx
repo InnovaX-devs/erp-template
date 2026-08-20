@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Calendar, X } from "lucide-react";
+import DateInput from "@/components/ui/date-input";
 
 interface RangoFechasProps {
   desde: string | null;
@@ -88,21 +89,19 @@ export function RangoFechas({ desde, hasta, onCambiar }: RangoFechasProps) {
           <div className="space-y-3">
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-text-dim">Desde</span>
-              <input
-                type="date"
+              <DateInput
                 value={desdeLocal}
                 max={hastaLocal || undefined}
-                onChange={(e) => setDesdeLocal(e.target.value)}
+                onChange={(valor) => setDesdeLocal(valor)}
                 className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-text-dim">Hasta</span>
-              <input
-                type="date"
+              <DateInput
                 value={hastaLocal}
                 min={desdeLocal || undefined}
-                onChange={(e) => setHastaLocal(e.target.value)}
+                onChange={(valor) => setHastaLocal(valor)}
                 className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </label>

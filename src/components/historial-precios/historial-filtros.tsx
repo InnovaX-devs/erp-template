@@ -1,6 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
+import DateInput from "@/components/ui/date-input";
 import { CAMPO_OPTIONS, ORIGEN_OPTIONS } from "@/lib/historial-precio-labels";
 
 export type HistorialFiltrosState = {
@@ -71,20 +72,20 @@ export function HistorialFiltros({ filtros, onChange }: Props) {
 
       <div>
         <label className="block text-xs font-medium text-text-dim">Desde</label>
-        <input
-          type="date"
+        <DateInput
           value={filtros.fechaDesde}
-          onChange={(e) => set("fechaDesde", e.target.value)}
+          max={filtros.fechaHasta || undefined}
+          onChange={(valor) => set("fechaDesde", valor)}
           className="mt-1 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-primary"
         />
       </div>
 
       <div>
         <label className="block text-xs font-medium text-text-dim">Hasta</label>
-        <input
-          type="date"
+        <DateInput
           value={filtros.fechaHasta}
-          onChange={(e) => set("fechaHasta", e.target.value)}
+          min={filtros.fechaDesde || undefined}
+          onChange={(valor) => set("fechaHasta", valor)}
           className="mt-1 w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text outline-none focus:border-primary"
         />
       </div>

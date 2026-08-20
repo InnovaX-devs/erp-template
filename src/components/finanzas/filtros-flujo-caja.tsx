@@ -1,5 +1,7 @@
 "use client";
 
+import Select from "@/components/ui/select";
+import DateInput from "@/components/ui/date-input";
 import type { CuentaDTO } from "@/types/cuenta";
 import { ETIQUETAS_CONCEPTO, type ConceptoMovimientoCaja } from "@/types/movimiento-caja";
 
@@ -39,15 +41,34 @@ function calcularRango(periodo: PeriodoRapido): { desde: string; hasta: string }
   return { desde: "", hasta: "" };
 }
 
+const OPCIONES_TIPO = [
+  { value: "", label: "Todos los tipos" },
+  { value: "INGRESO", label: "Ingreso" },
+  { value: "EGRESO", label: "Egreso" },
+];
+
 export function FiltrosFlujoCaja({ filtros, onChange, cuentas }: Props) {
   function setPeriodoRapido(periodo: PeriodoRapido) {
     const rango = calcularRango(periodo);
     onChange({ ...filtros, periodoRapido: periodo, ...rango });
   }
 
+  const opcionesCuenta = [
+    { value: "", label: "Todas las cuentas" },
+    ...cuentas.map((c) => ({ value: String(c.id), label: c.nombre })),
+  ];
+
+  const opcionesConcepto = [
+    { value: "", label: "Todos los medios" },
+    ...Object.entries(ETIQUETAS_CONCEPTO).map(([valor, etiqueta]) => ({
+      value: valor,
+      label: etiqueta,
+    })),
+  ];
+
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-medium uppercase tracking-wider text-text-dim">Período:</span>
         {(["HOY", "SEMANA", "MES"] as const).map((p) => (
           <button
@@ -65,52 +86,41 @@ export function FiltrosFlujoCaja({ filtros, onChange, cuentas }: Props) {
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <input
-          type="date"
-          value={filtros.desde}
-          onChange={(e) => onChange({ ...filtros, periodoRapido: "PERSONALIZADO", desde: e.target.value })}
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
-        />
-        <input
-          type="date"
-          value={filtros.hasta}
-          onChange={(e) => onChange({ ...filtros, periodoRapido: "PERSONALIZADO", hasta: e.target.value })}
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
-        />
-        <select
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <div className="flex w-full flex-col gap-1 sm:w-auto">
+          <label className="text-xs font-medium uppercase tracking-wider text-text-dim">Desde</label>
+          <DateInput
+            value={filtros.desde}
+            onChange={(valor) => onChange({ ...filtros, periodoRapido: "PERSONALIZADO", desde: valor })}
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none sm:w-auto"
+          />
+        </div>
+        <div className="flex w-full flex-col gap-1 sm:w-auto">
+          <label className="text-xs font-medium uppercase tracking-wider text-text-dim">Hasta</label>
+          <DateInput
+            value={filtros.hasta}
+            onChange={(valor) => onChange({ ...filtros, periodoRapido: "PERSONALIZADO", hasta: valor })}
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none sm:w-auto"
+          />
+        </div>
+        <Select
           value={filtros.tipo}
-          onChange={(e) => onChange({ ...filtros, tipo: e.target.value as FiltrosFlujo["tipo"] })}
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
-        >
-          <option value="">Todos los tipos</option>
-          <option value="INGRESO">Ingreso</option>
-          <option value="EGRESO">Egreso</option>
-        </select>
-        <select
+          onChange={(value) => onChange({ ...filtros, tipo: value as FiltrosFlujo["tipo"] })}
+          options={OPCIONES_TIPO}
+          className="w-full sm:w-44"
+        />
+        <Select
           value={filtros.cuentaId}
-          onChange={(e) => onChange({ ...filtros, cuentaId: e.target.value })}
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
-        >
-          <option value="">Todas las cuentas</option>
-          {cuentas.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nombre}
-            </option>
-          ))}
-        </select>
-        <select
+          onChange={(value) => onChange({ ...filtros, cuentaId: value })}
+          options={opcionesCuenta}
+          className="w-full sm:w-48"
+        />
+        <Select
           value={filtros.concepto}
-          onChange={(e) => onChange({ ...filtros, concepto: e.target.value as FiltrosFlujo["concepto"] })}
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
-        >
-          <option value="">Todos los medios</option>
-          {Object.entries(ETIQUETAS_CONCEPTO).map(([valor, etiqueta]) => (
-            <option key={valor} value={valor}>
-              {etiqueta}
-            </option>
-          ))}
-        </select>
+          onChange={(value) => onChange({ ...filtros, concepto: value as FiltrosFlujo["concepto"] })}
+          options={opcionesConcepto}
+          className="w-full sm:w-48"
+        />
       </div>
     </div>
   );

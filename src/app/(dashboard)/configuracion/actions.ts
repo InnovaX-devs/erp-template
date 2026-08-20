@@ -16,6 +16,7 @@ export async function guardarConfiguracion(formData: FormData) {
   const remitenteNombre = formData.get("remitenteNombre") as string;
   const remitenteDni = formData.get("remitenteDni") as string;
   const logoFile = formData.get("logo") as File | null;
+  const removerLogo = formData.get("removerLogo") === "true";
 
   const cotizacionUSDRaw = formData.get("cotizacionUSD") as string;
   const cotizacionUSD = Number(cotizacionUSDRaw);
@@ -26,13 +27,15 @@ export async function guardarConfiguracion(formData: FormData) {
 
   const costoPromedioPonderado = formData.get("costoPromedioPonderado") === "on";
 
-  let logoUrl: string | undefined;
+  let logoUrl: string | null | undefined;
 
   if (logoFile && logoFile.size > 0) {
     const blob = await put(`logos/${Date.now()}-${logoFile.name}`, logoFile, {
       access: "public",
     });
     logoUrl = blob.url;
+  } else if (removerLogo) {
+    logoUrl = null;
   }
 
   await actualizarConfiguracion({
@@ -44,7 +47,7 @@ export async function guardarConfiguracion(formData: FormData) {
     remitenteDni,
     cotizacionUSD,
     costoPromedioPonderado,
-    ...(logoUrl ? { logoUrl } : {}),
+    ...(logoUrl !== undefined ? { logoUrl } : {}),
   });
 
   revalidatePath("/", "layout");

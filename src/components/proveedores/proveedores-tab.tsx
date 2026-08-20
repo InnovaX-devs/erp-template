@@ -16,6 +16,7 @@ interface Proveedor {
   notas: string | null;
   cantidadCompras: number;
   totalComprado: number;
+  esVirtual?: boolean;
 }
 
 interface Resumen {
@@ -78,7 +79,7 @@ export function ProveedoresTab() {
         <button
           type="button"
           onClick={() => setIsCrearOpen(true)}
-          className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium cursor-pointer text-white transition-opacity hover:opacity-90"
         >
           + Nuevo Proveedor
         </button>
@@ -132,8 +133,13 @@ export function ProveedoresTab() {
                 proveedores.map((p) => (
                   <tr
                     key={p.id}
-                    onClick={() => setProveedorDetalle(p)}
-                    className="cursor-pointer border-b border-border last:border-0 hover:bg-surface-hover/50"
+                    onClick={() => !p.esVirtual && setProveedorDetalle(p)}
+                    className={cn(
+                      "border-b border-border last:border-0",
+                      p.esVirtual
+                        ? "italic text-text-dim"
+                        : "cursor-pointer hover:bg-surface-hover/50"
+                    )}
                   >
                     <td className="py-3 pr-4 font-medium text-text">{p.nombre}</td>
                     <td className="py-3 pr-4 text-text-dim">
@@ -141,7 +147,7 @@ export function ProveedoresTab() {
                     </td>
                     <td className="py-3 pr-4 text-text-dim">{p.cantidadCompras}</td>
                     <td className="py-3 pr-4 text-text-dim">{formatMoney(p.totalComprado)}</td>
-                    <td className="py-3 pr-4 text-right text-text-dim">→</td>
+                    <td className="py-3 pr-4 text-right text-text-dim">{p.esVirtual ? "" : "→"}</td>
                   </tr>
                 ))
               ) : (

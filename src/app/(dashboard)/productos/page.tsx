@@ -198,7 +198,7 @@ export default function ProductosPage() {
           <button
             type="button"
             onClick={() => setIsPdfModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 py-2.5 text-sm font-medium text-text hover:bg-surface-hover sm:px-4"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 py-2.5 text-sm font-medium text-text hover:bg-surface-hover sm:px-4 cursor-pointer"
           >
             <FileText className="h-4 w-4 shrink-0" />
             <span className="truncate">Generar PDF</span>
@@ -212,14 +212,14 @@ export default function ProductosPage() {
           <button
             type="button"
             onClick={() => setIsFormulaDecantOpen(true)}
-            className="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 sm:px-4"
+            className="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 sm:px-4 cursor-pointer"
           >
             Fórmula Decant
           </button>
           <button
             type="button"
             onClick={handleAbrirCrear}
-            className="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 sm:px-4"
+            className="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 sm:px-4 cursor-pointer"
           >
             + Nuevo Producto
           </button>

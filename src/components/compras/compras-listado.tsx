@@ -117,7 +117,7 @@ export function ComprasListado() {
                 "rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors",
                 filtro === f.key
                   ? "border-primary bg-primary/10 text-primary"
-                  : "border-border text-text-dim hover:text-text"
+                  : "border-border text-text-dim hover:text-text cursor-pointer"
               )}
             >
               {f.label}
@@ -141,16 +141,16 @@ export function ComprasListado() {
           <>
             {/* Desktop / tablet: tabla */}
             <div className="hidden overflow-x-auto md:block">
-              <table className="w-full text-sm">
+              <table className="w-full table-fixed text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-text-dim">
-                    <th className="px-4 py-3 font-medium">#</th>
-                    <th className="px-4 py-3 font-medium">Proveedor</th>
-                    <th className="px-4 py-3 font-medium">Cuenta</th>
-                    <th className="px-4 py-3 font-medium">Total</th>
-                    <th className="px-4 py-3 font-medium">Estado</th>
-                    <th className="px-4 py-3 font-medium">Fecha</th>
-                    <th className="px-4 py-3 font-medium">Acciones</th>
+                    <th className="w-16 px-4 py-3 font-medium">#</th>
+                    <th className="w-1/4 px-4 py-3 font-medium">Proveedor</th>
+                    <th className="w-1/6 px-4 py-3 font-medium">Cuenta</th>
+                    <th className="w-1/5 px-4 py-3 font-medium">Total</th>
+                    <th className="w-28 px-4 py-3 font-medium">Estado</th>
+                    <th className="w-28 px-4 py-3 font-medium">Fecha</th>
+                    <th className="w-24 px-4 py-3 font-medium">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -160,10 +160,14 @@ export function ComprasListado() {
                     const cargandoFila = accionandoId === compra.id;
                     return (
                       <tr key={compra.id} className="border-b border-border last:border-0">
-                        <td className="px-4 py-3 text-text">#{compra.id}</td>
-                        <td className="px-4 py-3 text-text">{compra.proveedor?.nombre ?? "Sin especificar"}</td>
-                        <td className="px-4 py-3 text-text-dim">{compra.cuenta?.nombre ?? "—"}</td>
-                        <td className="px-4 py-3 font-medium text-text">
+                        <td className="truncate px-4 py-3 text-text">#{compra.id}</td>
+                        <td className="truncate px-4 py-3 text-text">
+                          {compra.proveedor?.nombre ?? "Sin especificar"}
+                        </td>
+                        <td className="truncate px-4 py-3 text-text-dim">
+                          {compra.cuenta?.nombre ?? "—"}
+                        </td>
+                        <td className="truncate px-4 py-3 font-medium text-text">
                           USD {compra.totalUSD.toFixed(2)}
                           {compra.totalARS != null && (
                             <span className="ml-1 text-xs font-normal text-text-dim">
@@ -176,7 +180,9 @@ export function ComprasListado() {
                             {estado.label}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-text-dim">{new Date(compra.fecha).toLocaleDateString("es-AR")}</td>
+                        <td className="truncate px-4 py-3 text-text-dim">
+                          {new Date(compra.fecha).toLocaleDateString("es-AR")}
+                        </td>
                         <td className="px-4 py-3">
                           {puedeAccionar ? (
                             <div className="flex items-center gap-1.5">

@@ -70,7 +70,7 @@ export function ProveedorFormModal({ isOpen, onClose, onSuccess }: ProveedorForm
           <h2 className="text-xl font-semibold text-text">Nuevo Proveedor</h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1 text-text-dim hover:bg-surface-hover hover:text-text"
+            className="rounded-lg p-1 text-text-dim hover:bg-surface-hover hover:text-text cursor-pointer"
           >
             ✕
           </button>
@@ -137,14 +137,14 @@ export function ProveedorFormModal({ isOpen, onClose, onSuccess }: ProveedorForm
             <button
               type="button"
               onClick={onClose}
-              className="w-full rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-dim hover:bg-surface-hover sm:w-auto"
+              className="w-full rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-dim hover:bg-surface-hover sm:w-auto cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 sm:w-auto"
+              className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 sm:w-auto cursor-pointer"
             >
               {loading ? "Guardando..." : "Guardar Proveedor"}
             </button>

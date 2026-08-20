@@ -25,12 +25,15 @@ export async function GET(request: NextRequest) {
       createdAt: true,
       compras: {
         where: WHERE_COMPRA_REAL,
-        // totalARS siempre está seteado acá porque WHERE_COMPRA_REAL
-        // filtra confirmada: true, y totalARS/cotizacionUsada se completan
-        // justo al confirmar (ver /api/compras/[id]/confirmar).
         select: { totalUSD: true, totalARS: true, pagada: true },
       },
     },
+  });
+
+  // Compras confirmadas y no canceladas que NO tienen proveedor asignado
+  const comprasSinProveedor = await prisma.compra.findMany({
+    where: { ...WHERE_COMPRA_REAL, proveedorId: null },
+    select: { totalUSD: true, totalARS: true, pagada: true },
   });
 
   const proveedoresConCalculos = proveedores.map((p) => {
@@ -43,7 +46,7 @@ export async function GET(request: NextRequest) {
     const deuda = p.deudaInicial + deudaCompras;
 
     return {
-      id: p.id,
+      id: String(p.id),
       nombre: p.nombre,
       personaContacto: p.personaContacto,
       telefono: p.telefono,
@@ -55,19 +58,54 @@ export async function GET(request: NextRequest) {
       totalCompradoUSD,
       deuda,
       alDia: deuda <= 0,
+      esVirtual: false as const,
     };
   });
 
+  // Fila virtual "Sin especificar" — solo se muestra si hay compras sin proveedor
+  const cantidadComprasSinProveedor = comprasSinProveedor.length;
+  const totalCompradoSinProveedor = comprasSinProveedor.reduce(
+    (acc, c) => acc + (c.totalARS ?? 0),
+    0
+  );
+  const totalCompradoSinProveedorUSD = comprasSinProveedor.reduce(
+    (acc, c) => acc + c.totalUSD,
+    0
+  );
+  const deudaSinProveedor = comprasSinProveedor
+    .filter((c) => !c.pagada)
+    .reduce((acc, c) => acc + (c.totalARS ?? 0), 0);
+
+  const itemSinEspecificar =
+    cantidadComprasSinProveedor > 0
+      ? {
+          id: "sin-especificar",
+          nombre: "Sin especificar",
+          personaContacto: null,
+          telefono: null,
+          email: null,
+          deudaInicial: 0,
+          notas: null,
+          cantidadCompras: cantidadComprasSinProveedor,
+          totalComprado: totalCompradoSinProveedor,
+          totalCompradoUSD: totalCompradoSinProveedorUSD,
+          deuda: deudaSinProveedor,
+          alDia: deudaSinProveedor <= 0,
+          esVirtual: true as const,
+        }
+      : null;
+
   const resumen = {
     totalProveedores: proveedoresConCalculos.length,
-    totalComprado: proveedoresConCalculos.reduce((acc, p) => acc + p.totalComprado, 0),
-    deudasTotales: proveedoresConCalculos.reduce(
-      (acc, p) => acc + Math.max(p.deuda, 0),
-      0
-    ),
+    totalComprado:
+      proveedoresConCalculos.reduce((acc, p) => acc + p.totalComprado, 0) +
+      (itemSinEspecificar?.totalComprado ?? 0),
+    deudasTotales:
+      proveedoresConCalculos.reduce((acc, p) => acc + Math.max(p.deuda, 0), 0) +
+      Math.max(itemSinEspecificar?.deuda ?? 0, 0),
   };
 
-  const items = proveedoresConCalculos.filter((p) => {
+  const cumpleFiltro = (p: { nombre: string; deuda: number }) => {
     const coincideBusqueda = q ? p.nombre.toLowerCase().includes(q) : true;
     const coincideEstado =
       estado === "con-deuda"
@@ -76,7 +114,12 @@ export async function GET(request: NextRequest) {
         ? p.deuda <= 0
         : true;
     return coincideBusqueda && coincideEstado;
-  });
+  };
+
+  const items = [
+    ...proveedoresConCalculos.filter(cumpleFiltro),
+    ...(itemSinEspecificar && cumpleFiltro(itemSinEspecificar) ? [itemSinEspecificar] : []),
+  ];
 
   return NextResponse.json({ items, resumen });
 }

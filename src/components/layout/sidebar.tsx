@@ -87,7 +87,7 @@ export function Sidebar({ logoUrl }: { logoUrl: string | null }) {
         </div>
 
         <nav
-          className="flex-1 space-y-1 overflow-y-auto px-3 pb-4"
+          className="sidebar-scroll flex-1 space-y-1 overflow-y-auto px-3 pb-4"
           aria-label="Navegación principal"
         >
           {/* INICIO */}

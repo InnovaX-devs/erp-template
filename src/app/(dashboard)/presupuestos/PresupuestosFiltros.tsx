@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useState, useEffect, useTransition } from "react";
+import DateInput from "@/components/ui/date-input";
 
 const ESTADOS = [
   { value: "TODOS", label: "Todos" },
@@ -70,12 +71,12 @@ export default function PresupuestosFiltros() {
         <label className="block text-[11px] font-bold uppercase tracking-wider text-[#45464f]">
           Desde
         </label>
-        <input
-          type="date"
+        <DateInput
           value={desde}
-          onChange={(e) => {
-            setDesde(e.target.value);
-            aplicarFiltros({ desde: e.target.value });
+          max={hasta || undefined}
+          onChange={(valor) => {
+            setDesde(valor);
+            aplicarFiltros({ desde: valor });
           }}
           className="mt-1 border border-[#c5c6d0] rounded-lg px-2 py-1.5 text-sm"
         />
@@ -85,12 +86,12 @@ export default function PresupuestosFiltros() {
         <label className="block text-[11px] font-bold uppercase tracking-wider text-[#45464f]">
           Hasta
         </label>
-        <input
-          type="date"
+        <DateInput
           value={hasta}
-          onChange={(e) => {
-            setHasta(e.target.value);
-            aplicarFiltros({ hasta: e.target.value });
+          min={desde || undefined}
+          onChange={(valor) => {
+            setHasta(valor);
+            aplicarFiltros({ hasta: valor });
           }}
           className="mt-1 border border-[#c5c6d0] rounded-lg px-2 py-1.5 text-sm"
         />

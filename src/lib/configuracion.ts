@@ -23,7 +23,7 @@ export async function obtenerConfiguracion() {
 export async function actualizarConfiguracion(
   data: Partial<{
     nombreNegocio: string;
-    logoUrl: string;
+    logoUrl: string | null;
     telefono: string;
     email: string;
     direccion: string;

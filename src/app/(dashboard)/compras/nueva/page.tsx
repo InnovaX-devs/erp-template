@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
+import Select from "@/components/ui/select";
 
 interface Proveedor {
   id: number;
@@ -300,18 +301,15 @@ export default function NuevaCompraPage() {
         <p className="text-xs uppercase tracking-wide text-text-dim">Proveedor (opcional)</p>
         {!altaRapidaAbierta ? (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <select
+            <Select
               value={proveedorId}
-              onChange={(e) => setProveedorId(e.target.value)}
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none sm:flex-1"
-            >
-              <option value="">Sin especificar</option>
-              {proveedores.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nombre}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setProveedorId(value)}
+              options={[
+                { value: "", label: "Sin especificar" },
+                ...proveedores.map((p) => ({ value: String(p.id), label: p.nombre })),
+              ]}
+              className="w-full min-w-0 sm:flex-1"
+            />
             <button
               type="button"
               onClick={() => setAltaRapidaAbierta(true)}
@@ -328,7 +326,7 @@ export default function NuevaCompraPage() {
               placeholder="Nombre del proveedor"
               value={nombreProveedorNuevo}
               onChange={(e) => setNombreProveedorNuevo(e.target.value)}
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none sm:flex-1"
+              className="w-full min-w-0 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none sm:flex-1"
             />
             <div className="flex gap-2">
               <button
@@ -356,18 +354,18 @@ export default function NuevaCompraPage() {
         <p className="text-xs uppercase tracking-wide text-text-dim">
           Cuenta desde la que se paga
         </p>
-        <select
+        <Select
           value={cuentaId}
-          onChange={(e) => setCuentaId(e.target.value)}
-          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
-        >
-          <option value="">Elegí una cuenta...</option>
-          {cuentas.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nombre} — {TIPO_CUENTA_LABEL[c.tipo]}
-            </option>
-          ))}
-        </select>
+          onChange={(value) => setCuentaId(value)}
+          options={[
+            { value: "", label: "Elegí una cuenta..." },
+            ...cuentas.map((c) => ({
+              value: String(c.id),
+              label: `${c.nombre} — ${TIPO_CUENTA_LABEL[c.tipo]}`,
+            })),
+          ]}
+          className="w-full"
+        />
         {cuentas.length === 0 && (
           <p className="text-xs text-text-dim">
             No hay cuentas activas registradas. Creá una desde Caja/Cuentas antes de comprar.

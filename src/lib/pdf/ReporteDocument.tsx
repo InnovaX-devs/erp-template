@@ -1,4 +1,4 @@
-import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 import { BusinessHeader } from "./BusinessHeader";
 import { pdfStyles } from "./styles";
 import { PDF_BRAND } from "./brand";
@@ -96,7 +96,20 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
   topRank: { width: "6%", fontSize: 8, color: PDF_BRAND.textDim },
-  topNombre: { width: "49%" },
+  topNombreWrap: { flexDirection: "row", alignItems: "center", width: "49%" },
+  topImagenBox: {
+    width: 26,
+    height: 26,
+    marginRight: 6,
+    borderRadius: 3,
+    overflow: "hidden",
+    backgroundColor: PDF_BRAND.surfaceHover,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  topImagen: { width: 26, height: 26, objectFit: "contain" },
+  topPlaceholderText: { fontSize: 5, color: PDF_BRAND.textDim, textAlign: "center" },
+  topNombreCol: { flex: 1 },
   topCant: { width: "20%", textAlign: "right", fontSize: 9 },
   topMonto: { width: "25%", textAlign: "right", fontSize: 9, fontFamily: "Helvetica-Bold" },
 });
@@ -227,24 +240,57 @@ export function ReporteDocument({
           </>
         )}
 
-        <Text style={s.seccionTitulo}>Top productos</Text>
-        {topProductos.length === 0 ? (
-          <Text style={s.vacioTexto}>Sin ventas de catálogo en el período.</Text>
-        ) : (
-          topProductos.map((p, i) => (
-            <View key={`${p.productoId}-${p.presentacion}`} style={s.topFila}>
-              <Text style={s.topRank}>{i + 1}</Text>
-              <View style={s.topNombre}>
+        <View wrap={false}>
+          <Text style={s.seccionTitulo}>Top productos</Text>
+          {topProductos.length === 0 && (
+            <Text style={s.vacioTexto}>Sin ventas de catálogo en el período.</Text>
+          )}
+          {topProductos.length > 0 &&
+            topProductos.slice(0, 1).map((p, i) => (
+              <View key={`${p.productoId}-${p.presentacion}`} style={s.topFila} wrap={false}>
+                <Text style={s.topRank}>{i + 1}</Text>
+                <View style={s.topNombreWrap}>
+                  <View style={s.topImagenBox}>
+                    {p.fotoUrl ? (
+                      <Image src={p.fotoUrl} style={s.topImagen} />
+                    ) : (
+                      <Text style={s.topPlaceholderText}>Sin foto</Text>
+                    )}
+                  </View>
+                  <View style={s.topNombreCol}>
+                    <Text style={{ fontSize: 9 }}>{p.nombre}</Text>
+                    <Text style={{ fontSize: 6.5, color: PDF_BRAND.textDim, marginTop: 1 }}>
+                      {LABEL_PRESENTACION[p.presentacion]}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={s.topCant}>{p.cantidad}</Text>
+                <Text style={[s.topMonto, { color: PDF_BRAND.primary }]}>{formatCurrency(p.montoARS, "ARS")}</Text>
+              </View>
+            ))}
+        </View>
+        {topProductos.slice(1).map((p, i) => (
+          <View key={`${p.productoId}-${p.presentacion}`} style={s.topFila} wrap={false}>
+            <Text style={s.topRank}>{i + 2}</Text>
+            <View style={s.topNombreWrap}>
+              <View style={s.topImagenBox}>
+                {p.fotoUrl ? (
+                  <Image src={p.fotoUrl} style={s.topImagen} />
+                ) : (
+                  <Text style={s.topPlaceholderText}>Sin foto</Text>
+                )}
+              </View>
+              <View style={s.topNombreCol}>
                 <Text style={{ fontSize: 9 }}>{p.nombre}</Text>
                 <Text style={{ fontSize: 6.5, color: PDF_BRAND.textDim, marginTop: 1 }}>
                   {LABEL_PRESENTACION[p.presentacion]}
                 </Text>
               </View>
-              <Text style={s.topCant}>{p.cantidad}</Text>
-              <Text style={[s.topMonto, { color: PDF_BRAND.primary }]}>{formatCurrency(p.montoARS, "ARS")}</Text>
             </View>
-          ))
-        )}
+            <Text style={s.topCant}>{p.cantidad}</Text>
+            <Text style={[s.topMonto, { color: PDF_BRAND.primary }]}>{formatCurrency(p.montoARS, "ARS")}</Text>
+          </View>
+        ))}
 
         <Text
           style={pdfStyles.footer}

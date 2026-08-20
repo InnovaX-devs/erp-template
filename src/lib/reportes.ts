@@ -15,14 +15,14 @@ export type ItemVentaParaReporte = {
   precioUnitarioUSD: number;
   tipoPrecio: "MINORISTA" | "MAYORISTA";
   costoUnitarioARS: number;
-  presentacion: "FRASCO" | "DECANT_5ML" | "DECANT_10ML"; // NUEVO
-  nombreProducto: string | null; // NUEVO — null si es ítem "Varios/Muestra"
-  fotoUrl: string | null; // NUEVO
+  presentacion: "FRASCO" | "DECANT_5ML" | "DECANT_10ML"; 
+  nombreProducto: string | null; 
+  fotoUrl: string | null; 
 };
 
 export type VentaParaReporte = {
   id: number;
-  fecha: Date; // NUEVO — necesario para agrupar por día
+  fecha: Date; 
   totalARS: number;
   totalUSD: number;
   montoPagado: number;
@@ -328,4 +328,9 @@ export function calcularTopProductos(ventas: VentaParaReporte[], limite = 10): T
   return Array.from(acumulado.values())
     .sort((a, b) => b.montoARS - a.montoARS)
     .slice(0, limite);
+}
+
+/** true si `a` y `b` caen en el mismo día calendario (mismo huso local). */
+export function esMismoDia(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }

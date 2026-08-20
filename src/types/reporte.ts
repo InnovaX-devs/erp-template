@@ -30,14 +30,6 @@ export interface DesgloseMetodoCobroItem {
   porcentaje: number;
 }
 
-export interface ReporteData {
-  fechaInicio: string;
-  fechaFin: string;
-  kpis: ReporteKPIs;
-  desgloseTipoPrecio: DesgloseTipoPrecioItem[];
-  desgloseMetodoCobro: DesgloseMetodoCobroItem[];
-}
-
 export type ResultadoReporte = { success: true; data: ReporteData } | { success: false; error: string };
 
 export interface IngresoPorDia {
@@ -62,6 +54,6 @@ export interface ReporteData {
   kpis: ReporteKPIs;
   desgloseTipoPrecio: DesgloseTipoPrecioItem[];
   desgloseMetodoCobro: DesgloseMetodoCobroItem[];
-  ingresosPorDia: IngresoPorDia[]; // NUEVO
-  topProductos: TopProductoItem[]; // NUEVO
+  ingresosPorDia: IngresoPorDia[]; 
+  topProductos: TopProductoItem[]; 
 }

@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import {
   calcularReporte,
+  calcularIngresosPorDia,
+  calcularTopProductos,
+  claveFecha,
   costoHistoricoDelProducto,
   type VentaParaReporte,
 } from "@/lib/reportes";
@@ -42,7 +45,7 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
             tipoPrecio: true,
             presentacion: true,
             producto: {
-              select: { id: true, precioCosto: true, monedaPrecio: true, contenidoMl: true },
+              select: { id: true, nombre: true, fotoUrl: true, precioCosto: true, monedaPrecio: true, contenidoMl: true },
             },
           },
         },
@@ -76,6 +79,7 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
 
   const ventas: VentaParaReporte[] = ventasRaw.map((v) => ({
     id: v.id,
+    fecha: v.fecha,
     totalARS: v.totalARS,
     totalUSD: v.totalUSD,
     montoPagado: v.montoPagado,
@@ -114,6 +118,9 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
         cantidad: item.cantidad,
         precioUnitarioUSD: item.precioUnitarioUSD,
         tipoPrecio: item.tipoPrecio,
+        presentacion: item.presentacion, 
+        nombreProducto: item.producto?.nombre ?? null, 
+        fotoUrl: item.producto?.fotoUrl ?? null,
         costoUnitarioARS,
       };
     }),
@@ -127,14 +134,22 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
 
   const movimientosEgreso = await prisma.movimientoCaja.findMany({
     where: { tipo: "EGRESO", concepto: "GASTO", fecha: { gte: desde, lte: hasta } },
-    select: { monto: true, cuenta: { select: { tipo: true } } },
+    select: { monto: true, fecha: true, cuenta: { select: { tipo: true } } }, // + fecha
   });
-  const egresosGastosARS = movimientosEgreso.reduce((acc, m) => {
+
+  let egresosGastosARS = 0;
+  const egresosGastosPorDiaARS = new Map<string, number>();
+  for (const m of movimientosEgreso) {
     const esUSD = m.cuenta.tipo === "EFECTIVO_USD" || m.cuenta.tipo === "BANCO_USD";
-    return acc + (esUSD ? m.monto * cotizacionActual : m.monto);
-  }, 0);
+    const montoARS = esUSD ? m.monto * cotizacionActual : m.monto;
+    egresosGastosARS += montoARS;
+    const clave = claveFecha(m.fecha);
+    egresosGastosPorDiaARS.set(clave, (egresosGastosPorDiaARS.get(clave) ?? 0) + montoARS);
+  }
 
   const { kpis, desgloseTipoPrecio, desgloseMetodoCobro } = calcularReporte(ventas, egresosGastosARS);
+  const ingresosPorDia = calcularIngresosPorDia(ventas, egresosGastosPorDiaARS, desde, hasta);
+  const topProductos = calcularTopProductos(ventas);
 
   return {
     fechaInicio: desde.toISOString(),
@@ -142,5 +157,7 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
     kpis,
     desgloseTipoPrecio,
     desgloseMetodoCobro,
+    ingresosPorDia,
+    topProductos,
   };
 }

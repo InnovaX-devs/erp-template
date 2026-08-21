@@ -5,14 +5,15 @@ import { Search, Loader2 } from "lucide-react";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import type { ProductoBusquedaDTO } from "@/types/producto";
 import { formatCurrency, toArs } from "@/lib/currency";
+import { useVenta } from "@/components/ventas/venta-context";
 
-// Umbral: tipeo humano normal ronda 100-300ms entre teclas.
-// Una lectora de código de barras dispara caracteres mucho más rápido.
+
 const UMBRAL_LECTORA_MS = 40;
 
 type Props = { onSeleccionar: (producto: ProductoBusquedaDTO) => void };
 
 export function BuscadorProducto({ onSeleccionar }: Props) {
+  const { cotizacionUSD } = useVenta();
   const [query, setQuery] = useState("");
   const [resultados, setResultados] = useState<ProductoBusquedaDTO[]>([]);
   const [abierto, setAbierto] = useState(false);
@@ -156,7 +157,7 @@ export function BuscadorProducto({ onSeleccionar }: Props) {
                 </span>
               </span>
               <span className="shrink-0 text-sm font-semibold text-text">
-                {formatCurrency(toArs(p.precioVenta, p.monedaPrecio), "ARS")}
+                {formatCurrency(toArs(p.precioVenta, p.monedaPrecio, cotizacionUSD), "ARS")}
               </span>
             </button>
           ))}

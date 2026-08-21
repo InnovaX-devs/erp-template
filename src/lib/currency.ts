@@ -1,13 +1,12 @@
-export const USD_RATE = Number(process.env.NEXT_PUBLIC_USD_RATE ?? 1000);
-
+// lib/currency.ts
 export type Moneda = "ARS" | "USD";
 
-export function toArs(value: number, moneda: Moneda): number {
-  return moneda === "USD" ? value * USD_RATE : value;
+export function toArs(value: number, moneda: Moneda, cotizacionUSD: number): number {
+  return moneda === "USD" ? value * cotizacionUSD : value;
 }
 
-export function toUsd(value: number, moneda: Moneda): number {
-  return moneda === "USD" ? value : value / USD_RATE;
+export function toUsd(value: number, moneda: Moneda, cotizacionUSD: number): number {
+  return moneda === "USD" ? value : value / cotizacionUSD;
 }
 
 export function formatCurrency(value: number, currency: Moneda) {

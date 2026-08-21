@@ -22,6 +22,7 @@ import { confirmarVenta, registrarPedido, descontarStockSinVenta, verificarStock
 import { ModalStockComprometido } from "@/components/ventas/modal-stock-comprometido";
 import { Tag, Gift } from "lucide-react";
 
+
 export default function NuevaVentaPage() {
   return (
     <VentaProvider>
@@ -38,7 +39,6 @@ function NuevaVentaContenido() {
   const [modalPrecioAbierto, setModalPrecioAbierto] = useState(false);
   const [modalDescuentoAbierto, setModalDescuentoAbierto] = useState(false);
   const [descuento, setDescuento] = useState<Descuento>(null);
-  const { tipoPrecio, cliente, setCliente, modoCobro, setModoCobro, pagos, setPagos } = useVenta();
 
   // --- Prefill desde un Presupuesto ("Convertir a venta") ---
   const searchParams = useSearchParams();
@@ -48,6 +48,7 @@ function NuevaVentaContenido() {
 
   const [modalPresentacionAbierto, setModalPresentacionAbierto] = useState(false);
   const [productoParaPresentacion, setProductoParaPresentacion] = useState<ProductoBusquedaDTO | null>(null);
+  const { tipoPrecio, cliente, setCliente, modoCobro, setModoCobro, pagos, setPagos, cotizacionUSD } = useVenta();
 
   const [advertenciaStock, setAdvertenciaStock] = useState<{
     producto: ProductoBusquedaDTO;
@@ -166,7 +167,7 @@ function NuevaVentaContenido() {
 
     const precioBaseOriginal =
       tipoPrecio === "MAYORISTA" && producto.precioMayorista != null ? producto.precioMayorista : producto.precioVenta;
-    const precioUnitarioArs = toArs(precioBaseOriginal, producto.monedaPrecio);
+    const precioUnitarioArs = toArs(precioBaseOriginal, producto.monedaPrecio, cotizacionUSD); // <-- agregado cotizacionUSD
 
     intentarAgregar(producto, "FRASCO", precioUnitarioArs, false);
   }
@@ -206,7 +207,7 @@ function NuevaVentaContenido() {
         return {
           ...it,
           tipoPrecio: tipo,
-          precioUnitarioArs: toArs(precioBaseOriginal, it.producto.monedaPrecio),
+          precioUnitarioArs: toArs(precioBaseOriginal, it.producto.monedaPrecio, cotizacionUSD), 
         };
       })
     );
@@ -245,28 +246,6 @@ function NuevaVentaContenido() {
     setPresupuestoIdOrigen(null);
   }
 
-  async function handleConfirmarVenta() {
-    if (carrito.length === 0) {
-      toast.error("El carrito está vacío.");
-      return;
-    }
-    if (modoCobro !== "A_CUENTA" && Math.abs(pagos.reduce((a, p) => a + p.monto, 0) - total) > 0.01) {
-      toast.error("El monto cobrado no coincide con el total. Revisá el cobro.");
-      return;
-    }
-    setProcesando(true);
-    const cotizacionRes = await fetch("/api/configuracion").then((r) => r.json());
-    const resultado = await confirmarVenta({ ...armarInput(), cotizacionUSD: cotizacionRes.cotizacionUSD ?? 0 });
-    setProcesando(false);
-
-    if (!resultado.success) {
-      toast.error(resultado.error);
-      return;
-    }
-    toast.success(`Venta #${resultado.ventaId} confirmada`);
-    limpiarVenta();
-  }
-
   async function handleDescontarStock() {
     if (carrito.length === 0) {
       toast.error("El carrito está vacío.");
@@ -291,14 +270,13 @@ function NuevaVentaContenido() {
     limpiarVenta();
   }
 
-  async function handleRegistrarPedido() {
+    async function handleRegistrarPedido() {
     if (carrito.length === 0) {
       toast.error("El carrito está vacío.");
       return;
     }
     setProcesando(true);
-    const cotizacionRes = await fetch("/api/configuracion").then((r) => r.json());
-    const resultado = await registrarPedido({ ...armarInput(), cotizacionUSD: cotizacionRes.cotizacionUSD ?? 0 });
+    const resultado = await registrarPedido({ ...armarInput(), cotizacionUSD });
     setProcesando(false);
 
     if (!resultado.success) {
@@ -306,6 +284,27 @@ function NuevaVentaContenido() {
       return;
     }
     toast.success(`Pedido #${resultado.ventaId} registrado`);
+    limpiarVenta();
+  }
+
+  async function handleConfirmarVenta() {
+    if (carrito.length === 0) {
+      toast.error("El carrito está vacío.");
+      return;
+    }
+    if (modoCobro !== "A_CUENTA" && Math.abs(pagos.reduce((a, p) => a + p.monto, 0) - total) > 0.01) {
+      toast.error("El monto cobrado no coincide con el total. Revisá el cobro.");
+      return;
+    }
+    setProcesando(true);
+    const resultado = await confirmarVenta({ ...armarInput(), cotizacionUSD });
+    setProcesando(false);
+
+    if (!resultado.success) {
+      toast.error(resultado.error);
+      return;
+    }
+    toast.success(`Venta #${resultado.ventaId} confirmada`);
     limpiarVenta();
   }
 

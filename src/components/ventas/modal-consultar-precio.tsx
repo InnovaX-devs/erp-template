@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Search, X, Loader2, PackageX } from "lucide-react";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import type { ProductoBusquedaDTO } from "@/types/producto";
-import { formatCurrency, toUsd, toArs } from "@/lib/currency";
+import { formatCurrency, toUsd } from "@/lib/currency";
 
 interface Props {
   onClose: () => void;
@@ -97,8 +97,8 @@ export function ModalConsultarPrecio({ onClose }: Props) {
 
           <div className="divide-y divide-border">
             {resultados.map((p, i) => {
-              const minoristaUsd = toUsd(p.precioVenta, p.monedaPrecio);
-              const mayoristaUsd = p.precioMayorista != null ? toUsd(p.precioMayorista, p.monedaPrecio) : null;
+              const minoristaUsd = toUsd(p.precioVenta, p.monedaPrecio, cotizacionUSD);
+              const mayoristaUsd = p.precioMayorista != null ? toUsd(p.precioMayorista, p.monedaPrecio, cotizacionUSD) : null;
               const conStock = p.stockActual > 0;
 
               return (

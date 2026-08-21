@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { toArs } from "@/lib/currency";
 import type { Prisma } from "@prisma/client";
+import { obtenerConfiguracion } from "@/lib/configuracion";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const [items, total, aggregateBase] = await Promise.all([
+        const [items, total, aggregateBase] = await Promise.all([
       prisma.producto.findMany({
         where,
         orderBy: { nombre: "asc" },
@@ -78,12 +79,15 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
+    const config = await obtenerConfiguracion(); 
+    const cotizacionUSD = config.cotizacionUSD;   
+
     let stockCostoArs = 0;
     let stockVentaArs = 0;
 
     for (const p of aggregateBase) {
-      stockCostoArs += p.stockActual * toArs(p.precioCosto, p.monedaPrecio);
-      stockVentaArs += p.stockActual * toArs(p.precioVenta, p.monedaPrecio);
+      stockCostoArs += p.stockActual * toArs(p.precioCosto, p.monedaPrecio, cotizacionUSD);
+      stockVentaArs += p.stockActual * toArs(p.precioVenta, p.monedaPrecio, cotizacionUSD);
     }
 
     return NextResponse.json({

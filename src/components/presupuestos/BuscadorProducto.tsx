@@ -7,9 +7,11 @@ import type { ProductoBusqueda } from "@/types/presupuesto";
 export default function BuscadorProducto({
   tipoPrecio,
   onAgregar,
+  cotizacionUSD,
 }: {
   tipoPrecio: "MINORISTA" | "MAYORISTA";
   onAgregar: (producto: ProductoBusqueda) => void;
+  cotizacionUSD: number;
 }) {
   const [query, setQuery] = useState("");
   const [resultados, setResultados] = useState<ProductoBusqueda[]>([]);
@@ -94,7 +96,7 @@ export default function BuscadorProducto({
           {!cargando &&
             resultados.map((p) => {
               const precioBase = tipoPrecio === "MAYORISTA" ? p.precioMayorista ?? p.precioVenta : p.precioVenta;
-              const precio = toArs(precioBase, p.monedaPrecio);
+              const precio = toArs(precioBase, p.monedaPrecio, cotizacionUSD);
               return (
                 <button
                   key={p.id}

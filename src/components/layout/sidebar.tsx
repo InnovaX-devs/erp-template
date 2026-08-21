@@ -91,7 +91,7 @@ export function Sidebar({ logoUrl }: { logoUrl: string | null }) {
           </span>
 
           <p className="mt-1 text-xs uppercase tracking-[0.2em] text-ivory/50">
-            Perfumería de Lujo
+            Perfumes Árabes
           </p>
         </div>
 

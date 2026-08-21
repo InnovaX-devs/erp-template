@@ -16,6 +16,15 @@ function grupoTieneRutaActiva(grupo: NavGroup, pathname: string) {
   );
 }
 
+// Devuelve el href más específico (más largo) entre los children de un grupo
+// que matchea el pathname actual. Evita que una ruta padre como "/ventas"
+// quede marcada activa cuando en realidad estás en "/ventas/historial".
+function mejorMatchDeGrupo(grupo: NavGroup, pathname: string) {
+  return grupo.children
+    .filter((c) => pathname === c.href || pathname.startsWith(`${c.href}/`))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+}
+
 export function Sidebar({ logoUrl }: { logoUrl: string | null }) {
   const pathname = usePathname();
   const { isOpen, close } = useSidebar();
@@ -121,6 +130,7 @@ export function Sidebar({ logoUrl }: { logoUrl: string | null }) {
               const Icon = item.icon;
               const abierto = grupoAbierto === item.label;
               const tieneActivo = grupoTieneRutaActiva(item, pathname);
+              const activeHref = mejorMatchDeGrupo(item, pathname);
 
               return (
                 <div key={item.label}>
@@ -156,9 +166,7 @@ export function Sidebar({ logoUrl }: { logoUrl: string | null }) {
                       {item.children.map((child) => {
                         const ChildIcon = child.icon;
 
-                        const isActive =
-                          pathname === child.href ||
-                          pathname.startsWith(`${child.href}/`);
+                        const isActive = child.href === activeHref;
 
                         return (
                           <Link

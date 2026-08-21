@@ -1,3 +1,6 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
 -- CreateEnum
 CREATE TYPE "MonedaPrecio" AS ENUM ('ARS', 'USD');
 
@@ -5,7 +8,7 @@ CREATE TYPE "MonedaPrecio" AS ENUM ('ARS', 'USD');
 CREATE TYPE "CampoPrecio" AS ENUM ('COSTO', 'MINORISTA', 'MAYORISTA', 'OVERRIDE_5ML', 'OVERRIDE_10ML');
 
 -- CreateEnum
-CREATE TYPE "OrigenCambioPrecio" AS ENUM ('MANUAL', 'RECALCULO_DECANT', 'ACTUALIZACION_MASIVA');
+CREATE TYPE "OrigenCambioPrecio" AS ENUM ('MANUAL', 'RECALCULO_DECANT', 'ACTUALIZACION_MASIVA', 'COMPRA_CONFIRMADA');
 
 -- CreateEnum
 CREATE TYPE "EstadoPago" AS ENUM ('PAGADA', 'A_CUENTA', 'ANULADA', 'CANCELADA');
@@ -18,9 +21,6 @@ CREATE TYPE "TipoPrecioVenta" AS ENUM ('MINORISTA', 'MAYORISTA');
 
 -- CreateEnum
 CREATE TYPE "EstadoPresupuesto" AS ENUM ('BORRADOR', 'VENCIDO', 'CONVERTIDO');
-
--- CreateEnum
-CREATE TYPE "TipoPagoCompra" AS ENUM ('CUENTA', 'EFECTIVO', 'TRANSFERENCIA');
 
 -- CreateEnum
 CREATE TYPE "TipoCuenta" AS ENUM ('EFECTIVO_ARS', 'EFECTIVO_USD', 'BANCO_ARS', 'BANCO_USD');
@@ -36,7 +36,7 @@ CREATE TYPE "EstadoPagoGasto" AS ENUM ('PENDIENTE', 'PAGADO');
 
 -- CreateTable
 CREATE TABLE "Usuario" (
-    "id" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
     "nombre" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "passwordHash" TEXT NOT NULL,
@@ -49,7 +49,7 @@ CREATE TABLE "Usuario" (
 
 -- CreateTable
 CREATE TABLE "Marca" (
-    "id" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
     "nombre" TEXT NOT NULL,
     "activa" BOOLEAN NOT NULL DEFAULT true,
 
@@ -58,7 +58,7 @@ CREATE TABLE "Marca" (
 
 -- CreateTable
 CREATE TABLE "Categoria" (
-    "id" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
     "nombre" TEXT NOT NULL,
     "activa" BOOLEAN NOT NULL DEFAULT true,
 
@@ -67,13 +67,14 @@ CREATE TABLE "Categoria" (
 
 -- CreateTable
 CREATE TABLE "Producto" (
-    "id" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
     "nombre" TEXT NOT NULL,
     "codigoBarras" TEXT,
     "ubicacionDeposito" TEXT,
     "fotoUrl" TEXT,
-    "marcaId" TEXT,
-    "categoriaId" TEXT,
+    "contenidoMl" INTEGER,
+    "marcaId" INTEGER,
+    "categoriaId" INTEGER,
     "stockActual" INTEGER NOT NULL DEFAULT 0,
     "stockMinimo" INTEGER NOT NULL DEFAULT 0,
     "destacado" BOOLEAN NOT NULL DEFAULT false,
@@ -96,8 +97,8 @@ CREATE TABLE "Producto" (
 
 -- CreateTable
 CREATE TABLE "HistorialPrecio" (
-    "id" TEXT NOT NULL,
-    "productoId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "productoId" INTEGER NOT NULL,
     "campo" "CampoPrecio" NOT NULL,
     "valorAnterior" DOUBLE PRECISION,
     "valorNuevo" DOUBLE PRECISION NOT NULL,
@@ -110,7 +111,7 @@ CREATE TABLE "HistorialPrecio" (
 
 -- CreateTable
 CREATE TABLE "Cliente" (
-    "id" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
     "nombre" TEXT NOT NULL,
     "apellido" TEXT,
     "telefono" TEXT,
@@ -125,8 +126,9 @@ CREATE TABLE "Cliente" (
 
 -- CreateTable
 CREATE TABLE "Venta" (
-    "id" TEXT NOT NULL,
-    "clienteId" TEXT,
+    "id" SERIAL NOT NULL,
+    "clienteId" INTEGER,
+    "presupuestoId" INTEGER,
     "fecha" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "cotizacionUsada" DOUBLE PRECISION NOT NULL,
     "descuentoMonto" DOUBLE PRECISION,
@@ -145,9 +147,9 @@ CREATE TABLE "Venta" (
 
 -- CreateTable
 CREATE TABLE "ItemVenta" (
-    "id" TEXT NOT NULL,
-    "ventaId" TEXT NOT NULL,
-    "productoId" TEXT,
+    "id" SERIAL NOT NULL,
+    "ventaId" INTEGER NOT NULL,
+    "productoId" INTEGER,
     "descripcionLibre" TEXT,
     "presentacion" "Presentacion" NOT NULL DEFAULT 'FRASCO',
     "abrioFrascoCerrado" BOOLEAN NOT NULL DEFAULT false,
@@ -160,9 +162,9 @@ CREATE TABLE "ItemVenta" (
 
 -- CreateTable
 CREATE TABLE "PagoVenta" (
-    "id" TEXT NOT NULL,
-    "ventaId" TEXT NOT NULL,
-    "cuentaId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "ventaId" INTEGER NOT NULL,
+    "cuentaId" INTEGER NOT NULL,
     "monto" DOUBLE PRECISION NOT NULL,
 
     CONSTRAINT "PagoVenta_pkey" PRIMARY KEY ("id")
@@ -170,8 +172,8 @@ CREATE TABLE "PagoVenta" (
 
 -- CreateTable
 CREATE TABLE "Presupuesto" (
-    "id" TEXT NOT NULL,
-    "clienteId" TEXT,
+    "id" SERIAL NOT NULL,
+    "clienteId" INTEGER,
     "fecha" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "vigenciaDias" INTEGER NOT NULL DEFAULT 15,
     "fechaVencimiento" TIMESTAMP(3) NOT NULL,
@@ -186,9 +188,9 @@ CREATE TABLE "Presupuesto" (
 
 -- CreateTable
 CREATE TABLE "PresupuestoItem" (
-    "id" TEXT NOT NULL,
-    "presupuestoId" TEXT NOT NULL,
-    "productoId" TEXT,
+    "id" SERIAL NOT NULL,
+    "presupuestoId" INTEGER NOT NULL,
+    "productoId" INTEGER,
     "descripcion" TEXT NOT NULL,
     "presentacion" "Presentacion" NOT NULL DEFAULT 'FRASCO',
     "tipoPrecio" "TipoPrecioVenta" NOT NULL DEFAULT 'MINORISTA',
@@ -200,7 +202,7 @@ CREATE TABLE "PresupuestoItem" (
 
 -- CreateTable
 CREATE TABLE "Proveedor" (
-    "id" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
     "nombre" TEXT NOT NULL,
     "personaContacto" TEXT,
     "telefono" TEXT,
@@ -214,10 +216,12 @@ CREATE TABLE "Proveedor" (
 
 -- CreateTable
 CREATE TABLE "Compra" (
-    "id" TEXT NOT NULL,
-    "proveedorId" TEXT,
-    "tipoPago" "TipoPagoCompra" NOT NULL DEFAULT 'CUENTA',
-    "total" DOUBLE PRECISION NOT NULL,
+    "id" SERIAL NOT NULL,
+    "proveedorId" INTEGER,
+    "cuentaId" INTEGER NOT NULL,
+    "totalUSD" DOUBLE PRECISION NOT NULL,
+    "totalARS" DOUBLE PRECISION,
+    "cotizacionUsada" DOUBLE PRECISION,
     "confirmada" BOOLEAN NOT NULL DEFAULT false,
     "pagada" BOOLEAN NOT NULL DEFAULT false,
     "recibida" BOOLEAN NOT NULL DEFAULT false,
@@ -229,18 +233,18 @@ CREATE TABLE "Compra" (
 
 -- CreateTable
 CREATE TABLE "ItemCompra" (
-    "id" TEXT NOT NULL,
-    "compraId" TEXT NOT NULL,
-    "productoId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "compraId" INTEGER NOT NULL,
+    "productoId" INTEGER NOT NULL,
     "cantidad" INTEGER NOT NULL,
-    "costoUnitario" DOUBLE PRECISION NOT NULL,
+    "costoUnitarioUSD" DOUBLE PRECISION NOT NULL,
 
     CONSTRAINT "ItemCompra_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Cuenta" (
-    "id" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
     "nombre" TEXT NOT NULL,
     "tipo" "TipoCuenta" NOT NULL,
     "titular" TEXT,
@@ -260,23 +264,23 @@ CREATE TABLE "Cuenta" (
 
 -- CreateTable
 CREATE TABLE "MovimientoCaja" (
-    "id" TEXT NOT NULL,
-    "cuentaId" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
+    "cuentaId" INTEGER NOT NULL,
     "tipo" "TipoMovimientoCaja" NOT NULL,
     "concepto" "ConceptoMovimientoCaja" NOT NULL,
     "monto" DOUBLE PRECISION NOT NULL,
     "saldoResultante" DOUBLE PRECISION NOT NULL,
     "fecha" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "ventaId" TEXT,
-    "gastoId" TEXT,
-    "compraId" TEXT,
+    "ventaId" INTEGER,
+    "gastoId" INTEGER,
+    "compraId" INTEGER,
 
     CONSTRAINT "MovimientoCaja_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "CategoriaGasto" (
-    "id" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
     "nombre" TEXT NOT NULL,
 
     CONSTRAINT "CategoriaGasto_pkey" PRIMARY KEY ("id")
@@ -284,11 +288,11 @@ CREATE TABLE "CategoriaGasto" (
 
 -- CreateTable
 CREATE TABLE "Gasto" (
-    "id" TEXT NOT NULL,
+    "id" SERIAL NOT NULL,
     "monto" DOUBLE PRECISION NOT NULL,
     "concepto" TEXT NOT NULL,
-    "categoriaId" TEXT,
-    "proveedorId" TEXT,
+    "categoriaId" INTEGER,
+    "proveedorId" INTEGER,
     "observaciones" TEXT,
     "estadoPago" "EstadoPagoGasto" NOT NULL DEFAULT 'PENDIENTE',
     "fecha" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -298,7 +302,7 @@ CREATE TABLE "Gasto" (
 
 -- CreateTable
 CREATE TABLE "Configuracion" (
-    "id" TEXT NOT NULL,
+    "id" TEXT NOT NULL DEFAULT 'singleton',
     "nombreNegocio" TEXT NOT NULL,
     "logoUrl" TEXT,
     "telefono" TEXT,
@@ -306,13 +310,15 @@ CREATE TABLE "Configuracion" (
     "direccion" TEXT,
     "remitenteNombre" TEXT,
     "remitenteDni" TEXT,
-    "cotizacionUSD" DOUBLE PRECISION NOT NULL,
+    "cotizacionUSD" DOUBLE PRECISION NOT NULL DEFAULT 1000,
     "costoPromedioPonderado" BOOLEAN NOT NULL DEFAULT true,
     "margenGananciaGlobal" BOOLEAN NOT NULL DEFAULT false,
     "margenMinoristaDefault" DOUBLE PRECISION,
     "margenMayoristaDefault" DOUBLE PRECISION,
     "costoEnvaseDecantARS" DOUBLE PRECISION,
     "multiplicadorInsumoDecant" DOUBLE PRECISION,
+    "divisorFrascoDecant" DOUBLE PRECISION DEFAULT 9,
+    "offsetDecant5mlARS" DOUBLE PRECISION DEFAULT 200,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Configuracion_pkey" PRIMARY KEY ("id")
@@ -346,10 +352,31 @@ CREATE INDEX "HistorialPrecio_fecha_idx" ON "HistorialPrecio"("fecha");
 CREATE INDEX "Cliente_nombre_idx" ON "Cliente"("nombre");
 
 -- CreateIndex
+CREATE INDEX "Cliente_apellido_idx" ON "Cliente"("apellido");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Venta_presupuestoId_key" ON "Venta"("presupuestoId");
+
+-- CreateIndex
 CREATE INDEX "Venta_clienteId_idx" ON "Venta"("clienteId");
 
 -- CreateIndex
 CREATE INDEX "Venta_fecha_idx" ON "Venta"("fecha");
+
+-- CreateIndex
+CREATE INDEX "Venta_estadoPago_idx" ON "Venta"("estadoPago");
+
+-- CreateIndex
+CREATE INDEX "Venta_estadoPago_fecha_idx" ON "Venta"("estadoPago", "fecha");
+
+-- CreateIndex
+CREATE INDEX "Venta_retirado_estadoPago_idx" ON "Venta"("retirado", "estadoPago");
+
+-- CreateIndex
+CREATE INDEX "Venta_armado_idx" ON "Venta"("armado");
+
+-- CreateIndex
+CREATE INDEX "Venta_enviado_idx" ON "Venta"("enviado");
 
 -- CreateIndex
 CREATE INDEX "ItemVenta_ventaId_idx" ON "ItemVenta"("ventaId");
@@ -368,6 +395,9 @@ CREATE INDEX "Proveedor_nombre_idx" ON "Proveedor"("nombre");
 
 -- CreateIndex
 CREATE INDEX "Compra_proveedorId_idx" ON "Compra"("proveedorId");
+
+-- CreateIndex
+CREATE INDEX "Compra_cuentaId_idx" ON "Compra"("cuentaId");
 
 -- CreateIndex
 CREATE INDEX "Compra_fecha_idx" ON "Compra"("fecha");
@@ -409,6 +439,9 @@ ALTER TABLE "HistorialPrecio" ADD CONSTRAINT "HistorialPrecio_productoId_fkey" F
 ALTER TABLE "Venta" ADD CONSTRAINT "Venta_clienteId_fkey" FOREIGN KEY ("clienteId") REFERENCES "Cliente"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Venta" ADD CONSTRAINT "Venta_presupuestoId_fkey" FOREIGN KEY ("presupuestoId") REFERENCES "Presupuesto"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "ItemVenta" ADD CONSTRAINT "ItemVenta_ventaId_fkey" FOREIGN KEY ("ventaId") REFERENCES "Venta"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -428,6 +461,9 @@ ALTER TABLE "PresupuestoItem" ADD CONSTRAINT "PresupuestoItem_presupuestoId_fkey
 
 -- AddForeignKey
 ALTER TABLE "Compra" ADD CONSTRAINT "Compra_proveedorId_fkey" FOREIGN KEY ("proveedorId") REFERENCES "Proveedor"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Compra" ADD CONSTRAINT "Compra_cuentaId_fkey" FOREIGN KEY ("cuentaId") REFERENCES "Cuenta"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ItemCompra" ADD CONSTRAINT "ItemCompra_compraId_fkey" FOREIGN KEY ("compraId") REFERENCES "Compra"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -452,3 +488,4 @@ ALTER TABLE "Gasto" ADD CONSTRAINT "Gasto_categoriaId_fkey" FOREIGN KEY ("catego
 
 -- AddForeignKey
 ALTER TABLE "Gasto" ADD CONSTRAINT "Gasto_proveedorId_fkey" FOREIGN KEY ("proveedorId") REFERENCES "Proveedor"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+

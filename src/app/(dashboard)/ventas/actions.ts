@@ -212,15 +212,26 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
         },
       });
 
-      // 3. Registrar pagos + movimientos de caja
+            // 3. Registrar pagos + movimientos de caja
       for (const pago of pagosValidos) {
+        const cuentaInfo = await tx.cuenta.findUnique({
+          where: { id: pago.cuentaId },
+          select: { tipo: true },
+        });
+        if (!cuentaInfo) throw new Error("La cuenta seleccionada no existe");
+
+        // pago.monto llega en ARS (así arma los totales el front). Si la cuenta
+        // es en USD, convertimos con la cotización usada en esta venta.
+        const esCuentaUSD = cuentaInfo.tipo === "EFECTIVO_USD" || cuentaInfo.tipo === "BANCO_USD";
+        const montoEnMonedaCuenta = esCuentaUSD ? pago.monto / cotizacionUsada : pago.monto;
+
         const cuenta = await tx.cuenta.update({
           where: { id: pago.cuentaId },
-          data: { saldoActual: { increment: pago.monto } },
+          data: { saldoActual: { increment: montoEnMonedaCuenta } },
         });
 
         await tx.pagoVenta.create({
-          data: { ventaId: venta.id, cuentaId: pago.cuentaId, monto: pago.monto },
+          data: { ventaId: venta.id, cuentaId: pago.cuentaId, monto: montoEnMonedaCuenta },
         });
 
         await tx.movimientoCaja.create({
@@ -228,7 +239,7 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
             cuentaId: pago.cuentaId,
             tipo: "INGRESO",
             concepto: "VENTA_COBRADA",
-            monto: pago.monto,
+            monto: montoEnMonedaCuenta,
             saldoResultante: cuenta.saldoActual,
             ventaId: venta.id,
           },
@@ -595,6 +606,12 @@ export async function registrarCobroPedido(
       if (!venta) throw new Error("El pedido no existe");
       if (venta.estadoPago === "PAGADA") throw new Error("El pedido ya está pagado");
 
+      const configuracion = await tx.configuracion.findUnique({ where: { id: "singleton" } });
+      const cotizacion = configuracion?.cotizacionUSD && configuracion.cotizacionUSD > 0
+        ? configuracion.cotizacionUSD
+        : 1;
+
+      // montoNuevo y restante siguen en ARS: así es como está expresado totalARS/montoPagado del pedido.
       const montoNuevo = pagosValidos.reduce((acc, p) => acc + p.monto, 0);
       const restante = venta.totalARS - venta.montoPagado;
 
@@ -605,13 +622,22 @@ export async function registrarCobroPedido(
       }
 
       for (const pago of pagosValidos) {
+        const cuentaInfo = await tx.cuenta.findUnique({
+          where: { id: pago.cuentaId },
+          select: { tipo: true },
+        });
+        if (!cuentaInfo) throw new Error("La cuenta seleccionada no existe");
+
+        const esCuentaUSD = cuentaInfo.tipo === "EFECTIVO_USD" || cuentaInfo.tipo === "BANCO_USD";
+        const montoEnMonedaCuenta = esCuentaUSD ? pago.monto / cotizacion : pago.monto;
+
         const cuenta = await tx.cuenta.update({
           where: { id: pago.cuentaId },
-          data: { saldoActual: { increment: pago.monto } },
+          data: { saldoActual: { increment: montoEnMonedaCuenta } },
         });
 
         await tx.pagoVenta.create({
-          data: { ventaId, cuentaId: pago.cuentaId, monto: pago.monto },
+          data: { ventaId, cuentaId: pago.cuentaId, monto: montoEnMonedaCuenta },
         });
 
         await tx.movimientoCaja.create({
@@ -619,7 +645,7 @@ export async function registrarCobroPedido(
             cuentaId: pago.cuentaId,
             tipo: "INGRESO",
             concepto: "VENTA_COBRADA",
-            monto: pago.monto,
+            monto: montoEnMonedaCuenta,
             saldoResultante: cuenta.saldoActual,
             ventaId,
           },

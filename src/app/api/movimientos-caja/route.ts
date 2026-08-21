@@ -34,19 +34,26 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  // Resumen: se calcula sobre TODO el período filtrado (sin el take:200),
+    // Resumen: se calcula sobre TODO el período filtrado (sin el take:200),
   // para que las tarjetas no queden truncadas si hay más de 200 movimientos.
   const todosEnPeriodo = await prisma.movimientoCaja.findMany({
     where,
     select: { tipo: true, monto: true, cuenta: { select: { tipo: true } } },
   });
 
+  const configuracion = await prisma.configuracion.findUnique({
+    where: { id: "singleton" },
+    select: { cotizacionUSD: true },
+  });
+  const cotizacion = configuracion?.cotizacionUSD ?? 1000;
+
   // Ingresos/Egresos/Neto: sí dependen del período filtrado.
   let ingresos = 0;
   let egresos = 0;
   for (const m of todosEnPeriodo) {
-    if (m.tipo === "INGRESO") ingresos += m.monto;
-    else egresos += m.monto;
+    const montoEnArs = m.cuenta.tipo.endsWith("USD") ? m.monto * cotizacion : m.monto;
+    if (m.tipo === "INGRESO") ingresos += montoEnArs;
+    else egresos += montoEnArs;
   }
 
   // Saldo total, Efectivo y Transferencia: son una foto del momento actual,
@@ -63,12 +70,6 @@ export async function GET(request: NextRequest) {
   let saldoTotal = 0;
   let totalEfectivo = 0;
   let totalTransferencia = 0;
-
-  const configuracion = await prisma.configuracion.findUnique({
-    where: { id: "singleton" },
-    select: { cotizacionUSD: true },
-  });
-  const cotizacion = configuracion?.cotizacionUSD ?? 1000;
 
   for (const c of cuentasActivas) {
     const saldoEnArs = c.tipo.endsWith("USD") ? c.saldoActual * cotizacion : c.saldoActual;

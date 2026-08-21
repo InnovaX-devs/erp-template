@@ -34,6 +34,7 @@ interface Movimiento {
   hora: string;
   descripcion: string;
   monto: number;
+  moneda: "ARS" | "USD";   
   tipo: "ingreso" | "egreso";
   ventaId: number | null;
 }
@@ -116,7 +117,7 @@ export default function DashboardPage() {
             <Link
               href="/finanzas"
               className="rounded-lg bg-white/10 p-2 hover:bg-white/15"
-              title="Ir a Contabilidad"
+              title="Ir a Cuentas Financieras"
             >
               <Settings size={16} />
             </Link>
@@ -247,7 +248,7 @@ export default function DashboardPage() {
                   }`}
                 >
                   {m.tipo === "ingreso" ? "+" : "-"}
-                  {formatCurrency(m.monto, "ARS")}
+                  {formatCurrency(m.monto, m.moneda)}
                 </span>
               </div>
             ))}

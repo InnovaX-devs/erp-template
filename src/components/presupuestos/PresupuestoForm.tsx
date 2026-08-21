@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react"; // <-- agregado useEffect
 import { useRouter } from "next/navigation";
 import BuscadorProducto from "./BuscadorProducto";
 import BuscadorCliente from "./BuscadorCliente";
@@ -26,6 +26,14 @@ export default function PresupuestoForm() {
   const [descuentoPorcentaje, setDescuentoPorcentaje] = useState<number | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cotizacionUSD, setCotizacionUSD] = useState(0); // <-- agregado
+
+  useEffect(() => { // <-- agregado
+    fetch("/api/configuracion")
+      .then((r) => r.json())
+      .then((data) => setCotizacionUSD(data.cotizacionUSD ?? 0))
+      .catch(() => setCotizacionUSD(0));
+  }, []);
 
   const fechaVencimiento = useMemo(
     () => calcularFechaVencimiento(new Date(), vigenciaDias),
@@ -37,11 +45,11 @@ export default function PresupuestoForm() {
     [items, descuentoMonto, descuentoPorcentaje]
   );
 
-  function agregarProducto(producto: ProductoBusqueda) {
+    function agregarProducto(producto: ProductoBusqueda) {
     const precioBaseOriginal =
       tipoPrecio === "MAYORISTA" ? producto.precioMayorista ?? producto.precioVenta : producto.precioVenta;
 
-    const precioUnitario = toArs(precioBaseOriginal, producto.monedaPrecio);
+    const precioUnitario = toArs(precioBaseOriginal, producto.monedaPrecio, cotizacionUSD); // <-- agregado cotizacionUSD
 
     setItems((prev) => [
       ...prev,
@@ -101,7 +109,7 @@ export default function PresupuestoForm() {
         </div>
 
         <div className="w-full sm:w-auto sm:min-w-[220px] sm:flex-1">
-          <BuscadorProducto tipoPrecio={tipoPrecio} onAgregar={agregarProducto} />
+          <BuscadorProducto tipoPrecio={tipoPrecio} onAgregar={agregarProducto} cotizacionUSD={cotizacionUSD} />
         </div>
 
         <div className="flex w-full overflow-hidden rounded-lg border border-[#021541] sm:w-auto">

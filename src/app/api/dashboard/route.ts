@@ -57,23 +57,27 @@ export async function GET() {
   // --- Movimientos de caja de hoy (ingresos/egresos reales) ---
   const movimientosHoy = await prisma.movimientoCaja.findMany({
     where: { fecha: { gte: inicioHoy, lt: finHoy } },
-    include: { gasto: { select: { concepto: true } } },
+    include: {
+      gasto: { select: { concepto: true } },
+      cuenta: { select: { tipo: true } },
+    },
     orderBy: { fecha: "desc" },
   });
 
   const ingresosHoyARS = movimientosHoy
     .filter((m) => m.tipo === "INGRESO")
-    .reduce((acc, m) => acc + m.monto, 0);
+    .reduce((acc, m) => acc + (m.cuenta.tipo.endsWith("USD") ? m.monto * cotizacionActual : m.monto), 0);
 
   const egresosHoyARS = movimientosHoy
     .filter((m) => m.tipo === "EGRESO")
-    .reduce((acc, m) => acc + m.monto, 0);
+    .reduce((acc, m) => acc + (m.cuenta.tipo.endsWith("USD") ? m.monto * cotizacionActual : m.monto), 0);
 
   const movimientos = movimientosHoy.slice(0, 10).map((m) => ({
     id: m.id,
     hora: m.fecha.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }),
     descripcion: descripcionMovimiento(m),
     monto: m.monto,
+    moneda: m.cuenta.tipo.endsWith("USD") ? "USD" as const : "ARS" as const,
     tipo: m.tipo === "INGRESO" ? ("ingreso" as const) : ("egreso" as const),
   }));
 

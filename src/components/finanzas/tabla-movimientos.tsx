@@ -27,34 +27,37 @@ export function TablaMovimientos({ movimientos }: { movimientos: MovimientoCajaD
           </tr>
         </thead>
         <tbody>
-          {movimientos.map((m) => (
-            <tr key={m.id} className="border-b border-border bg-surface last:border-0">
-              <td className="px-4 py-3 text-text-dim">
-                {new Date(m.fecha).toLocaleString("es-AR", {
-                  day: "numeric",
-                  month: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </td>
-              <td className="px-4 py-3">
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                    m.tipo === "INGRESO" ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
-                  }`}
-                >
-                  {m.tipo === "INGRESO" ? "Ingreso" : "Egreso"}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-text">{ETIQUETAS_CONCEPTO[m.concepto]}</td>
-              <td className="px-4 py-3 text-primary">{m.cuenta.nombre}</td>
-              <td className={`px-4 py-3 text-right font-semibold ${m.tipo === "INGRESO" ? "text-success" : "text-danger"}`}>
-                {m.tipo === "INGRESO" ? "+" : "-"}
-                {formatCurrency(m.monto, "ARS")}
-              </td>
-              <td className="px-4 py-3 text-right text-text-dim">{formatCurrency(m.saldoResultante, "ARS")}</td>
-            </tr>
-          ))}
+          {movimientos.map((m) => {
+            const moneda = m.cuenta.tipo.endsWith("USD") ? "USD" : "ARS";
+            return (
+              <tr key={m.id} className="border-b border-border bg-surface last:border-0">
+                <td className="px-4 py-3 text-text-dim">
+                  {new Date(m.fecha).toLocaleString("es-AR", {
+                    day: "numeric",
+                    month: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </td>
+                <td className="px-4 py-3">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                      m.tipo === "INGRESO" ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
+                    }`}
+                  >
+                    {m.tipo === "INGRESO" ? "Ingreso" : "Egreso"}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-text">{ETIQUETAS_CONCEPTO[m.concepto]}</td>
+                <td className="px-4 py-3 text-primary">{m.cuenta.nombre}</td>
+                <td className={`px-4 py-3 text-right font-semibold ${m.tipo === "INGRESO" ? "text-success" : "text-danger"}`}>
+                  {m.tipo === "INGRESO" ? "+" : "-"}
+                  {formatCurrency(m.monto, moneda)}
+                </td>
+                <td className="px-4 py-3 text-right text-text-dim">{formatCurrency(m.saldoResultante, moneda)}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

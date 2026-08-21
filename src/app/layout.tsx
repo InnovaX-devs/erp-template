@@ -21,8 +21,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Esencia · Panel administrativo",
-  description: "Panel de administración para el emprendimiento de perfumes.",
+  title: "Kj importados · Panel administrativo",
+  description: "Panel de administración para Kj importados.",
 };
 
 export default function RootLayout({

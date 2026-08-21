@@ -12,6 +12,7 @@ import {
   Droplets,
   ShoppingCart,
   Package,
+  Truck,
 } from "lucide-react";
 
 export type NavLeaf = {
@@ -43,7 +44,14 @@ export const NAV_ITEMS: NavItem[] = [
       { label: "Historial de precios", href: "/historial-precios", icon: History },
     ],
   },
-  { label: "Compras", href: "/compras", icon: PackagePlus },
+  {
+    label: "Compras",
+    icon: PackagePlus,
+    children: [
+      { label: "Compras", href: "/compras", icon: PackagePlus },
+      { label: "Proveedores", href: "/compras/proveedores", icon: Truck },
+    ],
+  },
   {
     label: "Ventas",
     icon: Receipt,
@@ -53,7 +61,7 @@ export const NAV_ITEMS: NavItem[] = [
       { label: "Pedidos", href: "/ventas/pedidos", icon: Package },
     ],
   },
-  { label: "Presupuestos", href: "/presupuestos", icon: FileText  },
+  { label: "Presupuestos", href: "/presupuestos", icon: FileText },
   {
     label: "Finanzas",
     icon: Calculator,
@@ -65,5 +73,4 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { label: "Reportes", href: "/reportes", icon: Droplets },
   { label: "Configuración", href: "/configuracion", icon: PackagePlus },
-  
 ];

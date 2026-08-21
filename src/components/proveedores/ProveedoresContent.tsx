@@ -1,0 +1,107 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ProveedorFormModal } from "@/components/proveedores/proveedor-form-modal";
+import { ProveedorDetalleModal } from "@/components/proveedores/proveedor-detalle-modal";
+import ProveedoresResumenCards from "./ProveedoresResumenCards";
+import ProveedoresFilters from "./ProveedoresFilters";
+import ProveedoresTable from "./ProveedoresTable";
+import type { ProveedorConCompras, Paginacion } from "@/lib/proveedores";
+
+export default function ProveedoresContent({
+  proveedores,
+  resumen,
+  paginacion,
+}: {
+  proveedores: ProveedorConCompras[];
+  resumen: { totalProveedores: number; totalComprado: number };
+  paginacion: Paginacion;
+}) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [isCrearOpen, setIsCrearOpen] = useState(false);
+  const [proveedorDetalle, setProveedorDetalle] = useState<ProveedorConCompras | null>(null);
+
+  function abrirDetalle(proveedor: ProveedorConCompras) {
+    if (proveedor.esVirtual) return;
+    setProveedorDetalle(proveedor);
+  }
+
+  function cerrarDetalle() {
+    setProveedorDetalle(null);
+  }
+
+  function handleSuccess() {
+    setIsCrearOpen(false);
+    cerrarDetalle();
+    router.refresh(); // vuelve a pedir los datos al server component
+  }
+
+  function irAPagina(pagina: number) {
+    const nuevosParams = new URLSearchParams(searchParams.toString());
+    nuevosParams.set("page", String(pagina));
+    router.push(`?${nuevosParams.toString()}`);
+  }
+
+  const { pagina, totalPaginas, totalItems } = paginacion;
+
+  return (
+    <div className="p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl sm:text-2xl font-semibold text-[#191c1e]">Proveedores</h1>
+        <button
+          onClick={() => setIsCrearOpen(true)}
+          className="px-4 py-2 text-sm rounded-lg bg-[#021541] text-white hover:opacity-90 self-start sm:self-auto cursor-pointer"
+        >
+          + Nuevo proveedor
+        </button>
+      </div>
+
+      <ProveedoresResumenCards resumen={resumen} />
+      <ProveedoresFilters />
+      <ProveedoresTable proveedores={proveedores} onVerDetalle={abrirDetalle} />
+
+      {totalItems > 0 && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-[#45464f]">
+          <span>
+            Mostrando {(pagina - 1) * paginacion.pageSize + 1}–
+            {Math.min(pagina * paginacion.pageSize, totalItems)} de {totalItems}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => irAPagina(pagina - 1)}
+              disabled={pagina <= 1}
+              className="px-3 py-1.5 rounded-lg border border-[#c5c6d0] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#eceef0]"
+            >
+              Anterior
+            </button>
+            <span>
+              Página {pagina} de {totalPaginas}
+            </span>
+            <button
+              onClick={() => irAPagina(pagina + 1)}
+              disabled={pagina >= totalPaginas}
+              className="px-3 py-1.5 rounded-lg border border-[#c5c6d0] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#eceef0]"
+            >
+              Siguiente
+            </button>
+          </div>
+        </div>
+      )}
+
+      <ProveedorFormModal
+        isOpen={isCrearOpen}
+        onClose={() => setIsCrearOpen(false)}
+        onSuccess={handleSuccess}
+      />
+
+      <ProveedorDetalleModal
+        isOpen={proveedorDetalle !== null}
+        onClose={cerrarDetalle}
+        proveedor={proveedorDetalle}
+        onSuccess={handleSuccess}
+      />
+    </div>
+  );
+}

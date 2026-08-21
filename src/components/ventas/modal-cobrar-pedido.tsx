@@ -102,4 +102,4 @@ export function ModalCobrarPedido({ pedido, tieneCliente, onClose, onCobrado }: 
       </div>
     </div>
   );
-}
+} 

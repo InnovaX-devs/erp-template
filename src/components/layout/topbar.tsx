@@ -13,15 +13,29 @@ import { actualizarCotizacionRapida } from "@/app/(dashboard)/configuracion/acti
 
 function useSectionTitle() {
   const pathname = usePathname();
-  for (const item of NAV_ITEMS) {
-    if (esGrupo(item)) {
-      const child = item.children.find((c) => pathname === c.href || pathname?.startsWith(`${c.href}/`));
-      if (child) return child.label;
-    } else if (pathname === item.href || pathname?.startsWith(`${item.href}/`)) {
-      return item.label;
+
+  let mejorLabel: string | null = null;
+  let mejorLargo = -1;
+
+  function evaluar(href: string, label: string) {
+    const coincide = pathname === href || pathname?.startsWith(`${href}/`);
+    if (coincide && href.length > mejorLargo) {
+      mejorLargo = href.length;
+      mejorLabel = label;
     }
   }
-  return "Panel";
+
+  for (const item of NAV_ITEMS) {
+    if (esGrupo(item)) {
+      for (const child of item.children) {
+        evaluar(child.href, child.label);
+      }
+    } else {
+      evaluar(item.href, item.label);
+    }
+  }
+
+  return mejorLabel ?? "Panel";
 }
 
 export function Topbar({ cotizacionUSD }: { cotizacionUSD: number }) {

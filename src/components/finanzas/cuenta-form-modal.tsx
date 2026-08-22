@@ -215,10 +215,10 @@ export function CuentaFormModal({ isOpen, onClose, cuentaEditar, onSuccess }: Pr
             </div>
           )}
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <label className="block text-xs font-medium text-text-dim">Color</label>
-              <div className="mt-2 flex gap-2">
+              <div className="mt-2 flex flex-wrap gap-2">
                 {COLORES.map((c) => (
                   <button
                     key={c}

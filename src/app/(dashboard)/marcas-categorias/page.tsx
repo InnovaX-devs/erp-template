@@ -164,7 +164,7 @@ function TablaSeccion({ titulo, singular, endpoint }: SeccionProps) {
         </div>
         <button
           onClick={handleOpenCrear}
-          className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors shadow-sm"
+          className="inline-flex items-center justify-center gap-2 bg-[#021541] cursor-pointer hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors shadow-sm"
         >
           <span>+</span> Nueva {singular}
         </button>

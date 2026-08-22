@@ -1,0 +1,394 @@
+"use client";
+
+import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
+import { cn } from "@/lib/cn";
+import { listarVentas } from "@/app/(dashboard)/ventas/actions"; // ajustá el path según donde queden las actions
+import type { EstadoPago } from "@prisma/client";
+import type { FiltroEstado, VentaListItem } from "@/types/venta";
+import { Search, RefreshCw, Download, Loader2, X, Plus } from "lucide-react";
+import Select from "@/components/ui/select";
+import { RangoFechas } from "@/components/ui/rango-fechas";
+
+const PAGE_SIZE = 15;
+
+const FILTROS_ESTADO: { label: string; value: FiltroEstado }[] = [
+  { label: "Todos", value: "TODOS" },
+  { label: "Pagadas", value: "PAGADA" },
+  { label: "A cuenta", value: "A_CUENTA" },
+  { label: "Canceladas", value: "CANCELADA" },
+];
+
+const OPCIONES_ORDEN = [
+  { value: "MAS_NUEVO", label: "Más nuevo primero" },
+  { value: "MAS_VIEJO", label: "Más viejo primero" },
+];
+
+const ESTADO_STYLE: Record<EstadoPago, string> = {
+  PAGADA: "bg-[#e1f2e6] text-[#1e7d38]",
+  A_CUENTA: "bg-[#fdecc8] text-[#8a5a00]",
+  ANULADA: "bg-[#e0e3e5] text-[#45464f]",
+  CANCELADA: "bg-[#fbe4e4] text-[#ba1a1a]",
+};
+
+const ESTADO_LABEL: Record<EstadoPago, string> = {
+  PAGADA: "Pagada",
+  A_CUENTA: "A cuenta",
+  ANULADA: "Anulada",
+  CANCELADA: "Cancelada",
+};
+
+const formatoMoneda = new Intl.NumberFormat("es-AR", {
+  style: "currency",
+  currency: "ARS",
+  minimumFractionDigits: 2,
+});
+
+const formatoFecha = new Intl.DateTimeFormat("es-AR", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "2-digit",
+});
+
+export function HistorialVentas() {
+  const [ventas, setVentas] = useState<VentaListItem[]>([]);
+  const [totalRegistros, setTotalRegistros] = useState(0);
+  const [isPending, startTransition] = useTransition();
+
+  const [estado, setEstado] = useState<FiltroEstado>("TODOS");
+  const [clienteInput, setClienteInput] = useState("");
+  const [clienteTexto, setClienteTexto] = useState("");
+  const [fechaDesde, setFechaDesde] = useState<string | null>(null);
+  const [fechaHasta, setFechaHasta] = useState<string | null>(null);
+  const [orden, setOrden] = useState<"MAS_NUEVO" | "MAS_VIEJO">("MAS_NUEVO");
+  const [page, setPage] = useState(1);
+  const [descargando, setDescargando] = useState<number | null>(null);
+
+  const hayFiltrosActivos =
+    estado !== "TODOS" || clienteTexto !== "" || !!fechaDesde || !!fechaHasta;
+
+  function limpiarFiltros() {
+    setEstado("TODOS");
+    setClienteInput("");
+    setClienteTexto("");
+    setFechaDesde(null);
+    setFechaHasta(null);
+    setPage(1);
+  }
+
+  function handleCambiarFechas(desde: string | null, hasta: string | null) {
+    setFechaDesde(desde);
+    setFechaHasta(hasta);
+    setPage(1);
+  }
+
+  async function descargarComprobante(ventaId: number) {
+    setDescargando(ventaId);
+    try {
+      const res = await fetch(`/api/ventas/${ventaId}/comprobante`);
+      if (!res.ok) throw new Error("No se pudo generar el comprobante.");
+
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `comprobante-venta-${String(ventaId).padStart(6, "0")}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDescargando(null);
+    }
+  }
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setClienteTexto(clienteInput);
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [clienteInput]);
+
+  function cargar() {
+    startTransition(async () => {
+      const resultado = await listarVentas({
+        estado,
+        clienteTexto,
+        fechaDesde: fechaDesde || null,
+        fechaHasta: fechaHasta || null,
+        orden,
+        page,
+        pageSize: PAGE_SIZE,
+      });
+      setVentas(resultado.ventas);
+      setTotalRegistros(resultado.totalRegistros);
+    });
+  }
+
+  useEffect(() => {
+    cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estado, clienteTexto, fechaDesde, fechaHasta, orden, page]);
+
+  const totalPaginas = Math.max(1, Math.ceil(totalRegistros / PAGE_SIZE));
+
+  return (
+    <div className="space-y-5 sm:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl font-semibold text-[#191c1e] sm:text-2xl">Ventas</h1>
+        <Link
+          href="/ventas"
+          className="flex items-center justify-center gap-1.5 self-start rounded-lg bg-[#021541] px-4 py-2 text-sm text-white hover:opacity-90 sm:self-auto"
+        >
+          <Plus className="h-4 w-4" /> Nueva Venta
+        </Link>
+      </div>
+
+      {/* Filtros */}
+      <div className="space-y-3 rounded-2xl border border-[#E2E8F0] bg-white p-3">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#45464f]" />
+          <input
+            value={clienteInput}
+            onChange={(e) => setClienteInput(e.target.value)}
+            placeholder='Cliente, "Sin cliente" o Nº de venta...'
+            className="w-full rounded-lg border border-[#c5c6d0] bg-white py-2 pl-9 pr-3 text-sm text-[#191c1e] placeholder:text-[#45464f] focus:outline-none focus:ring-1 focus:ring-[#021541]"
+          />
+        </div>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:pb-0">
+            {FILTROS_ESTADO.map((f) => (
+              <button
+                key={f.value}
+                type="button"
+                onClick={() => {
+                  setEstado(f.value);
+                  setPage(1);
+                }}
+                className={cn(
+                  "shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  estado === f.value
+                    ? "bg-[#021541] text-white"
+                    : "border border-[#c5c6d0] bg-white text-[#45464f] hover:bg-[#eceef0]"
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <RangoFechas desde={fechaDesde} hasta={fechaHasta} onCambiar={handleCambiarFechas} />
+
+            <Select
+              value={orden}
+              onChange={(v) => setOrden(v as "MAS_NUEVO" | "MAS_VIEJO")}
+              options={OPCIONES_ORDEN}
+              className="w-full min-w-[9rem] sm:w-auto"
+            />
+
+            {hayFiltrosActivos && (
+              <button
+                type="button"
+                onClick={limpiarFiltros}
+                className="flex items-center gap-1 whitespace-nowrap rounded-lg px-2 py-2 text-xs font-medium text-[#021541] hover:underline"
+              >
+                <X className="h-3.5 w-3.5" />
+                Limpiar
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={cargar}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#c5c6d0] text-[#45464f] hover:bg-[#eceef0]"
+              aria-label="Actualizar"
+            >
+              <RefreshCw className={cn("h-4 w-4", isPending && "animate-spin")} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white">
+        <div className="relative hidden overflow-x-auto md:block">
+          {isPending && (
+            <div className="absolute inset-0 z-10 flex items-start justify-center bg-white/60 pt-16 backdrop-blur-[1px]">
+              <Loader2 className="h-5 w-5 animate-spin text-[#021541]" />
+            </div>
+          )}
+          <table className="w-full min-w-[720px] text-sm">
+            <thead className="bg-[#F1F5F9]">
+              <tr className="text-left text-[11px] font-bold uppercase tracking-wider text-[#45464f]">
+                <th className="px-4 py-3">#</th>
+                <th className="px-4 py-3">Cliente</th>
+                <th className="px-4 py-3">Total</th>
+                <th className="px-4 py-3">Ganancia</th>
+                <th className="px-4 py-3">Fecha</th>
+                <th className="px-4 py-3">Estado</th>
+                <th className="px-4 py-3 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ventas.map((venta) => (
+                <tr key={venta.id} className="border-t border-[#E2E8F0]">
+                  <td className="px-4 py-3 font-mono text-xs text-[#45464f]">#{venta.id}</td>
+                  <td className="px-4 py-3">
+                    {venta.clienteNombre ? (
+                      <span className="font-medium text-[#191c1e]">{venta.clienteNombre}</span>
+                    ) : (
+                      <span className="italic text-[#45464f]">Sin cliente</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 font-mono font-medium text-[#191c1e]">
+                    {formatoMoneda.format(venta.totalARS)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="font-mono font-medium text-[#1e7d38]">
+                      {formatoMoneda.format(venta.gananciaARS)}
+                    </span>
+                    <span className="ml-1 text-xs text-[#45464f]">
+                      ({venta.gananciaPorcentaje.toFixed(1)}%)
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-[#45464f]">{formatoFecha.format(new Date(venta.fecha))}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={cn(
+                        "rounded-full px-2.5 py-1 text-xs font-semibold",
+                        ESTADO_STYLE[venta.estado]
+                      )}
+                    >
+                      {ESTADO_LABEL[venta.estado]}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => descargarComprobante(venta.id)}
+                      disabled={descargando === venta.id}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#c5c6d0] text-[#45464f] hover:bg-[#eceef0] disabled:opacity-50"
+                      aria-label={`Descargar comprobante de la venta #${venta.id}`}
+                    >
+                      {descargando === venta.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+
+              {!isPending && ventas.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-[#45464f]">
+                    No se encontraron ventas con estos filtros.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile: tarjetas */}
+        <div className="relative divide-y divide-[#E2E8F0] md:hidden">
+          {isPending && (
+            <div className="absolute inset-0 z-10 flex items-start justify-center bg-white/60 pt-10 backdrop-blur-[1px]">
+              <Loader2 className="h-5 w-5 animate-spin text-[#021541]" />
+            </div>
+          )}
+          {ventas.map((venta) => (
+            <div key={venta.id} className="p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-mono text-xs text-[#45464f]">#{venta.id}</p>
+                  {venta.clienteNombre ? (
+                    <p className="truncate font-medium text-[#191c1e]">{venta.clienteNombre}</p>
+                  ) : (
+                    <p className="italic text-[#45464f]">Sin cliente</p>
+                  )}
+                </div>
+                <span
+                  className={cn(
+                    "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold",
+                    ESTADO_STYLE[venta.estado]
+                  )}
+                >
+                  {ESTADO_LABEL[venta.estado]}
+                </span>
+              </div>
+
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm">
+                  <span className="font-mono font-semibold text-[#191c1e]">
+                    {formatoMoneda.format(venta.totalARS)}
+                  </span>{" "}
+                  <span className="font-mono text-xs text-[#1e7d38]">
+                    +{formatoMoneda.format(venta.gananciaARS)} ({venta.gananciaPorcentaje.toFixed(1)}%)
+                  </span>
+                </p>
+                <p className="text-xs text-[#45464f]">{formatoFecha.format(new Date(venta.fecha))}</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => descargarComprobante(venta.id)}
+                disabled={descargando === venta.id}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-[#c5c6d0] py-2 text-sm font-medium text-[#45464f] hover:bg-[#eceef0] disabled:opacity-50"
+              >
+                {descargando === venta.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                Comprobante
+              </button>
+            </div>
+          ))}
+
+          {!isPending && ventas.length === 0 && (
+            <div className="px-4 py-10 text-center text-sm text-[#45464f]">
+              No se encontraron ventas con estos filtros.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Paginación */}
+      {totalRegistros > 0 && (
+        <div className="flex flex-col gap-2 text-sm text-[#45464f] sm:flex-row sm:items-center sm:justify-between">
+          <span>
+            {totalRegistros} venta{totalRegistros !== 1 ? "s" : ""}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="px-3 py-1.5 rounded-lg border border-[#c5c6d0] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#eceef0]"
+            >
+              Anterior
+            </button>
+            <span>
+              Página {page} de {totalPaginas}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPaginas, p + 1))}
+              disabled={page >= totalPaginas}
+              className="px-3 py-1.5 rounded-lg border border-[#c5c6d0] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#eceef0]"
+            >
+              Siguiente
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

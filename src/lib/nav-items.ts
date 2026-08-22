@@ -48,7 +48,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Compras",
     icon: PackagePlus,
     children: [
-      { label: "Compras", href: "/compras", icon: PackagePlus },
+      { label: "Nueva Compra", href: "/compras/nueva", icon: PackagePlus },
+      { label: "Historial de Compras", href: "/compras", icon: Package },
       { label: "Proveedores", href: "/compras/proveedores", icon: Truck },
     ],
   },

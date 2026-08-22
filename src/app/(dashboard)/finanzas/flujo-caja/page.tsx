@@ -64,20 +64,20 @@ export default function FlujoCajaPage() {
   }, [cargarMovimientos]);
 
   return (
-    <div className="space-y-4 p-6">
+    <div className="space-y-4 p-4">
       <div>
-        <h1 className="text-xl font-semibold text-text">Flujo de Caja</h1>
-        <p className="text-sm text-text-dim">Historial de movimientos de dinero</p>
+        <h1 className="text-xl font-semibold text-[#191c1e] sm:text-2xl">Flujo de Caja</h1>
+        <p className="text-sm text-[#45464f]">Historial de movimientos de dinero</p>
       </div>
 
       <TarjetasResumenFlujo resumen={resumen} />
 
-      <div className="rounded-xl border border-border bg-surface p-4">
+      <div className="rounded-2xl border border-[#E2E8F0] bg-white p-4">
         <FiltrosFlujoCaja filtros={filtros} onChange={setFiltros} cuentas={cuentas} />
       </div>
 
       {cargando ? (
-        <div className="rounded-xl border border-border bg-surface p-8 text-center text-sm text-text-dim">
+        <div className="rounded-2xl border border-[#E2E8F0] bg-white p-8 text-center text-sm text-[#45464f]">
           Cargando...
         </div>
       ) : (

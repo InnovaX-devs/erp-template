@@ -99,7 +99,7 @@ export default function DashboardPage() {
         </button>
         <Link
           href="/ventas"
-          className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          className="rounded-lg bg-[#021541] cursor-pointer px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
         >
           + Nueva Venta
         </Link>

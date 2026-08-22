@@ -31,16 +31,16 @@ export default async function ReporteDecantsPage({
   const { kpis, ventas } = await obtenerReporteDecants(filtros);
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="space-y-4 p-4">
       <div>
         <Link
           href="/reportes"
-          className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-text-dim hover:text-text"
+          className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-[#45464f] hover:text-[#191c1e]"
         >
           <ArrowLeft size={14} /> Volver a Reportes
         </Link>
-        <h1 className="font-display text-2xl text-text">Reporte de Decants</h1>
-        <p className="text-sm text-text-dim">
+        <h1 className="text-xl font-semibold text-[#191c1e] sm:text-2xl">Reporte de Decants</h1>
+        <p className="text-sm text-[#45464f]">
           Ingresos y unidades vendidas por decant, con filtros por cliente, producto, estado y fecha.
         </p>
       </div>

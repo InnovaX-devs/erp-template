@@ -31,12 +31,12 @@ export function SelectorPeriodoAnalisis({ periodo, onChange }: Props) {
   );
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-4">
-      <div className="flex overflow-hidden rounded-lg border border-border">
+    <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-[#E2E8F0] bg-white p-4">
+      <div className="flex overflow-hidden rounded-lg border border-[#c5c6d0]">
         <button
           onClick={() => onChange({ modo: "mes", mes: mesActualISO(0) })}
           className={`px-3 py-1.5 text-sm ${
-            periodo.modo === "mes" ? "bg-primary text-white" : "text-text-dim hover:bg-border/40"
+            periodo.modo === "mes" ? "bg-[#021541] text-white" : "text-[#45464f] hover:bg-[#eceef0]"
           }`}
         >
           Por mes
@@ -50,7 +50,7 @@ export function SelectorPeriodoAnalisis({ periodo, onChange }: Props) {
             })
           }
           className={`px-3 py-1.5 text-sm ${
-            periodo.modo === "rango" ? "bg-primary text-white" : "text-text-dim hover:bg-border/40"
+            periodo.modo === "rango" ? "bg-[#021541] text-white" : "text-[#45464f] hover:bg-[#eceef0]"
           }`}
         >
           Rango libre
@@ -63,7 +63,7 @@ export function SelectorPeriodoAnalisis({ periodo, onChange }: Props) {
             type="month"
             value={periodo.mes}
             onChange={(e) => onChange({ modo: "mes", mes: e.target.value })}
-            className="rounded-lg border border-border bg-transparent px-2 py-1.5 text-sm text-text"
+            className="rounded-lg border border-[#c5c6d0] bg-transparent px-2 py-1.5 text-sm text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
           />
           <div className="flex gap-1.5">
             {accesosRapidos.map((a) => (
@@ -72,8 +72,8 @@ export function SelectorPeriodoAnalisis({ periodo, onChange }: Props) {
                 onClick={() => onChange({ modo: "mes", mes: a.mes })}
                 className={`rounded-md px-2.5 py-1 text-xs ${
                   periodo.mes === a.mes
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "text-text-dim hover:bg-border/40"
+                    ? "bg-[#e3e6f5] font-medium text-[#021541]"
+                    : "text-[#45464f] hover:bg-[#eceef0]"
                 }`}
               >
                 {a.label}
@@ -87,14 +87,14 @@ export function SelectorPeriodoAnalisis({ periodo, onChange }: Props) {
             value={periodo.desde}
             onChange={(valor) => onChange({ ...periodo, desde: valor })}
             max={periodo.hasta || undefined}
-            className="rounded-lg border border-border bg-transparent px-2 py-1.5 text-text"
+            className="rounded-lg border border-[#c5c6d0] bg-transparent px-2 py-1.5 text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
           />
-          <span className="text-text-dim">a</span>
+          <span className="text-[#45464f]">a</span>
           <DateInput
             value={periodo.hasta}
             onChange={(valor) => onChange({ ...periodo, hasta: valor })}
             min={periodo.desde || undefined}
-            className="rounded-lg border border-border bg-transparent px-2 py-1.5 text-text"
+            className="rounded-lg border border-[#c5c6d0] bg-transparent px-2 py-1.5 text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
           />
         </div>
       )}

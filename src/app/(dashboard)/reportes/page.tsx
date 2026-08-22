@@ -35,27 +35,27 @@ export default async function ReportesPage({
     : `${rango.desde.toLocaleDateString("es-AR")} — ${rango.hasta.toLocaleDateString("es-AR")}`;
 
   return (
-    <div className="flex flex-col gap-6 p-6 print:p-0">
+    <div className="space-y-4 p-4 print:p-0">
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <div>
-          <h1 className="font-display text-2xl text-text">Reportes</h1>
-          <p className="text-sm text-text-dim">{rangoTexto}</p>
+          <h1 className="text-xl font-semibold text-[#191c1e] sm:text-2xl">Reportes</h1>
+          <p className="text-sm text-[#45464f]">{rangoTexto}</p>
         </div>
         <div className="flex items-center gap-2">
-        <Link
-          href="/reportes/decants"
-          className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text hover:bg-surface-hover"
-        >
-          <Droplets size={14} /> Reporte de Decants
-        </Link>
-        <BotonExportarPdf tab={tab} desde={params.desde} hasta={params.hasta} />
-      </div>
+          <Link
+            href="/reportes/decants"
+            className="flex items-center gap-1.5 rounded-lg border border-[#c5c6d0] bg-white px-3 py-2 text-sm font-medium text-[#45464f] hover:bg-[#eceef0]"
+          >
+            <Droplets size={14} /> Reporte de Decants
+          </Link>
+          <BotonExportarPdf tab={tab} desde={params.desde} hasta={params.hasta} />
+        </div>
       </div>
 
       <TabsReportes tabActual={tab} desde={params.desde} hasta={params.hasta} />
 
       {faltaPeriodo ? (
-        <p className="text-sm text-text-dim">Elegí un rango de fechas para ver el reporte.</p>
+        <p className="text-sm text-[#45464f]">Elegí un rango de fechas para ver el reporte.</p>
       ) : (
         <ReportePeriodoSection rango={rango} />
       )}

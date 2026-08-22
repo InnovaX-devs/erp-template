@@ -43,31 +43,31 @@ export default function GastosPage() {
   }, [pestana, cargarGastos]);
 
   return (
-    <div className="space-y-4 p-4 sm:p-6">
+    <div className="space-y-4 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-text">Gastos</h1>
-          <p className="text-sm text-text-dim">{gastos.length} gastos registrados</p>
+          <h1 className="text-xl font-semibold text-[#191c1e] sm:text-2xl">Gastos</h1>
+          <p className="text-sm text-[#45464f]">{gastos.length} gastos registrados</p>
         </div>
         {pestana === "listado" && (
           <button
             onClick={() => setModalFormAbierto(true)}
-            className="flex items-center justify-center gap-1.5 rounded-lg bg-[#021541] cursor-pointer px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+            className="flex items-center justify-center gap-1.5 self-start rounded-lg bg-[#021541] px-4 py-2 text-sm font-medium text-white hover:opacity-90 sm:self-auto cursor-pointer"
           >
             <Plus size={16} /> Nuevo gasto
           </button>
         )}
       </div>
 
-      <div className="flex gap-1 border-b border-border">
+      <div className="flex gap-1 border-b border-[#E2E8F0]">
         {(["listado", "analisis"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setPestana(tab)}
             className={`px-4 py-2 text-sm font-medium ${
               pestana === tab
-                ? "border-b-2 border-primary text-primary"
-                : "text-text-dim hover:text-text"
+                ? "border-b-2 border-[#021541] text-[#021541]"
+                : "text-[#45464f] hover:text-[#191c1e]"
             }`}
           >
             {tab === "listado" ? "Listado" : "Análisis"}
@@ -78,11 +78,11 @@ export default function GastosPage() {
       {pestana === "listado" ? (
         <>
           <TarjetasResumenGastos resumen={resumen} />
-          <div className="rounded-xl border border-border bg-surface p-4">
+          <div className="rounded-2xl border border-[#E2E8F0] bg-white p-4">
             <FiltrosGastos q={q} onChangeQ={setQ} />
           </div>
           {cargando ? (
-            <div className="rounded-xl border border-border bg-surface p-8 text-center text-sm text-text-dim">
+            <div className="rounded-2xl border border-[#E2E8F0] bg-white p-8 text-center text-sm text-[#45464f]">
               Cargando...
             </div>
           ) : (

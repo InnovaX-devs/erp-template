@@ -67,23 +67,43 @@ export function HistorialPreciosView() {
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <HistorialFiltros filtros={filtros} onChange={setFiltros} />
 
       {error && (
-        <div role="alert" className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+        <div role="alert" className="rounded-lg border border-[#f3b4b4] bg-[#fbe4e4] px-4 py-3 text-sm text-[#ba1a1a]">
           {error}
         </div>
       )}
 
-      <HistorialTabla
-        items={data?.items ?? []}
-        isLoading={isLoading && !data}
-        page={page}
-        totalPages={totalPages}
-        total={data?.total ?? 0}
-        onPageChange={setPage}
-      />
+      <HistorialTabla items={data?.items ?? []} isLoading={isLoading && !data} />
+
+      {(data?.total ?? 0) > 0 && (
+        <div className="flex flex-col gap-2 text-sm text-[#45464f] sm:flex-row sm:items-center sm:justify-between">
+          <span>
+            {data?.total} registro{data?.total === 1 ? "" : "s"}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="px-3 py-1.5 rounded-lg border border-[#c5c6d0] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#eceef0]"
+            >
+              Anterior
+            </button>
+            <span>
+              Página {page} de {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="px-3 py-1.5 rounded-lg border border-[#c5c6d0] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#eceef0]"
+            >
+              Siguiente
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

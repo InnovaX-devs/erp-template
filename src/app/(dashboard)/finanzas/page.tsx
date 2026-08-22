@@ -110,15 +110,15 @@ export default function FinanzasPage() {
   }
 
   return (
-    <div className="space-y-4 p-4 sm:p-6">
+    <div className="space-y-4 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-text">Cuentas financieras</h1>
-          <p className="text-sm text-text-dim">{cuentas.length} cuentas configuradas</p>
+          <h1 className="text-xl font-semibold text-[#191c1e] sm:text-2xl">Cuentas financieras</h1>
+          <p className="text-sm text-[#45464f]">{cuentas.length} cuentas configuradas</p>
         </div>
         <button
           onClick={abrirNueva}
-          className="flex items-center justify-center gap-1.5 rounded-lg bg-[#021541] cursor-pointer px-4 py-2 text-sm font-medium text-white hover:opacity-90 sm:w-auto"
+          className="flex items-center justify-center gap-1.5 self-start rounded-lg bg-[#021541] px-4 py-2 text-sm font-medium text-white hover:opacity-90 sm:self-auto"
         >
           <Plus size={16} /> Nueva cuenta
         </button>
@@ -135,12 +135,12 @@ export default function FinanzasPage() {
         onBusquedaChange={setBusqueda}
       />
 
-      <div className="overflow-hidden rounded-xl border border-border bg-surface">
+      <div className="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white">
         {/* Desktop / tablet: tabla */}
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[720px] text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-hover/50 text-left text-xs font-semibold uppercase tracking-wider text-text-dim">
+            <thead className="bg-[#F1F5F9]">
+              <tr className="text-left text-[11px] font-bold uppercase tracking-wider text-[#45464f]">
                 <th className="px-4 py-3">Nombre</th>
                 <th className="px-4 py-3">Tipo</th>
                 <th className="px-4 py-3">Alias</th>
@@ -152,26 +152,26 @@ export default function FinanzasPage() {
             <tbody>
               {cargando && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-text-dim">Cargando...</td>
+                  <td colSpan={6} className="px-4 py-8 text-center text-[#45464f]">Cargando...</td>
                 </tr>
               )}
               {!cargando && cuentasFiltradas.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-text-dim">
+                  <td colSpan={6} className="px-4 py-8 text-center text-[#45464f]">
                     No hay cuentas que coincidan con los filtros.
                   </td>
                 </tr>
               )}
               {cuentasFiltradas.map((cuenta) => (
-                <tr key={cuenta.id} className={`border-b border-border last:border-0 ${!cuenta.activa ? "opacity-50" : ""}`}>
+                <tr key={cuenta.id} className={`border-t border-[#E2E8F0] ${!cuenta.activa ? "opacity-50" : ""}`}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span
                         className="h-3 w-3 shrink-0 rounded-full"
                         style={{ backgroundColor: cuenta.color ?? "#94a3b8" }}
                       />
-                      <span className="font-medium text-text">{cuenta.nombre}</span>
-                      {cuenta.favorita && <span className="text-xs text-warning">★</span>}
+                      <span className="font-medium text-[#191c1e]">{cuenta.nombre}</span>
+                      {cuenta.favorita && <span className="text-xs text-[#eab308]">★</span>}
                     </div>
                     {cuenta.limiteMensualIngresos != null && (
                       <BarraLimiteMensual
@@ -181,15 +181,15 @@ export default function FinanzasPage() {
                       />
                     )}
                   </td>
-                  <td className="px-4 py-3 text-text-dim">{ETIQUETAS_TIPO[cuenta.tipo]}</td>
-                  <td className="px-4 py-3 text-text-dim">{cuenta.alias || "—"}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-text">
+                  <td className="px-4 py-3 text-[#45464f]">{ETIQUETAS_TIPO[cuenta.tipo]}</td>
+                  <td className="px-4 py-3 text-[#45464f]">{cuenta.alias || "—"}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-[#191c1e]">
                     {formatCurrency(cuenta.saldoActual, cuenta.tipo.endsWith("USD") ? "USD" : "ARS")}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        cuenta.activa ? "bg-success/10 text-success" : "bg-text-dim/10 text-text-dim"
+                        cuenta.activa ? "bg-[#e3e6f5] text-[#021541]" : "bg-[#e0e3e5] text-[#45464f]"
                       }`}
                     >
                       {cuenta.activa ? "Activa" : "Inactiva"}
@@ -199,28 +199,28 @@ export default function FinanzasPage() {
                     <div className="flex justify-end gap-1">
                       <button
                         onClick={() => toast.info("Ver movimientos: próximamente")}
-                        className="rounded-lg p-1.5 text-text-dim hover:bg-surface-hover hover:text-text"
+                        className="rounded-lg p-1.5 text-[#45464f] hover:bg-[#eceef0] hover:text-[#191c1e]"
                         title="Ver movimientos"
                       >
                         <Wallet size={16} />
                       </button>
                       <button
                         onClick={() => abrirEditar(cuenta)}
-                        className="rounded-lg p-1.5 text-text-dim hover:bg-surface-hover hover:text-text"
+                        className="rounded-lg p-1.5 text-[#45464f] hover:bg-[#eceef0] hover:text-[#191c1e]"
                         title="Editar"
                       >
                         <Pencil size={16} />
                       </button>
                       <button
                         onClick={() => toggleActiva(cuenta)}
-                        className="rounded-lg p-1.5 text-text-dim hover:bg-surface-hover hover:text-text"
+                        className="rounded-lg p-1.5 text-[#45464f] hover:bg-[#eceef0] hover:text-[#191c1e]"
                         title={cuenta.activa ? "Desactivar" : "Reactivar"}
                       >
                         {cuenta.activa ? <Ban size={16} /> : <CheckCircle2 size={16} />}
                       </button>
                       <button
                         onClick={() => eliminar(cuenta)}
-                        className="rounded-lg p-1.5 text-text-dim hover:bg-danger/10 hover:text-danger"
+                        className="rounded-lg p-1.5 text-[#45464f] hover:bg-[#fbe4e4] hover:text-[#ba1a1a]"
                         title="Eliminar"
                       >
                         <Trash2 size={16} />
@@ -234,12 +234,12 @@ export default function FinanzasPage() {
         </div>
 
         {/* Mobile: tarjetas */}
-        <div className="divide-y divide-border md:hidden">
+        <div className="divide-y divide-[#E2E8F0] md:hidden">
           {cargando && (
-            <div className="px-4 py-8 text-center text-sm text-text-dim">Cargando...</div>
+            <div className="px-4 py-8 text-center text-sm text-[#45464f]">Cargando...</div>
           )}
           {!cargando && cuentasFiltradas.length === 0 && (
-            <div className="px-4 py-8 text-center text-sm text-text-dim">
+            <div className="px-4 py-8 text-center text-sm text-[#45464f]">
               No hay cuentas que coincidan con los filtros.
             </div>
           )}
@@ -252,24 +252,24 @@ export default function FinanzasPage() {
                       className="h-3 w-3 shrink-0 rounded-full"
                       style={{ backgroundColor: cuenta.color ?? "#94a3b8" }}
                     />
-                    <span className="truncate font-medium text-text">{cuenta.nombre}</span>
-                    {cuenta.favorita && <span className="text-xs text-warning">★</span>}
+                    <span className="truncate font-medium text-[#191c1e]">{cuenta.nombre}</span>
+                    {cuenta.favorita && <span className="text-xs text-[#eab308]">★</span>}
                   </div>
-                  <p className="mt-0.5 text-xs text-text-dim">
+                  <p className="mt-0.5 text-xs text-[#45464f]">
                     {ETIQUETAS_TIPO[cuenta.tipo]}
                     {cuenta.alias ? ` · ${cuenta.alias}` : ""}
                   </p>
                 </div>
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                    cuenta.activa ? "bg-success/10 text-success" : "bg-text-dim/10 text-text-dim"
+                    cuenta.activa ? "bg-[#e3e6f5] text-[#021541]" : "bg-[#e0e3e5] text-[#45464f]"
                   }`}
                 >
                   {cuenta.activa ? "Activa" : "Inactiva"}
                 </span>
               </div>
 
-              <p className="mt-2 text-right font-mono text-lg font-semibold text-text">
+              <p className="mt-2 text-right font-mono text-lg font-semibold text-[#191c1e]">
                 {formatCurrency(cuenta.saldoActual, cuenta.tipo.endsWith("USD") ? "USD" : "ARS")}
               </p>
 
@@ -283,31 +283,31 @@ export default function FinanzasPage() {
                 </div>
               )}
 
-              <div className="mt-3 flex items-center justify-end gap-1 border-t border-border pt-2">
+              <div className="mt-3 flex items-center justify-end gap-1 border-t border-[#E2E8F0] pt-2">
                 <button
                   onClick={() => toast.info("Ver movimientos: próximamente")}
-                  className="rounded-lg p-2 text-text-dim hover:bg-surface-hover hover:text-text"
+                  className="rounded-lg p-2 text-[#45464f] hover:bg-[#eceef0] hover:text-[#191c1e]"
                   title="Ver movimientos"
                 >
                   <Wallet size={16} />
                 </button>
                 <button
                   onClick={() => abrirEditar(cuenta)}
-                  className="rounded-lg p-2 text-text-dim hover:bg-surface-hover hover:text-text"
+                  className="rounded-lg p-2 text-[#45464f] hover:bg-[#eceef0] hover:text-[#191c1e]"
                   title="Editar"
                 >
                   <Pencil size={16} />
                 </button>
                 <button
                   onClick={() => toggleActiva(cuenta)}
-                  className="rounded-lg p-2 text-text-dim hover:bg-surface-hover hover:text-text"
+                  className="rounded-lg p-2 text-[#45464f] hover:bg-[#eceef0] hover:text-[#191c1e]"
                   title={cuenta.activa ? "Desactivar" : "Reactivar"}
                 >
                   {cuenta.activa ? <Ban size={16} /> : <CheckCircle2 size={16} />}
                 </button>
                 <button
                   onClick={() => eliminar(cuenta)}
-                  className="rounded-lg p-2 text-text-dim hover:bg-danger/10 hover:text-danger"
+                  className="rounded-lg p-2 text-[#45464f] hover:bg-[#fbe4e4] hover:text-[#ba1a1a]"
                   title="Eliminar"
                 >
                   <Trash2 size={16} />

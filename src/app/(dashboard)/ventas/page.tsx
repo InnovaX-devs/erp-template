@@ -167,7 +167,7 @@ function NuevaVentaContenido() {
 
     const precioBaseOriginal =
       tipoPrecio === "MAYORISTA" && producto.precioMayorista != null ? producto.precioMayorista : producto.precioVenta;
-    const precioUnitarioArs = toArs(precioBaseOriginal, producto.monedaPrecio, cotizacionUSD); // <-- agregado cotizacionUSD
+    const precioUnitarioArs = toArs(precioBaseOriginal, producto.monedaPrecio, cotizacionUSD);
 
     intentarAgregar(producto, "FRASCO", precioUnitarioArs, false);
   }
@@ -207,7 +207,7 @@ function NuevaVentaContenido() {
         return {
           ...it,
           tipoPrecio: tipo,
-          precioUnitarioArs: toArs(precioBaseOriginal, it.producto.monedaPrecio, cotizacionUSD), 
+          precioUnitarioArs: toArs(precioBaseOriginal, it.producto.monedaPrecio, cotizacionUSD),
         };
       })
     );
@@ -309,14 +309,19 @@ function NuevaVentaContenido() {
   }
 
   return (
-    <div className="space-y-4 p-4 sm:p-6">
+    <div className="space-y-4 p-4">
+      <div>
+        <h1 className="text-xl font-semibold text-[#191c1e] sm:text-2xl">Nueva Venta</h1>
+        <p className="text-sm text-[#45464f]">Buscá cliente y productos, y confirmá el cobro</p>
+      </div>
+
       {presupuestoIdOrigen != null && (
-        <div className="rounded-lg border border-amber/40 bg-amber/10 px-3 py-2 text-sm text-text">
+        <div className="rounded-lg border border-[#c5c6d0] bg-[#e3e6f5] px-3 py-2 text-sm text-[#021541]">
           Convirtiendo el presupuesto #{presupuestoIdOrigen} — revisá los datos antes de confirmar.
         </div>
       )}
 
-      <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-3 sm:flex-row sm:flex-wrap sm:items-center">
+      <div className="flex flex-col gap-2 rounded-2xl border border-[#E2E8F0] bg-white p-3 sm:flex-row sm:flex-wrap sm:items-center">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-1 sm:min-w-0">
           <div className="w-full sm:flex-1 sm:min-w-[180px]">
             <BuscadorCliente />
@@ -331,7 +336,7 @@ function NuevaVentaContenido() {
           <button
             type="button"
             onClick={() => setModalPrecioAbierto(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text hover:bg-surface-hover whitespace-nowrap"
+            className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[#c5c6d0] bg-white px-3 py-2 text-sm font-medium text-[#45464f] hover:bg-[#eceef0]"
           >
             <Tag size={14} /> <span className="hidden sm:inline">Consultar precio</span>
             <span className="sm:hidden">Precio</span>
@@ -348,7 +353,7 @@ function NuevaVentaContenido() {
       />
 
       {carrito.length > 0 && (
-        <div className="rounded-xl border border-border bg-surface p-4">
+        <div className="rounded-2xl border border-[#E2E8F0] bg-white p-4">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr_220px]">
             <SelectorCobro
               total={total}
@@ -368,7 +373,7 @@ function NuevaVentaContenido() {
                 type="button"
                 onClick={handleConfirmarVenta}
                 disabled={procesando}
-                className="w-full rounded-lg bg-success px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                className="w-full rounded-lg bg-[#021541] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
               >
                 {procesando ? "Procesando..." : "Confirmar venta"}
               </button>
@@ -376,7 +381,7 @@ function NuevaVentaContenido() {
                 type="button"
                 onClick={handleRegistrarPedido}
                 disabled={procesando}
-                className="w-full rounded-lg border border-primary px-4 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10 disabled:opacity-50"
+                className="w-full rounded-lg border border-[#021541] px-4 py-2.5 text-sm font-medium text-[#021541] hover:bg-[#e3e6f5] disabled:opacity-50"
               >
                 Registrar pedido
               </button>
@@ -384,7 +389,7 @@ function NuevaVentaContenido() {
                 type="button"
                 onClick={handleDescontarStock}
                 disabled={procesando}
-                className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-border px-4 py-2.5 text-sm font-semibold text-text hover:bg-surface-hover disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#c5c6d0] bg-white px-4 py-2.5 text-sm font-medium text-[#45464f] hover:bg-[#eceef0] disabled:opacity-50"
               >
                 <Gift size={14} /> Solo descontar stock
               </button>

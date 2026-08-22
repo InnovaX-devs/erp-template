@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { listarVentas } from "@/app/(dashboard)/ventas/actions"; // ajustá el path según donde queden las actions
@@ -53,7 +53,9 @@ const formatoFecha = new Intl.DateTimeFormat("es-AR", {
 export function HistorialVentas() {
   const [ventas, setVentas] = useState<VentaListItem[]>([]);
   const [totalRegistros, setTotalRegistros] = useState(0);
-  const [isPending, startTransition] = useTransition();
+  const [cargando, setCargando] = useState(true);
+  const [recargando, setRecargando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [estado, setEstado] = useState<FiltroEstado>("TODOS");
   const [clienteInput, setClienteInput] = useState("");
@@ -114,8 +116,12 @@ export function HistorialVentas() {
     return () => clearTimeout(t);
   }, [clienteInput]);
 
-  function cargar() {
-    startTransition(async () => {
+  async function cargar(esRecarga = false) {
+    if (esRecarga) setRecargando(true);
+    else setCargando(true);
+    setError(null);
+
+    try {
       const resultado = await listarVentas({
         estado,
         clienteTexto,
@@ -127,7 +133,12 @@ export function HistorialVentas() {
       });
       setVentas(resultado.ventas);
       setTotalRegistros(resultado.totalRegistros);
-    });
+    } catch (err: any) {
+      setError(err.message || "Error al cargar las ventas");
+    } finally {
+      setCargando(false);
+      setRecargando(false);
+    }
   }
 
   useEffect(() => {
@@ -207,159 +218,160 @@ export function HistorialVentas() {
 
             <button
               type="button"
-              onClick={cargar}
+              onClick={() => cargar(true)}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#c5c6d0] text-[#45464f] hover:bg-[#eceef0]"
               aria-label="Actualizar"
             >
-              <RefreshCw className={cn("h-4 w-4", isPending && "animate-spin")} />
+              <RefreshCw className={cn("h-4 w-4", recargando && "animate-spin")} />
             </button>
           </div>
         </div>
       </div>
 
+      {error && <p className="text-sm text-[#ba1a1a]">{error}</p>}
+
       <div className="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white">
-        <div className="relative hidden overflow-x-auto md:block">
-          {isPending && (
-            <div className="absolute inset-0 z-10 flex items-start justify-center bg-white/60 pt-16 backdrop-blur-[1px]">
-              <Loader2 className="h-5 w-5 animate-spin text-[#021541]" />
+        {cargando ? (
+          <p className="p-8 text-center text-sm text-[#45464f]">Cargando...</p>
+        ) : ventas.length === 0 ? (
+          <p className="p-8 text-center text-sm text-[#45464f]">
+            No se encontraron ventas con estos filtros.
+          </p>
+        ) : (
+          <>
+            {/* Desktop / tablet: tabla */}
+            <div className="relative hidden overflow-x-auto md:block">
+              {recargando && (
+                <div className="absolute inset-0 z-10 flex items-start justify-center bg-white/60 pt-16 backdrop-blur-[1px]">
+                  <Loader2 className="h-5 w-5 animate-spin text-[#021541]" />
+                </div>
+              )}
+              <table className="w-full min-w-[720px] text-sm">
+                <thead className="bg-[#F1F5F9]">
+                  <tr className="text-left text-[11px] font-bold uppercase tracking-wider text-[#45464f]">
+                    <th className="px-4 py-3">#</th>
+                    <th className="px-4 py-3">Cliente</th>
+                    <th className="px-4 py-3">Total</th>
+                    <th className="px-4 py-3">Ganancia</th>
+                    <th className="px-4 py-3">Fecha</th>
+                    <th className="px-4 py-3">Estado</th>
+                    <th className="px-4 py-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ventas.map((venta) => (
+                    <tr key={venta.id} className="border-t border-[#E2E8F0]">
+                      <td className="px-4 py-3 font-mono text-xs text-[#45464f]">#{venta.id}</td>
+                      <td className="px-4 py-3">
+                        {venta.clienteNombre ? (
+                          <span className="font-medium text-[#191c1e]">{venta.clienteNombre}</span>
+                        ) : (
+                          <span className="italic text-[#45464f]">Sin cliente</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-mono font-medium text-[#191c1e]">
+                        {formatoMoneda.format(venta.totalARS)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="font-mono font-medium text-[#1e7d38]">
+                          {formatoMoneda.format(venta.gananciaARS)}
+                        </span>
+                        <span className="ml-1 text-xs text-[#45464f]">
+                          ({venta.gananciaPorcentaje.toFixed(1)}%)
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-[#45464f]">
+                        {formatoFecha.format(new Date(venta.fecha))}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={cn(
+                            "rounded-full px-2.5 py-1 text-xs font-semibold",
+                            ESTADO_STYLE[venta.estado]
+                          )}
+                        >
+                          {ESTADO_LABEL[venta.estado]}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => descargarComprobante(venta.id)}
+                          disabled={descargando === venta.id}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#c5c6d0] text-[#45464f] hover:bg-[#eceef0] disabled:opacity-50"
+                          aria-label={`Descargar comprobante de la venta #${venta.id}`}
+                        >
+                          {descargando === venta.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
-          <table className="w-full min-w-[720px] text-sm">
-            <thead className="bg-[#F1F5F9]">
-              <tr className="text-left text-[11px] font-bold uppercase tracking-wider text-[#45464f]">
-                <th className="px-4 py-3">#</th>
-                <th className="px-4 py-3">Cliente</th>
-                <th className="px-4 py-3">Total</th>
-                <th className="px-4 py-3">Ganancia</th>
-                <th className="px-4 py-3">Fecha</th>
-                <th className="px-4 py-3">Estado</th>
-                <th className="px-4 py-3 text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
+
+            {/* Mobile: tarjetas */}
+            <div className="relative divide-y divide-[#E2E8F0] md:hidden">
+              {recargando && (
+                <div className="absolute inset-0 z-10 flex items-start justify-center bg-white/60 pt-10 backdrop-blur-[1px]">
+                  <Loader2 className="h-5 w-5 animate-spin text-[#021541]" />
+                </div>
+              )}
               {ventas.map((venta) => (
-                <tr key={venta.id} className="border-t border-[#E2E8F0]">
-                  <td className="px-4 py-3 font-mono text-xs text-[#45464f]">#{venta.id}</td>
-                  <td className="px-4 py-3">
-                    {venta.clienteNombre ? (
-                      <span className="font-medium text-[#191c1e]">{venta.clienteNombre}</span>
-                    ) : (
-                      <span className="italic text-[#45464f]">Sin cliente</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 font-mono font-medium text-[#191c1e]">
-                    {formatoMoneda.format(venta.totalARS)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="font-mono font-medium text-[#1e7d38]">
-                      {formatoMoneda.format(venta.gananciaARS)}
-                    </span>
-                    <span className="ml-1 text-xs text-[#45464f]">
-                      ({venta.gananciaPorcentaje.toFixed(1)}%)
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-[#45464f]">{formatoFecha.format(new Date(venta.fecha))}</td>
-                  <td className="px-4 py-3">
+                <div key={venta.id} className="p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-mono text-xs text-[#45464f]">#{venta.id}</p>
+                      {venta.clienteNombre ? (
+                        <p className="truncate font-medium text-[#191c1e]">{venta.clienteNombre}</p>
+                      ) : (
+                        <p className="italic text-[#45464f]">Sin cliente</p>
+                      )}
+                    </div>
                     <span
                       className={cn(
-                        "rounded-full px-2.5 py-1 text-xs font-semibold",
+                        "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold",
                         ESTADO_STYLE[venta.estado]
                       )}
                     >
                       {ESTADO_LABEL[venta.estado]}
                     </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => descargarComprobante(venta.id)}
-                      disabled={descargando === venta.id}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#c5c6d0] text-[#45464f] hover:bg-[#eceef0] disabled:opacity-50"
-                      aria-label={`Descargar comprobante de la venta #${venta.id}`}
-                    >
-                      {descargando === venta.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Download className="h-4 w-4" />
-                      )}
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                  </div>
 
-              {!isPending && ventas.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-[#45464f]">
-                    No se encontraron ventas con estos filtros.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm">
+                      <span className="font-mono font-semibold text-[#191c1e]">
+                        {formatoMoneda.format(venta.totalARS)}
+                      </span>{" "}
+                      <span className="font-mono text-xs text-[#1e7d38]">
+                        +{formatoMoneda.format(venta.gananciaARS)} ({venta.gananciaPorcentaje.toFixed(1)}%)
+                      </span>
+                    </p>
+                    <p className="text-xs text-[#45464f]">{formatoFecha.format(new Date(venta.fecha))}</p>
+                  </div>
 
-        {/* Mobile: tarjetas */}
-        <div className="relative divide-y divide-[#E2E8F0] md:hidden">
-          {isPending && (
-            <div className="absolute inset-0 z-10 flex items-start justify-center bg-white/60 pt-10 backdrop-blur-[1px]">
-              <Loader2 className="h-5 w-5 animate-spin text-[#021541]" />
-            </div>
-          )}
-          {ventas.map((venta) => (
-            <div key={venta.id} className="p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="font-mono text-xs text-[#45464f]">#{venta.id}</p>
-                  {venta.clienteNombre ? (
-                    <p className="truncate font-medium text-[#191c1e]">{venta.clienteNombre}</p>
-                  ) : (
-                    <p className="italic text-[#45464f]">Sin cliente</p>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => descargarComprobante(venta.id)}
+                    disabled={descargando === venta.id}
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-[#c5c6d0] py-2 text-sm font-medium text-[#45464f] hover:bg-[#eceef0] disabled:opacity-50"
+                  >
+                    {descargando === venta.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    Comprobante
+                  </button>
                 </div>
-                <span
-                  className={cn(
-                    "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold",
-                    ESTADO_STYLE[venta.estado]
-                  )}
-                >
-                  {ESTADO_LABEL[venta.estado]}
-                </span>
-              </div>
-
-              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm">
-                  <span className="font-mono font-semibold text-[#191c1e]">
-                    {formatoMoneda.format(venta.totalARS)}
-                  </span>{" "}
-                  <span className="font-mono text-xs text-[#1e7d38]">
-                    +{formatoMoneda.format(venta.gananciaARS)} ({venta.gananciaPorcentaje.toFixed(1)}%)
-                  </span>
-                </p>
-                <p className="text-xs text-[#45464f]">{formatoFecha.format(new Date(venta.fecha))}</p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => descargarComprobante(venta.id)}
-                disabled={descargando === venta.id}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-[#c5c6d0] py-2 text-sm font-medium text-[#45464f] hover:bg-[#eceef0] disabled:opacity-50"
-              >
-                {descargando === venta.id ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4" />
-                )}
-                Comprobante
-              </button>
+              ))}
             </div>
-          ))}
-
-          {!isPending && ventas.length === 0 && (
-            <div className="px-4 py-10 text-center text-sm text-[#45464f]">
-              No se encontraron ventas con estos filtros.
-            </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
 
       {/* Paginación */}

@@ -57,7 +57,7 @@ export default function ClientesContent({
   const { pagina, totalPaginas, totalItems } = paginacion;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6">
+    <div className="p-4 space-y-5 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl sm:text-2xl font-semibold text-[#191c1e]">Clientes</h1>
         <button

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Search } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { listarPedidos } from "../actions";
 import { CardPedido } from "@/components/ventas/card-pedido";
@@ -62,14 +61,14 @@ export default function PedidosPage() {
   const pendienteRetirar = pedidos.filter((p) => p.armado && !p.retirado);
 
   return (
-    <div className="space-y-4 p-4 sm:p-6">
+    <div className="p-4 space-y-5 sm:space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-text">Pedidos</h1>
-        <p className="text-sm text-text-dim">Tablero de preparación y entrega</p>
+        <h1 className="text-xl font-semibold text-[#191c1e] sm:text-2xl">Pedidos</h1>
+        <p className="text-sm text-[#45464f]">Tablero de preparación y entrega</p>
       </div>
 
       {/* Filtros */}
-      <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-3">
+      <div className="rounded-2xl border border-[#E2E8F0] bg-white p-3">
         <div className="flex flex-wrap items-center gap-2">
           <RangoFechas
             desde={filtros.fechaDesde}
@@ -90,7 +89,7 @@ export default function PedidosPage() {
 
       {/* Columnas */}
       {cargando ? (
-        <div className="rounded-xl border border-border bg-surface p-8 text-center text-sm text-text-dim">
+        <div className="rounded-2xl border border-[#E2E8F0] bg-white p-8 text-center text-sm text-[#45464f]">
           Cargando...
         </div>
       ) : (
@@ -116,9 +115,9 @@ export default function PedidosPage() {
 }
 
 const ESTILOS_COLUMNA = {
-  amber: { fondo: "bg-amber/5", punto: "bg-amber", texto: "text-amber" },
-  primary: { fondo: "bg-primary/5", punto: "bg-primary", texto: "text-primary" },
-  success: { fondo: "bg-success/5", punto: "bg-success", texto: "text-success" },
+  amber: { fondo: "bg-[#fdecc8]/40", punto: "bg-[#8a5a00]", texto: "text-[#8a5a00]" },
+  primary: { fondo: "bg-[#e3e6f5]/40", punto: "bg-[#021541]", texto: "text-[#021541]" },
+  success: { fondo: "bg-[#e1f2e6]/60", punto: "bg-[#1e7d38]", texto: "text-[#1e7d38]" },
 } as const;
 
 function Columna({
@@ -136,11 +135,11 @@ function Columna({
 }) {
   const estilo = ESTILOS_COLUMNA[color];
   return (
-    <div className={cn("rounded-xl border border-border p-3", estilo.fondo)}>
+    <div className={cn("rounded-2xl border border-[#E2E8F0] p-3", estilo.fondo)}>
       <div className="mb-2 flex items-center gap-2">
         <span className={cn("h-2 w-2 rounded-full", estilo.punto)} />
         <h2 className={cn("font-semibold", estilo.texto)}>{titulo}</h2>
-        <span className="rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-text-dim">
+        <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-[#45464f]">
           {pedidos.length} pedido{pedidos.length !== 1 ? "s" : ""}
         </span>
       </div>
@@ -148,7 +147,7 @@ function Columna({
 
       <div className="space-y-2 lg:max-h-[600px] lg:overflow-y-auto">
         {pedidos.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-text-dim">
+          <div className="rounded-lg border border-dashed border-[#c5c6d0] p-6 text-center text-sm text-[#45464f]">
             No hay pedidos acá 🎉
           </div>
         ) : (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { Search } from "lucide-react";
 
 interface Elemento {
   id: number;
@@ -153,18 +154,18 @@ function TablaSeccion({ titulo, singular, endpoint }: SeccionProps) {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-4">
+    <div className="space-y-4 rounded-2xl border border-[#E2E8F0] bg-white p-4">
       {/* Encabezado y Botón Nuevo */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">{titulo}</h2>
-          <p className="text-sm text-slate-500">
+          <h2 className="text-lg font-semibold text-[#191c1e]">{titulo}</h2>
+          <p className="text-sm text-[#45464f]">
             Total registrados: {items.length}
           </p>
         </div>
         <button
           onClick={handleOpenCrear}
-          className="inline-flex items-center justify-center gap-2 bg-[#021541] cursor-pointer hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors shadow-sm"
+          className="inline-flex items-center justify-center gap-1.5 self-start rounded-lg bg-[#021541] px-4 py-2 text-sm font-medium text-white hover:opacity-90 sm:self-auto cursor-pointer"
         >
           <span>+</span> Nueva {singular}
         </button>
@@ -172,75 +173,63 @@ function TablaSeccion({ titulo, singular, endpoint }: SeccionProps) {
 
       {/* Buscador */}
       <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#45464f]" />
         <input
           type="text"
           placeholder={`Buscar ${singular.toLowerCase()}...`}
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          className="w-full rounded-lg border border-[#c5c6d0] bg-white py-2 pl-9 pr-3 text-sm text-[#191c1e] placeholder:text-[#45464f] focus:outline-none focus:ring-1 focus:ring-[#021541]"
         />
-        <svg
-          className="w-4 h-4 text-slate-400 absolute left-3 top-3"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
       </div>
 
       {/* Tabla */}
-      <div className="overflow-x-auto rounded-lg border border-slate-200">
-        <table className="w-full text-left border-collapse text-sm">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
-              <th className="py-3 px-4">Nombre</th>
-              <th className="py-3 px-4 text-center">Productos</th>
-              <th className="py-3 px-4 text-center">Estado</th>
-              <th className="py-3 px-4 text-right">Acciones</th>
+      <div className="overflow-hidden overflow-x-auto rounded-2xl border border-[#E2E8F0]">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-[#F1F5F9]">
+            <tr className="text-left text-[11px] font-bold uppercase tracking-wider text-[#45464f]">
+              <th className="px-4 py-3">Nombre</th>
+              <th className="px-4 py-3 text-center">Productos</th>
+              <th className="px-4 py-3 text-center">Estado</th>
+              <th className="px-4 py-3 text-right">Acciones</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
+          <tbody>
             {loading ? (
               <tr>
-                <td colSpan={4} className="py-8 text-center text-slate-400">
+                <td colSpan={4} className="px-4 py-8 text-center text-sm text-[#45464f]">
                   Cargando {titulo.toLowerCase()}...
                 </td>
               </tr>
             ) : itemsFiltrados.length === 0 ? (
               <tr>
-                <td colSpan={4} className="py-8 text-center text-slate-400">
+                <td colSpan={4} className="px-4 py-8 text-center text-sm text-[#45464f]">
                   No se encontraron {titulo.toLowerCase()}.
                 </td>
               </tr>
             ) : (
               itemsFiltrados.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-3 px-4 font-medium text-slate-800">
+                <tr key={item.id} className="border-t border-[#E2E8F0]">
+                  <td className="px-4 py-3 font-medium text-[#191c1e]">
                     {item.nombre}
                   </td>
 
                   {/* Cantidad de productos asociados real */}
-                  <td className="py-3 px-4 text-center">
-                    <span className="inline-flex items-center justify-center bg-slate-100 text-slate-700 font-semibold px-2.5 py-0.5 rounded-full text-xs">
+                  <td className="px-4 py-3 text-center">
+                    <span className="inline-flex items-center justify-center rounded-full bg-[#eceef0] px-2.5 py-0.5 text-xs font-semibold text-[#45464f]">
                       {item.cantidadProductos}
                     </span>
                   </td>
 
                   {/* Estado Activa / Inactiva */}
-                  <td className="py-3 px-4 text-center">
+                  <td className="px-4 py-3 text-center">
                     <button
                       onClick={() => handleToggleEstado(item)}
                       title={item.activa ? "Clic para desactivar" : "Clic para activar"}
-                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+                      className={`inline-flex cursor-pointer items-center rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
                         item.activa
-                          ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                          : "bg-rose-100 text-rose-800 hover:bg-rose-200"
+                          ? "bg-[#e1f2e6] text-[#1e7d38] hover:opacity-80"
+                          : "bg-[#fbe4e4] text-[#ba1a1a] hover:opacity-80"
                       }`}
                     >
                       {item.activa ? "Activa" : "Inactiva"}
@@ -248,19 +237,21 @@ function TablaSeccion({ titulo, singular, endpoint }: SeccionProps) {
                   </td>
 
                   {/* Acciones */}
-                  <td className="py-3 px-4 text-right space-x-2">
-                    <button
-                      onClick={() => handleOpenEditar(item)}
-                      className="text-indigo-600 hover:text-indigo-900 font-medium text-xs px-2 py-1 rounded hover:bg-indigo-50 transition-colors"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleEliminar(item)}
-                      className="text-rose-600 hover:text-rose-900 font-medium text-xs px-2 py-1 rounded hover:bg-rose-50 transition-colors"
-                    >
-                      Eliminar
-                    </button>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-3">
+                      <button
+                        onClick={() => handleOpenEditar(item)}
+                        className="text-sm text-[#021541] hover:underline"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleEliminar(item)}
+                        className="text-sm text-[#ba1a1a] hover:underline"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -272,20 +263,20 @@ function TablaSeccion({ titulo, singular, endpoint }: SeccionProps) {
       {/* Modal para Crear / Editar (Un solo campo: nombre) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
-            <h3 className="text-lg font-bold text-slate-800">
+          <div className="w-full max-w-md space-y-4 rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-[#191c1e]">
               {itemEditar ? `Editar ${singular}` : `Nueva ${singular}`}
             </h3>
 
             {errorMsg && (
-              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-lg">
+              <div className="rounded-lg border border-[#f3b4b4] bg-[#fbe4e4] p-3 text-sm text-[#ba1a1a]">
                 {errorMsg}
               </div>
             )}
 
             <form onSubmit={handleGuardar} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label className="mb-1 block text-sm font-medium text-[#45464f]">
                   Nombre de {singular} *
                 </label>
                 <input
@@ -295,7 +286,7 @@ function TablaSeccion({ titulo, singular, endpoint }: SeccionProps) {
                   placeholder={`Ej: ${singular === "Marca" ? "Chanel" : "Perfumes"}`}
                   value={nombreForm}
                   onChange={(e) => setNombreForm(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded-lg border border-[#c5c6d0] px-3 py-2 text-sm text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
                 />
               </div>
 
@@ -304,14 +295,14 @@ function TablaSeccion({ titulo, singular, endpoint }: SeccionProps) {
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   disabled={isSaving}
-                  className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                  className="rounded-lg border border-[#c5c6d0] px-4 py-2 text-sm font-medium text-[#45464f] hover:bg-[#eceef0]"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50"
+                  className="rounded-lg bg-[#021541] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
                 >
                   {isSaving ? "Guardando..." : "Guardar"}
                 </button>
@@ -326,18 +317,18 @@ function TablaSeccion({ titulo, singular, endpoint }: SeccionProps) {
 
 export default function MarcasCategoriasPage() {
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8">
+    <div className="p-4 space-y-5 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">
+        <h1 className="text-xl font-semibold text-[#191c1e] sm:text-2xl">
           Marcas y Categorías
         </h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Administra las marcas y categorías disponibles para los productos.
+        <p className="text-sm text-[#45464f]">
+          Administra las marcas y categorías disponibles para los productos
         </p>
       </div>
 
       {/* Dos Tablas Independientes */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 sm:gap-6">
         <TablaSeccion
           titulo="Marcas"
           singular="Marca"

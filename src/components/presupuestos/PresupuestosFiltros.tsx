@@ -2,6 +2,8 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useState, useEffect, useTransition } from "react";
+import { Search } from "lucide-react";
+import { cn } from "@/lib/cn";
 import DateInput from "@/components/ui/date-input";
 
 const ESTADOS = [
@@ -51,66 +53,70 @@ export default function PresupuestosFiltros() {
   }, [clienteQuery]);
 
   return (
-    <div className="flex flex-wrap items-end gap-3 p-4 bg-white border-b border-[#e2e8f0]">
-      <div className="flex rounded-lg overflow-hidden border border-[#021541]">
-        {ESTADOS.map((e) => (
-          <button
-            key={e.value}
-            type="button"
-            onClick={() => aplicarFiltros({ estado: e.value })}
-            className={`px-3 py-2 text-sm font-medium ${
-              estadoActual === e.value ? "bg-[#021541] text-white" : "bg-white text-[#021541]"
-            }`}
-          >
-            {e.label}
-          </button>
-        ))}
-      </div>
+    <div className="space-y-3 rounded-2xl border border-[#E2E8F0] bg-white p-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+        <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:pb-0">
+          {ESTADOS.map((e) => (
+            <button
+              key={e.value}
+              type="button"
+              onClick={() => aplicarFiltros({ estado: e.value })}
+              className={cn(
+                "shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                estadoActual === e.value
+                  ? "bg-[#021541] text-white"
+                  : "border border-[#c5c6d0] bg-white text-[#45464f] hover:bg-[#eceef0]"
+              )}
+            >
+              {e.label}
+            </button>
+          ))}
+        </div>
 
-      <div>
-        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#45464f]">
-          Desde
-        </label>
-        <DateInput
-          value={desde}
-          max={hasta || undefined}
-          onChange={(valor) => {
-            setDesde(valor);
-            aplicarFiltros({ desde: valor });
-          }}
-          className="mt-1 border border-[#c5c6d0] rounded-lg px-2 py-1.5 text-sm"
-        />
-      </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="block text-xs font-medium text-[#45464f]">Desde</label>
+            <DateInput
+              value={desde}
+              max={hasta || undefined}
+              onChange={(valor) => {
+                setDesde(valor);
+                aplicarFiltros({ desde: valor });
+              }}
+              className="mt-1 rounded-lg border border-[#c5c6d0] bg-white px-3 py-2 text-sm text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
+            />
+          </div>
 
-      <div>
-        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#45464f]">
-          Hasta
-        </label>
-        <DateInput
-          value={hasta}
-          min={desde || undefined}
-          onChange={(valor) => {
-            setHasta(valor);
-            aplicarFiltros({ hasta: valor });
-          }}
-          className="mt-1 border border-[#c5c6d0] rounded-lg px-2 py-1.5 text-sm"
-        />
-      </div>
+          <div>
+            <label className="block text-xs font-medium text-[#45464f]">Hasta</label>
+            <DateInput
+              value={hasta}
+              min={desde || undefined}
+              onChange={(valor) => {
+                setHasta(valor);
+                aplicarFiltros({ hasta: valor });
+              }}
+              className="mt-1 rounded-lg border border-[#c5c6d0] bg-white px-3 py-2 text-sm text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
+            />
+          </div>
 
-      <div className="flex-1 min-w-[200px]">
-        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#45464f]">
-          Cliente
-        </label>
-        <input
-          type="text"
-          value={clienteQuery}
-          onChange={(e) => setClienteQuery(e.target.value)}
-          placeholder="Buscar por nombre..."
-          className="mt-1 w-full border border-[#c5c6d0] rounded-lg px-2 py-1.5 text-sm"
-        />
-      </div>
+          <div className="min-w-[200px] flex-1">
+            <label className="block text-xs font-medium text-[#45464f]">Cliente</label>
+            <div className="relative mt-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#45464f]" />
+              <input
+                type="text"
+                value={clienteQuery}
+                onChange={(e) => setClienteQuery(e.target.value)}
+                placeholder="Buscar por nombre..."
+                className="w-full rounded-lg border border-[#c5c6d0] bg-white py-2 pl-9 pr-3 text-sm text-[#191c1e] placeholder:text-[#45464f] focus:outline-none focus:ring-1 focus:ring-[#021541]"
+              />
+            </div>
+          </div>
 
-      {isPending && <span className="text-xs text-[#45464f]">Filtrando...</span>}
+          {isPending && <span className="pb-2 text-xs text-[#45464f]">Filtrando...</span>}
+        </div>
+      </div>
     </div>
   );
 }

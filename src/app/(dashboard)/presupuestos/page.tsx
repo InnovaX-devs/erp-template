@@ -19,19 +19,20 @@ export default async function PresupuestosPage({
   });
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-6 py-4">
-        <h1 className="text-2xl font-bold text-[#191c1e]">Presupuestos</h1>
-        <Link href="/presupuestos/nuevo" className="px-4 py-2 rounded-lg bg-[#021541] text-white text-sm">
+    <div className="p-4 space-y-5 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl font-semibold text-[#191c1e] sm:text-2xl">Presupuestos</h1>
+        <Link
+          href="/presupuestos/nuevo"
+          className="px-4 py-2 text-sm rounded-lg bg-[#021541] text-white hover:opacity-90 self-start sm:self-auto"
+        >
           + Nuevo Presupuesto
         </Link>
       </div>
 
       <PresupuestosFiltros />
 
-      <div className="flex-1 bg-white rounded-2xl m-4 border border-[#e2e8f0] overflow-y-auto">
-        <PresupuestosTable presupuestos={presupuestos} />
-      </div>
+      <PresupuestosTable presupuestos={presupuestos} />
     </div>
   );
 }

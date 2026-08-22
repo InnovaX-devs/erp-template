@@ -52,7 +52,7 @@ export default function GastosPage() {
         {pestana === "listado" && (
           <button
             onClick={() => setModalFormAbierto(true)}
-            className="flex items-center justify-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+            className="flex items-center justify-center gap-1.5 rounded-lg bg-[#021541] cursor-pointer px-4 py-2 text-sm font-medium text-white hover:opacity-90"
           >
             <Plus size={16} /> Nuevo gasto
           </button>

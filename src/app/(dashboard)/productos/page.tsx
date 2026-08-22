@@ -205,21 +205,21 @@ export default function ProductosPage() {
           </button>
           <Link
             href="/productos/actualizar-precios"
-            className="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2.5 text-center text-sm font-medium text-white transition-opacity hover:opacity-90 sm:px-4"
+            className="inline-flex items-center justify-center rounded-lg bg-[#021541] cursor-pointer px-3 py-2.5 text-center text-sm font-medium text-white transition-opacity hover:opacity-90 sm:px-4"
           >
             + Actualizar Precios
           </Link>
           <button
             type="button"
             onClick={() => setIsFormulaDecantOpen(true)}
-            className="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 sm:px-4 cursor-pointer"
+            className="inline-flex items-center justify-center rounded-lg bg-[#021541] px-3 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 sm:px-4 cursor-pointer"
           >
             Fórmula Decant
           </button>
           <button
             type="button"
             onClick={handleAbrirCrear}
-            className="inline-flex items-center justify-center rounded-lg bg-primary px-3 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 sm:px-4 cursor-pointer"
+            className="inline-flex items-center justify-center rounded-lg bg-[#021541] px-3 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 sm:px-4 cursor-pointer"
           >
             + Nuevo Producto
           </button>

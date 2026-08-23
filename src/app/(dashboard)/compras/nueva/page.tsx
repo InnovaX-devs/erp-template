@@ -43,6 +43,12 @@ const TIPO_CUENTA_LABEL: Record<CuentaOpcion["tipo"], string> = {
 const esTipoCuentaUSD = (tipo: CuentaOpcion["tipo"]) =>
   tipo === "EFECTIVO_USD" || tipo === "BANCO_USD";
 
+// Límites de validación para cantidad y costo unitario
+const CANTIDAD_MIN = 1;
+const CANTIDAD_MAX = 99999;
+const COSTO_MIN = 0;
+const COSTO_MAX = 1_000_000;
+
 export default function NuevaCompraPage() {
   const router = useRouter();
 
@@ -157,13 +163,43 @@ export default function NuevaCompraPage() {
     }
   };
 
+  // Actualiza un campo del carrito mientras el usuario tipea.
+  // No fuerza el MÍNIMO acá (para poder borrar y escribir un número nuevo con libertad),
+  // pero sí recorta el MÁXIMO en el momento, para que no se puedan tipear números absurdos.
   const actualizarItem = (
     productoId: number,
     campo: "cantidad" | "costoUnitarioUSD",
     valor: number
   ) => {
+    const max = campo === "cantidad" ? CANTIDAD_MAX : COSTO_MAX;
+    const valorClampeado = Number.isFinite(valor) && valor > max ? max : valor;
     setCarrito((prev) =>
-      prev.map((it) => (it.productoId === productoId ? { ...it, [campo]: valor } : it))
+      prev.map((it) => (it.productoId === productoId ? { ...it, [campo]: valorClampeado } : it))
+    );
+  };
+
+  // Normaliza (clampea) un campo al salir del input (onBlur), evitando valores
+  // vacíos, negativos, cero (para cantidad) o por encima del máximo permitido.
+  const normalizarItem = (
+    productoId: number,
+    campo: "cantidad" | "costoUnitarioUSD",
+    valorCrudo: number
+  ) => {
+    const min = campo === "cantidad" ? CANTIDAD_MIN : COSTO_MIN;
+    const max = campo === "cantidad" ? CANTIDAD_MAX : COSTO_MAX;
+
+    let normalizado = valorCrudo;
+    if (!Number.isFinite(normalizado) || normalizado < min) {
+      normalizado = min;
+    } else if (normalizado > max) {
+      normalizado = max;
+    }
+    if (campo === "costoUnitarioUSD") {
+      normalizado = Number(normalizado.toFixed(2));
+    }
+
+    setCarrito((prev) =>
+      prev.map((it) => (it.productoId === productoId ? { ...it, [campo]: normalizado } : it))
     );
   };
 
@@ -209,6 +245,22 @@ export default function NuevaCompraPage() {
       setError("Elegí la cuenta desde la que se va a pagar la compra.");
       return;
     }
+
+    // Validación de ítems: cantidad debe ser >= 1 y costo no puede ser negativo.
+    const itemInvalido = carrito.find(
+      (it) =>
+        !Number.isFinite(it.cantidad) ||
+        it.cantidad < CANTIDAD_MIN ||
+        !Number.isFinite(it.costoUnitarioUSD) ||
+        it.costoUnitarioUSD < COSTO_MIN
+    );
+    if (itemInvalido) {
+      setError(
+        `Revisá "${itemInvalido.nombre}": la cantidad debe ser al menos ${CANTIDAD_MIN} y el costo no puede ser negativo.`
+      );
+      return;
+    }
+
     setError(null);
     setEnviando(true);
     try {
@@ -268,14 +320,14 @@ export default function NuevaCompraPage() {
               type="button"
               disabled={confirmando}
               onClick={confirmarCompra}
-              className="rounded-lg bg-[#021541] px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+              className="rounded-lg bg-[#021541] px-4 py-2.5 text-sm font-medium cursor-pointer text-white hover:opacity-90 disabled:opacity-50"
             >
               {confirmando ? "Confirmando..." : "Confirmar compra ahora"}
             </button>
             <button
               type="button"
               onClick={() => router.push("/compras")}
-              className="rounded-lg border border-[#c5c6d0] bg-white px-4 py-2.5 text-sm text-[#45464f] hover:bg-[#eceef0]"
+              className="rounded-lg border border-[#c5c6d0] bg-white cursor-pointer px-4 py-2.5 text-sm text-[#45464f] hover:bg-[#eceef0]"
             >
               Confirmar más tarde
             </button>
@@ -438,10 +490,19 @@ export default function NuevaCompraPage() {
                       <td className="px-4 py-3">
                         <input
                           type="number"
-                          min={1}
+                          min={CANTIDAD_MIN}
+                          max={CANTIDAD_MAX}
                           value={it.cantidad}
-                          onChange={(e) =>
-                            actualizarItem(it.productoId, "cantidad", Math.max(1, Number(e.target.value)))
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            actualizarItem(
+                              it.productoId,
+                              "cantidad",
+                              raw === "" ? ("" as unknown as number) : Number(raw)
+                            );
+                          }}
+                          onBlur={(e) =>
+                            normalizarItem(it.productoId, "cantidad", Number(e.target.value))
                           }
                           className="w-20 rounded-md border border-[#c5c6d0] bg-white px-2 py-1 text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
                         />
@@ -449,11 +510,20 @@ export default function NuevaCompraPage() {
                       <td className="px-4 py-3">
                         <input
                           type="number"
-                          min={0}
+                          min={COSTO_MIN}
+                          max={COSTO_MAX}
                           step="0.01"
                           value={it.costoUnitarioUSD}
-                          onChange={(e) =>
-                            actualizarItem(it.productoId, "costoUnitarioUSD", Math.max(0, Number(e.target.value)))
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            actualizarItem(
+                              it.productoId,
+                              "costoUnitarioUSD",
+                              raw === "" ? ("" as unknown as number) : Number(raw)
+                            );
+                          }}
+                          onBlur={(e) =>
+                            normalizarItem(it.productoId, "costoUnitarioUSD", Number(e.target.value))
                           }
                           className="w-24 rounded-md border border-[#c5c6d0] bg-white px-2 py-1 text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
                         />
@@ -497,10 +567,19 @@ export default function NuevaCompraPage() {
                       <label className="block text-[11px] text-[#45464f]">Cantidad</label>
                       <input
                         type="number"
-                        min={1}
+                        min={CANTIDAD_MIN}
+                        max={CANTIDAD_MAX}
                         value={it.cantidad}
-                        onChange={(e) =>
-                          actualizarItem(it.productoId, "cantidad", Math.max(1, Number(e.target.value)))
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          actualizarItem(
+                            it.productoId,
+                            "cantidad",
+                            raw === "" ? ("" as unknown as number) : Number(raw)
+                          );
+                        }}
+                        onBlur={(e) =>
+                          normalizarItem(it.productoId, "cantidad", Number(e.target.value))
                         }
                         className="mt-0.5 w-full rounded-md border border-[#c5c6d0] bg-white px-2 py-1.5 text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
                       />
@@ -509,11 +588,20 @@ export default function NuevaCompraPage() {
                       <label className="block text-[11px] text-[#45464f]">Costo unit. (USD)</label>
                       <input
                         type="number"
-                        min={0}
+                        min={COSTO_MIN}
+                        max={COSTO_MAX}
                         step="0.01"
                         value={it.costoUnitarioUSD}
-                        onChange={(e) =>
-                          actualizarItem(it.productoId, "costoUnitarioUSD", Math.max(0, Number(e.target.value)))
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          actualizarItem(
+                            it.productoId,
+                            "costoUnitarioUSD",
+                            raw === "" ? ("" as unknown as number) : Number(raw)
+                          );
+                        }}
+                        onBlur={(e) =>
+                          normalizarItem(it.productoId, "costoUnitarioUSD", Number(e.target.value))
                         }
                         className="mt-0.5 w-full rounded-md border border-[#c5c6d0] bg-white px-2 py-1.5 text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
                       />
@@ -548,7 +636,7 @@ export default function NuevaCompraPage() {
             type="button"
             disabled={enviando || carrito.length === 0}
             onClick={guardarCompra}
-            className="w-full rounded-lg bg-[#021541] px-6 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 sm:w-auto"
+            className="w-full rounded-lg bg-[#021541] px-6 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50 cursor-pointer sm:w-auto"
           >
             {enviando ? "Guardando..." : "Guardar Compra"}
           </button>

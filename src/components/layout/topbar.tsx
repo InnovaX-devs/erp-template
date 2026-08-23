@@ -6,7 +6,6 @@ import { Menu, Check, X as XIcon, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { NAV_ITEMS, esGrupo } from "@/lib/nav-items";
 import { LogoutButton } from "@/components/layout/logout-button";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { useSidebar } from "@/components/layout/sidebar-context";
 import { CambiarPasswordModal } from "@/components/layout/cambiar-password-modal"; // ⚠️ ajustar si tu ruta real es otra
 import { actualizarCotizacionRapida } from "@/app/(dashboard)/configuracion/actions"; // ⚠️ ajustar si tu ruta real es otra

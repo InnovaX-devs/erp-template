@@ -184,7 +184,7 @@ export function HistorialVentas() {
                   setPage(1);
                 }}
                 className={cn(
-                  "shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  "shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer",
                   estado === f.value
                     ? "bg-[#021541] text-white"
                     : "border border-[#c5c6d0] bg-white text-[#45464f] hover:bg-[#eceef0]"

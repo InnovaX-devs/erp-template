@@ -5,33 +5,71 @@ import type { Prisma } from "@prisma/client";
 const FILTROS_VALIDOS = ["pendientes", "confirmadas", "canceladas"] as const;
 type Filtro = (typeof FILTROS_VALIDOS)[number];
 
-function armarWhere(filtro: string | null): Prisma.CompraWhereInput {
+const PAGE_SIZE_DEFAULT = 15;
+const PAGE_SIZE_MAX = 100;
+
+function armarWhere(filtro: string | null, busqueda: string | null): Prisma.CompraWhereInput {
+  const where: Prisma.CompraWhereInput = {};
+
   switch (filtro as Filtro | null) {
     case "pendientes":
-      return { confirmada: false, cancelada: false };
+      Object.assign(where, { confirmada: false, cancelada: false });
+      break;
     case "confirmadas":
-      return { confirmada: true, cancelada: false };
+      Object.assign(where, { confirmada: true, cancelada: false });
+      break;
     case "canceladas":
-      return { cancelada: true };
+      Object.assign(where, { cancelada: true });
+      break;
     default:
-      return {};
+      break;
   }
+
+  const q = busqueda?.trim();
+  if (q) {
+    where.proveedor = { nombre: { contains: q, mode: "insensitive" } };
+  }
+
+  return where;
 }
 
 export async function GET(request: NextRequest) {
   try {
     const filtro = request.nextUrl.searchParams.get("filtro");
+    const busqueda = request.nextUrl.searchParams.get("q");
 
-    const compras = await prisma.compra.findMany({
-      where: armarWhere(filtro),
-      orderBy: { fecha: "desc" },
-      include: {
-        proveedor: { select: { nombre: true } },
-        cuenta: { select: { nombre: true, tipo: true } },
-      },
+    const pageParam = Number(request.nextUrl.searchParams.get("page"));
+    const pageSizeParam = Number(request.nextUrl.searchParams.get("pageSize"));
+
+    const page = Number.isFinite(pageParam) && pageParam > 0 ? Math.floor(pageParam) : 1;
+    const pageSize =
+      Number.isFinite(pageSizeParam) && pageSizeParam > 0
+        ? Math.min(Math.floor(pageSizeParam), PAGE_SIZE_MAX)
+        : PAGE_SIZE_DEFAULT;
+
+    const where = armarWhere(filtro, busqueda);
+
+    const [compras, totalCount] = await Promise.all([
+      prisma.compra.findMany({
+        where,
+        orderBy: { fecha: "desc" },
+        include: {
+          proveedor: { select: { nombre: true } },
+          cuenta: { select: { nombre: true, tipo: true } },
+        },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.compra.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      items: compras,
+      totalCount,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(totalCount / pageSize)),
     });
-
-    return NextResponse.json({ items: compras });
   } catch (error: any) {
     console.error("Error al listar compras:", error);
     return NextResponse.json(

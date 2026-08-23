@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, RefreshCw, Loader2 } from "lucide-react";
+import { Plus, Search, RefreshCw, Loader2, Check, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 interface Compra {
@@ -28,6 +28,7 @@ const FILTROS: { key: FiltroKey; label: string }[] = [
 ];
 
 const PAGE_SIZE = 15;
+const DEBOUNCE_MS = 300;
 
 function estadoDeCompra(compra: Compra): { label: string; className: string } {
   if (compra.cancelada) {
@@ -42,25 +43,40 @@ function estadoDeCompra(compra: Compra): { label: string; className: string } {
 export function ComprasListado() {
   const [filtro, setFiltro] = useState<FiltroKey>("todas");
   const [busqueda, setBusqueda] = useState("");
+  const [busquedaDebounced, setBusquedaDebounced] = useState("");
   const [compras, setCompras] = useState<Compra[]>([]);
+  const [totalRegistros, setTotalRegistros] = useState(0);
+  const [totalPaginas, setTotalPaginas] = useState(1);
   const [cargando, setCargando] = useState(true);
   const [recargando, setRecargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accionandoId, setAccionandoId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
 
+  // Debounce del texto de búsqueda antes de mandarlo al servidor
+  useEffect(() => {
+    const timeout = setTimeout(() => setBusquedaDebounced(busqueda.trim()), DEBOUNCE_MS);
+    return () => clearTimeout(timeout);
+  }, [busqueda]);
+
   const cargarCompras = (esRecarga = false) => {
     if (esRecarga) setRecargando(true);
     else setCargando(true);
     setError(null);
 
-    const url = filtro === "todas" ? "/api/compras" : `/api/compras?filtro=${filtro}`;
+    const params = new URLSearchParams();
+    if (filtro !== "todas") params.set("filtro", filtro);
+    if (busquedaDebounced) params.set("q", busquedaDebounced);
+    params.set("page", String(page));
+    params.set("pageSize", String(PAGE_SIZE));
 
-    return fetch(url)
+    return fetch(`/api/compras?${params.toString()}`)
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Error al cargar las compras");
         setCompras(data.items ?? []);
+        setTotalRegistros(data.totalCount ?? 0);
+        setTotalPaginas(data.totalPages ?? 1);
       })
       .catch((err) => setError(err.message || "Error al cargar las compras"))
       .finally(() => {
@@ -72,19 +88,12 @@ export function ComprasListado() {
   useEffect(() => {
     cargarCompras();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtro]);
+  }, [filtro, busquedaDebounced, page]);
 
+  // Si cambia el filtro o la búsqueda, volvemos a la página 1
   useEffect(() => {
     setPage(1);
-  }, [filtro, busqueda]);
-
-  const comprasFiltradas = compras.filter((c) =>
-    (c.proveedor?.nombre ?? "").toLowerCase().includes(busqueda.trim().toLowerCase())
-  );
-
-  const totalRegistros = comprasFiltradas.length;
-  const totalPaginas = Math.max(1, Math.ceil(totalRegistros / PAGE_SIZE));
-  const comprasPagina = comprasFiltradas.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  }, [filtro, busquedaDebounced]);
 
   const ejecutarAccion = async (id: number, accion: "confirmar" | "cancelar") => {
     setAccionandoId(id);
@@ -92,7 +101,12 @@ export function ComprasListado() {
       const res = await fetch(`/api/compras/${id}/${accion}`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Error al ${accion} la compra`);
-      await cargarCompras(true);
+      // Si era el único ítem de esta página y no es la primera, retrocedemos una página
+      if (compras.length === 1 && page > 1) {
+        setPage((p) => p - 1);
+      } else {
+        await cargarCompras(true);
+      }
     } catch (err: any) {
       setError(err.message || `Error al ${accion} la compra`);
     } finally {
@@ -133,7 +147,7 @@ export function ComprasListado() {
                 type="button"
                 onClick={() => setFiltro(f.key)}
                 className={cn(
-                  "shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  "shrink-0 cursor-pointer whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
                   filtro === f.key
                     ? "bg-[#021541] text-white"
                     : "border border-[#c5c6d0] bg-white text-[#45464f] hover:bg-[#eceef0]"
@@ -147,7 +161,7 @@ export function ComprasListado() {
           <button
             type="button"
             onClick={() => cargarCompras(true)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#c5c6d0] text-[#45464f] hover:bg-[#eceef0]"
+            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-[#c5c6d0] text-[#45464f] hover:bg-[#eceef0]"
             aria-label="Actualizar"
           >
             <RefreshCw className={cn("h-4 w-4", recargando && "animate-spin")} />
@@ -160,9 +174,9 @@ export function ComprasListado() {
       <div className="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white">
         {cargando ? (
           <p className="p-8 text-center text-sm text-[#45464f]">Cargando...</p>
-        ) : comprasFiltradas.length === 0 ? (
+        ) : compras.length === 0 ? (
           <p className="p-8 text-center text-sm text-[#45464f]">
-            {busqueda.trim()
+            {busquedaDebounced
               ? "No hay compras que coincidan con la búsqueda."
               : "No hay compras para este filtro."}
           </p>
@@ -188,7 +202,7 @@ export function ComprasListado() {
                   </tr>
                 </thead>
                 <tbody>
-                  {comprasPagina.map((compra) => {
+                  {compras.map((compra) => {
                     const estado = estadoDeCompra(compra);
                     const puedeAccionar = !compra.confirmada && !compra.cancelada;
                     const cargandoFila = accionandoId === compra.id;
@@ -222,22 +236,30 @@ export function ComprasListado() {
                         </td>
                         <td className="px-4 py-4 text-right">
                           {puedeAccionar ? (
-                            <div className="flex items-center justify-end gap-3">
+                            <div className="flex items-center justify-end gap-2">
                               <button
                                 type="button"
                                 disabled={cargandoFila}
                                 onClick={() => ejecutarAccion(compra.id, "confirmar")}
-                                className="text-sm text-[#021541] hover:underline disabled:opacity-50"
+                                aria-label="Confirmar compra"
+                                title="Confirmar"
+                                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#021541] hover:bg-[#e3e6f5] disabled:cursor-not-allowed disabled:opacity-50"
                               >
-                                {cargandoFila ? "..." : "Confirmar"}
+                                {cargandoFila ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Check className="h-4 w-4" />
+                                )}
                               </button>
                               <button
                                 type="button"
                                 disabled={cargandoFila}
                                 onClick={() => ejecutarAccion(compra.id, "cancelar")}
-                                className="text-sm text-[#ba1a1a] hover:underline disabled:opacity-50"
+                                aria-label="Cancelar compra"
+                                title="Cancelar"
+                                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[#ba1a1a] hover:bg-[#fbe4e4] disabled:cursor-not-allowed disabled:opacity-50"
                               >
-                                Cancelar
+                                <X className="h-4 w-4" />
                               </button>
                             </div>
                           ) : (
@@ -258,7 +280,7 @@ export function ComprasListado() {
                   <Loader2 className="h-5 w-5 animate-spin text-[#021541]" />
                 </div>
               )}
-              {comprasPagina.map((compra) => {
+              {compras.map((compra) => {
                 const estado = estadoDeCompra(compra);
                 const puedeAccionar = !compra.confirmada && !compra.cancelada;
                 const cargandoFila = accionandoId === compra.id;
@@ -295,22 +317,30 @@ export function ComprasListado() {
                     </div>
 
                     {puedeAccionar && (
-                      <div className="mt-3 flex items-center gap-4">
+                      <div className="mt-3 flex items-center gap-2">
                         <button
                           type="button"
                           disabled={cargandoFila}
                           onClick={() => ejecutarAccion(compra.id, "confirmar")}
-                          className="text-sm font-medium text-[#021541] disabled:opacity-50"
+                          aria-label="Confirmar compra"
+                          title="Confirmar"
+                          className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-[#021541] hover:bg-[#e3e6f5] disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          {cargandoFila ? "..." : "Confirmar"}
+                          {cargandoFila ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Check className="h-4 w-4" />
+                          )}
                         </button>
                         <button
                           type="button"
                           disabled={cargandoFila}
                           onClick={() => ejecutarAccion(compra.id, "cancelar")}
-                          className="text-sm font-medium text-[#ba1a1a] disabled:opacity-50"
+                          aria-label="Cancelar compra"
+                          title="Cancelar"
+                          className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-[#ba1a1a] hover:bg-[#fbe4e4] disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          Cancelar
+                          <X className="h-4 w-4" />
                         </button>
                       </div>
                     )}
@@ -332,7 +362,7 @@ export function ComprasListado() {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="px-3 py-1.5 rounded-lg border border-[#c5c6d0] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#eceef0]"
+              className="cursor-pointer rounded-lg border border-[#c5c6d0] px-3 py-1.5 hover:bg-[#eceef0] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Anterior
             </button>
@@ -342,7 +372,7 @@ export function ComprasListado() {
             <button
               onClick={() => setPage((p) => Math.min(totalPaginas, p + 1))}
               disabled={page >= totalPaginas}
-              className="px-3 py-1.5 rounded-lg border border-[#c5c6d0] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#eceef0]"
+              className="cursor-pointer rounded-lg border border-[#c5c6d0] px-3 py-1.5 hover:bg-[#eceef0] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Siguiente
             </button>

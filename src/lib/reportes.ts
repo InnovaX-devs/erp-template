@@ -7,6 +7,13 @@ import type {
   TopProductoItem,
 } from "@/types/reporte";
 
+import {
+  fechaISOAR,
+  inicioDiaAR,
+  inicioFinHoyAR,
+  siguienteDiaAR,
+} from "@/lib/timezone";
+
 // --- Tipos de entrada ya "aplanados" desde Prisma (ver queries.ts) ---
 
 export type ItemVentaParaReporte = {
@@ -182,27 +189,48 @@ export function calcularReporte(ventas: VentaParaReporte[], egresosGastosARS: nu
 
 export type TabReporte = "diario" | "semanal" | "mensual" | "periodo" | "cuenta";
 
-function inicioDelDia(d: Date) {
-  const r = new Date(d);
-  r.setHours(0, 0, 0, 0);
-  return r;
+function fechaASumaDias(fecha: string, dias: number): string {
+  const date = new Date(`${fecha}T00:00:00Z`);
+
+  date.setUTCDate(date.getUTCDate() + dias);
+
+  return date.toISOString().slice(0, 10);
 }
-function finDelDia(d: Date) {
-  const r = new Date(d);
-  r.setHours(23, 59, 59, 999);
-  return r;
+
+function inicioDelDiaAR(d: Date): Date {
+  return inicioDiaAR(fechaISOAR(d));
 }
-function inicioDeSemana(d: Date) {
-  const r = inicioDelDia(d);
-  const dia = r.getDay();
+
+function finDelDiaAR(d: Date): Date {
+  const fecha = fechaISOAR(d);
+  const siguiente = siguienteDiaAR(fecha);
+
+  return inicioDiaAR(siguiente);
+}
+
+function inicioDeSemanaAR(d: Date): Date {
+  const fecha = fechaISOAR(d);
+
+  // Usamos UTC solamente para calcular el día de la semana
+  // sobre la fecha calendario YYYY-MM-DD.
+  const auxiliar = new Date(`${fecha}T00:00:00Z`);
+
+  const dia = auxiliar.getUTCDay();
+
+  // Lunes = inicio de semana
   const diff = dia === 0 ? 6 : dia - 1;
-  r.setDate(r.getDate() - diff);
-  return r;
+
+  const lunes = fechaASumaDias(fecha, -diff);
+
+  return inicioDiaAR(lunes);
 }
-function inicioDeMes(d: Date) {
-  const r = inicioDelDia(d);
-  r.setDate(1);
-  return r;
+
+function inicioDeMesAR(d: Date): Date {
+  const fecha = fechaISOAR(d);
+
+  const [anio, mes] = fecha.split("-");
+
+  return inicioDiaAR(`${anio}-${mes}-01`);
 }
 
 /** Parsea "yyyy-mm-dd" como fecha LOCAL. A diferencia de `new Date(str)`,
@@ -219,26 +247,56 @@ export function rangoParaTab(
   hastaParam?: string
 ): { desde: Date; hasta: Date } {
   const ahora = new Date();
+
   switch (tab) {
-    case "diario":
-      return { desde: inicioDelDia(ahora), hasta: finDelDia(ahora) };
-    case "semanal":
-      return { desde: inicioDeSemana(ahora), hasta: finDelDia(ahora) };
-    case "mensual":
-      return { desde: inicioDeMes(ahora), hasta: finDelDia(ahora) };
+    case "diario": {
+      const { inicio, fin } = inicioFinHoyAR();
+
+      return {
+        desde: inicio,
+        hasta: fin,
+      };
+    }
+
+    case "semanal": {
+      const desde = inicioDeSemanaAR(ahora);
+      const { fin: hasta } = inicioFinHoyAR();
+
+      return {
+        desde,
+        hasta,
+      };
+    }
+
+    case "mensual": {
+      const desde = inicioDeMesAR(ahora);
+      const { fin: hasta } = inicioFinHoyAR();
+
+      return {
+        desde,
+        hasta,
+      };
+    }
+
     case "periodo":
     case "cuenta":
-    default:
+    default: {
+      const fechaDesde =
+        desdeParam ?? fechaISOAR(ahora);
+
+      const fechaHasta =
+        hastaParam ?? fechaISOAR(ahora);
+
       return {
-        desde: desdeParam ? inicioDelDia(parseFechaLocal(desdeParam)) : inicioDeMes(ahora),
-        hasta: hastaParam ? finDelDia(parseFechaLocal(hastaParam)) : finDelDia(ahora),
+        desde: inicioDiaAR(fechaDesde),
+        hasta: inicioDiaAR(siguienteDiaAR(fechaHasta)),
       };
+    }
   }
 }
 
-/** Clave "yyyy-mm-dd" en hora local, para agrupar por día calendario. */
 export function claveFecha(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return fechaISOAR(d);
 }
 
 /**
@@ -256,13 +314,19 @@ export function calcularIngresosPorDia(
 ): IngresoPorDia[] {
   const porDia = new Map<string, { ingresosARS: number; costoARS: number; items: number }>();
 
-  const cursor = new Date(desde);
-  cursor.setHours(0, 0, 0, 0);
-  const fin = new Date(hasta);
-  fin.setHours(0, 0, 0, 0);
-  while (cursor <= fin) {
-    porDia.set(claveFecha(cursor), { ingresosARS: 0, costoARS: 0, items: 0 });
-    cursor.setDate(cursor.getDate() + 1);
+  let fechaCursor = fechaISOAR(desde);
+  const fechaFin = fechaISOAR(
+    new Date(hasta.getTime() - 1)
+  );
+
+  while (fechaCursor <= fechaFin) {
+    porDia.set(fechaCursor, {
+      ingresosARS: 0,
+      costoARS: 0,
+      items: 0,
+    });
+
+    fechaCursor = siguienteDiaAR(fechaCursor);
   }
 
   for (const venta of ventas) {
@@ -330,7 +394,6 @@ export function calcularTopProductos(ventas: VentaParaReporte[], limite = 10): T
     .slice(0, limite);
 }
 
-/** true si `a` y `b` caen en el mismo día calendario (mismo huso local). */
 export function esMismoDia(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  return fechaISOAR(a) === fechaISOAR(b);
 }

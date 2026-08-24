@@ -1,5 +1,6 @@
 // components/finanzas/top5-gastos-card.tsx
 import type { TopGastoDTO } from "@/types/gasto-analisis";
+import { formatFechaAR } from "@/lib/timezone";
 
 export function Top5GastosCard({ gastos }: { gastos: TopGastoDTO[] }) {
   return (
@@ -14,7 +15,7 @@ export function Top5GastosCard({ gastos }: { gastos: TopGastoDTO[] }) {
               <div>
                 <p className="text-text">{g.concepto}</p>
                 <p className="text-xs text-text-dim">
-                  {g.categoria} · {new Date(g.fecha).toLocaleDateString("es-AR")}
+                  {g.categoria} · {formatFechaAR(new Date(g.fecha))}
                 </p>
               </div>
               <span className="font-medium text-text">

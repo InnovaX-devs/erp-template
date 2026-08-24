@@ -4,6 +4,7 @@ import Select from "@/components/ui/select";
 import DateInput from "@/components/ui/date-input";
 import type { CuentaDTO } from "@/types/cuenta";
 import { ETIQUETAS_CONCEPTO, type ConceptoMovimientoCaja } from "@/types/movimiento-caja";
+import { fechaISOAR } from "@/lib/timezone";
 
 export type PeriodoRapido = "HOY" | "SEMANA" | "MES" | "PERSONALIZADO";
 
@@ -22,22 +23,36 @@ interface Props {
   cuentas: CuentaDTO[];
 }
 
-function calcularRango(periodo: PeriodoRapido): { desde: string; hasta: string } {
-  const hoy = new Date();
-  const hastaStr = hoy.toISOString().slice(0, 10);
+function calcularRango(
+  periodo: PeriodoRapido
+): { desde: string; hasta: string } {
+  const hoy = fechaISOAR();
 
   if (periodo === "HOY") {
-    return { desde: hastaStr, hasta: hastaStr };
+    return { desde: hoy, hasta: hoy };
   }
+
   if (periodo === "SEMANA") {
-    const inicio = new Date(hoy);
-    inicio.setDate(hoy.getDate() - hoy.getDay());
-    return { desde: inicio.toISOString().slice(0, 10), hasta: hastaStr };
+    const fecha = new Date(`${hoy}T00:00:00-03:00`);
+
+    // Domingo como inicio de semana, igual que tu lógica anterior.
+    fecha.setDate(fecha.getDate() - fecha.getDay());
+
+    return {
+      desde: fechaISOAR(fecha),
+      hasta: hoy,
+    };
   }
+
   if (periodo === "MES") {
-    const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-    return { desde: inicio.toISOString().slice(0, 10), hasta: hastaStr };
+    const [anio, mes] = hoy.split("-");
+
+    return {
+      desde: `${anio}-${mes}-01`,
+      hasta: hoy,
+    };
   }
+
   return { desde: "", hasta: "" };
 }
 

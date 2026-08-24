@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { PresupuestoListado } from "../../app/(dashboard)/presupuestos/queries";
 import DetallePresupuestoModal from "@/components/presupuestos/DetallePresupuestoModal";
+import { formatFechaAR } from "@/lib/timezone";
 
 const ESTADO_STYLES: Record<string, string> = {
   BORRADOR: "bg-[#e0e3e5] text-[#45464f]",
@@ -51,9 +52,11 @@ export default function PresupuestosTable({ presupuestos }: { presupuestos: Pres
                       <td className="px-4 py-3 text-right font-mono font-medium text-[#191c1e]">
                         ${p.total.toFixed(2)}
                       </td>
-                      <td className="px-4 py-3 text-[#45464f]">{p.fecha.toLocaleDateString("es-AR")}</td>
                       <td className="px-4 py-3 text-[#45464f]">
-                        {p.fechaVencimiento.toLocaleDateString("es-AR")}
+                        {formatFechaAR(p.fecha)}
+                      </td>
+                      <td className="px-4 py-3 text-[#45464f]">
+                        {formatFechaAR(p.fechaVencimiento)}
                       </td>
                       <td className="px-4 py-3">
                         <span
@@ -106,8 +109,8 @@ export default function PresupuestosTable({ presupuestos }: { presupuestos: Pres
                   <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                     <p className="font-mono font-semibold text-[#191c1e]">${p.total.toFixed(2)}</p>
                     <p className="text-xs text-[#45464f]">
-                      {p.fecha.toLocaleDateString("es-AR")} · Vence{" "}
-                      {p.fechaVencimiento.toLocaleDateString("es-AR")}
+                      {formatFechaAR(p.fecha)} · Vence{" "}
+                      {formatFechaAR(p.fechaVencimiento)}
                     </p>
                   </div>
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { obtenerHistorialDeuda } from "@/app/(dashboard)/clientes/actions";
+import { formatFechaHoraAR } from "@/lib/timezone";
 
 type EventoHistorial = {
   id: string;
@@ -20,15 +21,6 @@ function formatARS(n: number) {
   return n.toLocaleString("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 2 });
 }
 
-function formatFecha(iso: string) {
-  return new Date(iso).toLocaleString("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "2-digit",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
 
 export default function HistorialDeudaModal({
   cliente,
@@ -101,7 +93,8 @@ export default function HistorialDeudaModal({
                 </span>
               </div>
               <p className="text-xs text-[#8a8c94] mt-2">
-                {formatFecha(e.fecha)} · Saldo: {formatARS(e.saldoAntes)} → {formatARS(e.saldoDespues)}
+                {formatFechaHoraAR(new Date(e.fecha))} · Saldo:{" "}
+                  {formatARS(e.saldoAntes)} → {formatARS(e.saldoDespues)}
                 {e.tipo === "venta" ? ` · Venta #${e.ventaId}` : ""}
               </p>
             </div>

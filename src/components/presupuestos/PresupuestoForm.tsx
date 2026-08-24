@@ -10,6 +10,8 @@ import { calcularFechaVencimiento, calcularTotalPresupuesto } from "@/lib/presup
 import { toArs } from "@/lib/currency";
 import type { ItemPresupuestoLocal, ProductoBusqueda } from "../../types/presupuesto";
 import type { ClienteBasico } from "@/components/clientes/ClienteForm";
+import { formatFechaAR } from "@/lib/timezone";
+
 
 const VIGENCIAS = [7, 15, 30] as const;
 
@@ -163,7 +165,7 @@ export default function PresupuestoForm() {
             ))}
           </div>
           <p className="text-xs text-[#45464f] mt-1">
-            Vence: {fechaVencimiento.toLocaleDateString("es-AR")}
+            Vence: {formatFechaAR(fechaVencimiento)}
           </p>
         </div>
 

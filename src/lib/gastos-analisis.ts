@@ -1,15 +1,4 @@
-// lib/gastos-analisis.ts
 
-/**
- * Calcula la variación entre dos montos, contemplando el caso en que
- * el período anterior no tuvo gastos (división por cero).
- *
- * - anterior > 0            -> porcentaje normal
- * - anterior === 0, actual === 0 -> porcentaje 0 (sin cambios)
- * - anterior === 0, actual > 0   -> porcentaje null (no expresable como %),
- *                                    se marca sinDatosPrevios para que la UI
- *                                    muestre "Sin datos previos" en vez de "+∞%"
- */
 export function calcularVariacion(actual: number, anterior: number) {
   const monto = actual - anterior;
   if (anterior === 0) {

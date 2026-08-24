@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { calcularEstadoEfectivo, type EstadoPresupuesto } from "@/lib/presupuestos";
+import { inicioDiaAR } from "@/lib/timezone";
 
 export type PresupuestoListado = {
   id: number;
@@ -24,8 +25,17 @@ export async function obtenerPresupuestos(
 
   if (filtros.desde || filtros.hasta) {
     where.fecha = {
-      ...(filtros.desde ? { gte: new Date(filtros.desde) } : {}),
-      ...(filtros.hasta ? { lte: new Date(filtros.hasta) } : {}),
+      ...(filtros.desde
+        ? { gte: inicioDiaAR(filtros.desde) }
+        : {}),
+      ...(filtros.hasta
+        ? {
+            lt: new Date(
+              inicioDiaAR(filtros.hasta).getTime() +
+                24 * 60 * 60 * 1000
+            ),
+          }
+        : {}),
     };
   }
 

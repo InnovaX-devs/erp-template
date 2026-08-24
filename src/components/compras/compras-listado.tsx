@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, Search, RefreshCw, Loader2, Check, X } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { formatFechaAR } from "@/lib/timezone";
 
 interface Compra {
   id: number;
@@ -232,7 +233,7 @@ export function ComprasListado() {
                           </span>
                         </td>
                         <td className="px-4 py-4 text-[#45464f]">
-                          {new Date(compra.fecha).toLocaleDateString("es-AR")}
+                          {formatFechaAR(new Date(compra.fecha))}
                         </td>
                         <td className="px-4 py-4 text-right">
                           {puedeAccionar ? (
@@ -313,7 +314,9 @@ export function ComprasListado() {
                           </span>
                         )}
                       </p>
-                      <p className="text-xs text-[#45464f]">{new Date(compra.fecha).toLocaleDateString("es-AR")}</p>
+                      <p className="text-xs text-[#45464f]">
+                        {formatFechaAR(new Date(compra.fecha))}
+                      </p>
                     </div>
 
                     {puedeAccionar && (

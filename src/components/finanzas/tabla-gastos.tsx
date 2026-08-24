@@ -4,6 +4,7 @@ import { Fragment, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import type { GastoDTO } from "@/types/gasto";
+import { formatFechaAR } from "@/lib/timezone";
 
 interface Props {
   gastos: GastoDTO[];
@@ -48,7 +49,7 @@ export function TablaGastos({ gastos }: Props) {
                     <td className="px-4 py-3 text-text-dim">{g.categoria?.nombre ?? "—"}</td>
                     <td className="px-4 py-3 text-text-dim">{g.proveedor?.nombre ?? "—"}</td>
                     <td className="px-4 py-3 text-text-dim">
-                      {new Date(g.fecha).toLocaleDateString("es-AR")}
+                      {formatFechaAR(new Date(g.fecha))}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-text">
                       {formatCurrency(g.monto, "ARS")}
@@ -125,7 +126,7 @@ export function TablaGastos({ gastos }: Props) {
                     {g.proveedor?.nombre ? ` · ${g.proveedor.nombre}` : ""}
                   </p>
                   <p className="mt-0.5 text-xs text-text-dim">
-                    {new Date(g.fecha).toLocaleDateString("es-AR")}
+                    {formatFechaAR(new Date(g.fecha))}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">

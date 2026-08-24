@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { guardarConfiguracion } from "@/app/(dashboard)/configuracion/actions";
+import { CambiarPasswordModal } from "@/components/layout/cambiar-password-modal";
 
 interface ConfiguracionFormProps {
   configuracion: {
@@ -26,6 +27,8 @@ export function ConfiguracionForm({ configuracion }: ConfiguracionFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [guardadoOk, setGuardadoOk] = useState(false);
+
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
 
   function handleSeleccionarArchivo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -265,6 +268,20 @@ export function ConfiguracionForm({ configuracion }: ConfiguracionFormProps) {
         {guardando ? "Guardando..." : "Guardar cambios"}
       </button>
       </form>
+
+      {/* Seguridad (fuera del <form>: no queremos que dispare el submit de configuración) */}
+      <div className="mx-auto max-w-2xl rounded-2xl border border-[#E2E8F0] bg-white p-6">
+        <h2 className="mb-4 text-base font-semibold text-[#191c1e]">Seguridad</h2>
+        <button
+          type="button"
+          onClick={() => setPasswordModalOpen(true)}
+          className="rounded-lg border cursor-pointer border-[#c5c6d0] px-3 py-1.5 text-sm font-medium text-[#191c1e] hover:bg-[#eceef0]"
+        >
+          Cambiar contraseña
+        </button>
+      </div>
+
+      <CambiarPasswordModal open={passwordModalOpen} onClose={() => setPasswordModalOpen(false)} />
     </div>
   );
 }

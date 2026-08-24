@@ -2,13 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, Check, X as XIcon, KeyRound } from "lucide-react";
+import Link from "next/link";
+import { Menu, Check, X as XIcon, Settings } from "lucide-react";
 import { toast } from "sonner";
-import { NAV_ITEMS, esGrupo } from "@/lib/nav-items";
 import { LogoutButton } from "@/components/layout/logout-button";
 import { useSidebar } from "@/components/layout/sidebar-context";
-import { CambiarPasswordModal } from "@/components/layout/cambiar-password-modal"; // ⚠️ ajustar si tu ruta real es otra
-import { actualizarCotizacionRapida } from "@/app/(dashboard)/configuracion/actions"; // ⚠️ ajustar si tu ruta real es otra
+import { actualizarCotizacionRapida } from "@/app/(dashboard)/configuracion/actions"; 
+import { NAV_ITEMS, esGrupo, EXTRA_TITLES } from "@/lib/nav-items";
 
 function useSectionTitle() {
   const pathname = usePathname();
@@ -34,17 +34,24 @@ function useSectionTitle() {
     }
   }
 
+  for (const [href, label] of Object.entries(EXTRA_TITLES)) {
+    evaluar(href, label);
+  }
+
   return mejorLabel ?? "Panel";
 }
 
 export function Topbar({ cotizacionUSD }: { cotizacionUSD: number }) {
   const title = useSectionTitle();
+  const pathname = usePathname();
   const { toggle } = useSidebar();
 
   const [editando, setEditando] = useState(false);
   const [valor, setValor] = useState(String(cotizacionUSD));
   const [pendiente, startTransition] = useTransition();
-  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+
+  const configuracionActiva =
+    pathname === "/configuracion" || pathname?.startsWith("/configuracion/");
 
   const cotizacionFormateada = new Intl.NumberFormat("es-AR", {
     minimumFractionDigits: 0,
@@ -142,7 +149,7 @@ export function Topbar({ cotizacionUSD }: { cotizacionUSD: number }) {
           <button
             type="button"
             onClick={iniciarEdicion}
-            className="hidden items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 transition-colors hover:border-primary sm:flex"
+            className="hidden items-center cursor-pointer gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 transition-colors hover:border-primary sm:flex"
             title="Editar cotización"
           >
             <span className="text-xs text-text/60">USD</span>
@@ -150,20 +157,22 @@ export function Topbar({ cotizacionUSD }: { cotizacionUSD: number }) {
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={() => setPasswordModalOpen(true)}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-text hover:bg-surface-hover"
-          title="Cambiar contraseña"
-          aria-label="Cambiar contraseña"
+        <Link
+          href="/configuracion"
+          className={
+            configuracionActiva
+              ? "flex h-9 w-9 items-center justify-center rounded-lg border border-primary bg-primary/10 text-primary"
+              : "flex h-9 w-9 items-center justify-center rounded-lg border border-border text-text hover:bg-surface-hover"
+          }
+          title="Configuración"
+          aria-label="Configuración"
+          aria-current={configuracionActiva ? "page" : undefined}
         >
-          <KeyRound className="h-4 w-4" />
-        </button>
+          <Settings className="h-4 w-4" />
+        </Link>
 
         <LogoutButton />
       </div>
-
-      <CambiarPasswordModal open={passwordModalOpen} onClose={() => setPasswordModalOpen(false)} />
     </header>
   );
 }

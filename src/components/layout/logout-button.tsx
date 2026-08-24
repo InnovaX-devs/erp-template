@@ -23,7 +23,7 @@ export function LogoutButton() {
       type="button"
       onClick={handleLogout}
       disabled={isLoading}
-      className="inline-flex items-center gap-2 rounded-lg border border-ink/10 px-3 py-2 text-sm text-ink/70 transition-colors hover:border-clay/40 hover:bg-clay/5 hover:text-clay disabled:opacity-50"
+      className="inline-flex items-center cursor-pointer gap-2 rounded-lg border border-ink/10 px-3 py-2 text-sm text-ink/70 transition-colors hover:border-clay/40 hover:bg-clay/5 hover:text-clay disabled:opacity-50"
     >
       <LogOut className="h-4 w-4" strokeWidth={1.75} />
       <span className="hidden sm:inline">Cerrar sesión</span>

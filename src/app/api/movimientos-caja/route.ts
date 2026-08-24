@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
-
+import { inicioDiaAR } from "@/lib/timezone";
 
 export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
@@ -13,10 +13,16 @@ export async function GET(request: NextRequest) {
 
   const where: Prisma.MovimientoCajaWhereInput = {
     ...(desde || hasta
+          ? {
+              fecha: {
+                ...(desde ? { gte: inicioDiaAR(desde) } : {}),
+    ...(hasta
       ? {
-          fecha: {
-            ...(desde ? { gte: new Date(`${desde}T00:00:00-03:00`) } : {}),
-            ...(hasta ? { lte: new Date(`${hasta}T23:59:59-03:00`) } : {}),
+          lt: new Date(
+            inicioDiaAR(hasta).getTime() + 24 * 60 * 60 * 1000
+          ),
+        }
+      : {}),
           },
         }
       : {}),

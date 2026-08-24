@@ -3,6 +3,7 @@
 import type { MovimientoCajaDTO } from "@/types/movimiento-caja";
 import { ETIQUETAS_CONCEPTO } from "@/types/movimiento-caja";
 import { formatCurrency } from "@/lib/currency";
+import { formatFechaHoraAR } from "@/lib/timezone";
 
 export function TablaMovimientos({ movimientos }: { movimientos: MovimientoCajaDTO[] }) {
   if (movimientos.length === 0) {
@@ -32,12 +33,7 @@ export function TablaMovimientos({ movimientos }: { movimientos: MovimientoCajaD
             return (
               <tr key={m.id} className="border-b border-border bg-surface last:border-0">
                 <td className="px-4 py-3 text-text-dim">
-                  {new Date(m.fecha).toLocaleString("es-AR", {
-                    day: "numeric",
-                    month: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatFechaHoraAR(new Date(m.fecha))}
                 </td>
                 <td className="px-4 py-3">
                   <span

@@ -7,11 +7,19 @@ import { FiltrosFlujoCaja, type FiltrosFlujo } from "@/components/finanzas/filtr
 import { TablaMovimientos } from "@/components/finanzas/tabla-movimientos";
 import type { CuentaDTO } from "@/types/cuenta";
 import type { MovimientoCajaDTO } from "@/types/movimiento-caja";
+import { fechaISOAR } from "@/lib/timezone";
+
+const hoy = fechaISOAR();
+
+const [anio, mes] = hoy.split("-");
 
 const FILTROS_INICIALES: FiltrosFlujo = {
   periodoRapido: "MES",
-  desde: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10),
-  hasta: new Date().toISOString().slice(0, 10),
+
+  desde: `${anio}-${mes}-01`,
+
+  hasta: hoy,
+
   tipo: "",
   cuentaId: "",
   concepto: "",

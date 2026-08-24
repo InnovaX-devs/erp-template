@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { GastoFormModal } from "@/components/gastos/gasto-form-modal";
+import { formatFechaAR } from "@/lib/timezone";
 
 interface Gasto {
   id: number;
@@ -216,7 +217,7 @@ export function GastosTab() {
                     <td className="py-3 pr-4 text-text-dim">{g.categoria?.nombre || "-"}</td>
                     <td className="py-3 pr-4 text-text-dim">{g.proveedor?.nombre || "-"}</td>
                     <td className="py-3 pr-4 text-text-dim">
-                      {new Date(g.fecha).toLocaleDateString("es-AR")}
+                      {formatFechaAR(new Date(g.fecha))}
                     </td>
                     <td className="py-3 pr-4">
                       <span

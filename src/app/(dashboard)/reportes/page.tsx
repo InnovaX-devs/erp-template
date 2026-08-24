@@ -9,6 +9,7 @@ import { DesgloseMetodoCobro } from "@/components/reportes/desglose-metodo-cobro
 import { BotonExportarPdf } from "../../../components/reportes/BotonExportarPdf";
 import { IngresosPorDia } from "@/components/reportes/ingresos-por-dia";
 import { TopProductos } from "@/components/reportes/top-productos";
+import { formatFechaAR } from "@/lib/timezone";
 
 type SearchParams = {
   tab?: string;
@@ -30,9 +31,11 @@ export default async function ReportesPage({
   const rango = rangoParaTab(tab, params.desde, params.hasta);
   const faltaPeriodo = tab === "periodo" && (!params.desde || !params.hasta);
 
-  const rangoTexto = esMismoDia(rango.desde, rango.hasta)
-    ? rango.desde.toLocaleDateString("es-AR")
-    : `${rango.desde.toLocaleDateString("es-AR")} — ${rango.hasta.toLocaleDateString("es-AR")}`;
+  const hastaVisible = new Date(rango.hasta.getTime() - 1);
+
+  const rangoTexto = esMismoDia(rango.desde, hastaVisible)
+    ? formatFechaAR(rango.desde)
+    : `${formatFechaAR(rango.desde)} — ${formatFechaAR(hastaVisible)}`;
 
   return (
     <div className="space-y-4 p-4 print:p-0">

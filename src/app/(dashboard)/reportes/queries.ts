@@ -27,7 +27,7 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
   const [ventasRaw, config] = await Promise.all([
     prisma.venta.findMany({
       where: {
-        fecha: { gte: desde, lte: hasta },
+        fecha: { gte: desde, lt: hasta },
         estadoPago: { notIn: [...ESTADOS_EXCLUIDOS] },
       },
       select: {
@@ -105,10 +105,6 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
           // Decant: costo proporcional a los ml vendidos, no el frasco entero.
           costoUnitarioARS = (costoFrascoARS / item.producto.contenidoMl) * mlDecant;
         } else {
-          // FRASCO completo, o decant con producto sin contenidoMl cargado
-          // (fallback defensivo: mejor sobreestimar el costo que dividir por
-          // cero. Esto último señala un producto mal cargado: tiene
-          // seVendePorDecant activado pero le falta contenidoMl).
           costoUnitarioARS = costoFrascoARS;
         }
       }
@@ -133,8 +129,8 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
   }));
 
   const movimientosEgreso = await prisma.movimientoCaja.findMany({
-    where: { tipo: "EGRESO", concepto: "GASTO", fecha: { gte: desde, lte: hasta } },
-    select: { monto: true, fecha: true, cuenta: { select: { tipo: true } } }, // + fecha
+    where: { tipo: "EGRESO", concepto: "GASTO", fecha: { gte: desde, lt: hasta } },
+    select: { monto: true, fecha: true, cuenta: { select: { tipo: true } } }, 
   });
 
   let egresosGastosARS = 0;

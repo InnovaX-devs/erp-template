@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma, CampoPrecio, OrigenCambioPrecio } from "@prisma/client";
+import { inicioDiaAR } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 
@@ -47,10 +48,19 @@ export async function GET(request: NextRequest) {
       ...(campo ? { campo } : {}),
       ...(origen ? { origen } : {}),
       ...(fechaDesde || fechaHasta
-        ? {
-            fecha: {
-              ...(fechaDesde ? { gte: new Date(fechaDesde) } : {}),
-              ...(fechaHasta ? { lte: new Date(`${fechaHasta}T23:59:59.999`) } : {}),
+  ? {
+      fecha: {
+        ...(fechaDesde
+                ? { gte: inicioDiaAR(fechaDesde) }
+                : {}),
+              ...(fechaHasta
+                ? {
+                    lt: new Date(
+                      inicioDiaAR(fechaHasta).getTime() +
+                        24 * 60 * 60 * 1000
+                    ),
+                  }
+                : {}),
             },
           }
         : {}),

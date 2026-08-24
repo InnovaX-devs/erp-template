@@ -1,4 +1,3 @@
-// components/finanzas/analisis-gastos-tab.tsx
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -10,10 +9,17 @@ import { Top5GastosCard } from "./top5-gastos-card";
 import { GraficoEvolucionMensual } from "./grafico-evolucion-mensual";
 import { TablaHistoricoMensual } from "./tabla-historico-mensual";
 import type { AnalisisGastosResponse } from "@/types/gasto-analisis";
+import { fechaISOAR } from "@/lib/timezone";
 
-function mesActualISO() {
-  const d = new Date();
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+function mesActualISO(offset = 0) {
+  const hoy = fechaISOAR();
+  const [anio, mes] = hoy.split("-").map(Number);
+
+  const fecha = new Date(anio, mes - 1 - offset, 1);
+
+  return `${fecha.getFullYear()}-${String(
+    fecha.getMonth() + 1
+  ).padStart(2, "0")}`;
 }
 
 export function AnalisisGastosTab() {

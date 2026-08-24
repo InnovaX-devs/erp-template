@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { EstadoPago, TipoPrecioVenta } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { unstable_cache } from "next/cache";
+import { inicioDiaAR } from "@/lib/timezone";
 import type {
   FiltrosVentas,
   ResultadoListadoVentas,
@@ -315,10 +316,20 @@ export async function listarVentas(filtros: FiltrosVentas): Promise<ResultadoLis
   }
 
   if (fechaDesde || fechaHasta) {
-      where.fecha = {};
-      if (fechaDesde) where.fecha.gte = new Date(`${fechaDesde}T00:00:00-03:00`);
-      if (fechaHasta) where.fecha.lte = new Date(`${fechaHasta}T23:59:59-03:00`);
+    where.fecha = {};
+
+    if (fechaDesde) {
+      where.fecha.gte = inicioDiaAR(fechaDesde);
     }
+
+    if (fechaHasta) {
+      const inicioDiaSiguiente = new Date(
+        inicioDiaAR(fechaHasta).getTime() + 24 * 60 * 60 * 1000
+      );
+
+      where.fecha.lt = inicioDiaSiguiente;
+    }
+  }
 
   const [ventas, totalRegistros, configuracion] = await Promise.all([
     prisma.venta.findMany({
@@ -480,10 +491,19 @@ export async function listarPedidos(filtros: FiltrosPedidos): Promise<ResultadoL
 
   if (fechaDesde || fechaHasta) {
     where.fecha = {};
-    if (fechaDesde) where.fecha.gte = new Date(`${fechaDesde}T00:00:00-03:00`);
-    if (fechaHasta) where.fecha.lte = new Date(`${fechaHasta}T23:59:59-03:00`);
-  }
 
+    if (fechaDesde) {
+      where.fecha.gte = inicioDiaAR(fechaDesde);
+    }
+
+    if (fechaHasta) {
+      const inicioDiaSiguiente = new Date(
+        inicioDiaAR(fechaHasta).getTime() + 24 * 60 * 60 * 1000
+      );
+
+      where.fecha.lt = inicioDiaSiguiente;
+    }
+  }
   const ventas = await prisma.venta.findMany({
     where,
     orderBy: { fecha: orden === "MAS_NUEVO" ? "desc" : "asc" },

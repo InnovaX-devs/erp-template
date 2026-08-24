@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { obtenerReporte } from "../../(dashboard)/reportes/queries";
 import { rangoParaTab } from "@/lib/reportes";
+import { formatHoraAR, inicioFinHoyAR } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 
@@ -25,10 +26,7 @@ function descripcionMovimiento(m: {
 }
 
 export async function GET() {
-  const inicioHoy = new Date();
-  inicioHoy.setHours(0, 0, 0, 0);
-  const finHoy = new Date(inicioHoy);
-  finHoy.setDate(finHoy.getDate() + 1);
+  const { inicio: inicioHoy, fin: finHoy } = inicioFinHoyAR();
 
   const configuracion = await prisma.configuracion.findUnique({
     where: { id: "singleton" },
@@ -47,9 +45,7 @@ export async function GET() {
     saldoTotal += c.tipo.endsWith("USD") ? c.saldoActual * cotizacionActual : c.saldoActual;
   }
 
-  // --- Ganancia de hoy: MISMA lógica que Reportes (prorrateada por lo
-  // efectivamente cobrado, neta de gastos GASTO del día). No se recalcula acá
-  // aparte para evitar que dashboard y reportes puedan desincronizarse. ---
+
   const reporteHoy = await obtenerReporte(rangoParaTab("diario"));
   const gananciaHoyARS = reporteHoy.kpis.gananciaNetaARS;
   const cantidadVentasHoy = reporteHoy.kpis.cantidadVentas;
@@ -74,7 +70,7 @@ export async function GET() {
 
   const movimientos = movimientosHoy.slice(0, 10).map((m) => ({
     id: m.id,
-    hora: m.fecha.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }),
+    hora: formatHoraAR(m.fecha),
     descripcion: descripcionMovimiento(m),
     monto: m.monto,
     moneda: m.cuenta.tipo.endsWith("USD") ? "USD" as const : "ARS" as const,

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma, type EstadoPago } from "@prisma/client";
+import { inicioDiaAR } from "@/lib/timezone";
 import {
   PRESENTACIONES_DECANT,
   calcularIngresoDecantsARS,
@@ -43,8 +44,18 @@ export async function obtenerReporteDecants(
 
   if (filtros.desde || filtros.hasta) {
     where.fecha = {
-      ...(filtros.desde ? { gte: new Date(filtros.desde) } : {}),
-      ...(filtros.hasta ? { lte: new Date(filtros.hasta) } : {}),
+      ...(filtros.desde
+        ? { gte: inicioDiaAR(filtros.desde) }
+        : {}),
+
+      ...(filtros.hasta
+        ? {
+            lt: new Date(
+              inicioDiaAR(filtros.hasta).getTime() +
+                24 * 60 * 60 * 1000
+            ),
+          }
+        : {}),
     };
   }
 

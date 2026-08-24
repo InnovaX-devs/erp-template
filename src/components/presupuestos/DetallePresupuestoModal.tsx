@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { obtenerDetallePresupuesto, type DetallePresupuesto } from "@/app/(dashboard)/presupuestos/actions";
-// ⚠️ Ajustá el import de arriba si tu alias @/ no apunta a src/ de esta forma
+import { formatFechaAR } from "@/lib/timezone";
 
 const ESTADO_STYLES: Record<string, string> = {
   BORRADOR: "bg-[#e0e3e5] text-[#45464f]",
@@ -63,8 +63,8 @@ export default function DetallePresupuestoModal({
             </div>
             {detalle && (
               <p className="text-sm text-white/70 mt-1">
-                Creado {detalle.fecha.toLocaleDateString("es-AR")} · Vence{" "}
-                {detalle.fechaVencimiento.toLocaleDateString("es-AR")}
+                Creado {formatFechaAR(detalle.fecha)} · Vence{" "}
+                {formatFechaAR(detalle.fechaVencimiento)}
               </p>
             )}
           </div>

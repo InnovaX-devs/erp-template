@@ -5,7 +5,9 @@ export type ConceptoMovimientoCaja =
   | "PAGO_DEUDA_CLIENTE"
   | "PAGO_A_PROVEEDOR"
   | "GASTO"
-  | "OTRO";
+  | "OTRO"
+  | "AJUSTE_SALDO"
+  | "TRANSFERENCIA";
 
 export type MovimientoCajaDTO = {
   id: number;
@@ -15,6 +17,7 @@ export type MovimientoCajaDTO = {
   concepto: ConceptoMovimientoCaja;
   monto: number;
   saldoResultante: number;
+  detalle: string | null;
   fecha: string;
   ventaId: number | null;
   gastoId: number | null;
@@ -27,4 +30,6 @@ export const ETIQUETAS_CONCEPTO: Record<ConceptoMovimientoCaja, string> = {
   PAGO_A_PROVEEDOR: "Pago a proveedor",
   GASTO: "Gasto",
   OTRO: "Otro",
+  AJUSTE_SALDO: "Ajuste de saldo",
+  TRANSFERENCIA: "Transferencia",
 };

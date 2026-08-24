@@ -355,6 +355,8 @@ enum ConceptoMovimientoCaja {
   PAGO_A_PROVEEDOR
   GASTO
   OTRO
+  AJUSTE_SALDO      // ← nuevo
+  TRANSFERENCIA     // ← nuevo
 }
 
 model MovimientoCaja {
@@ -365,6 +367,7 @@ model MovimientoCaja {
   concepto        ConceptoMovimientoCaja
   monto           Float
   saldoResultante Float
+  detalle         String?
   fecha           DateTime               @default(now())
 
   venta    Venta?  @relation(fields: [ventaId], references: [id])

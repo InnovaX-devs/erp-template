@@ -10,6 +10,7 @@ function descripcionMovimiento(m: {
   concepto: string;
   ventaId: number | null;
   gasto: { concepto: string } | null;
+  detalle: string | null;
 }) {
   switch (m.concepto) {
     case "VENTA_COBRADA":
@@ -20,6 +21,10 @@ function descripcionMovimiento(m: {
       return "Pago a proveedor";
     case "GASTO":
       return m.gasto?.concepto ?? "Gasto";
+    case "AJUSTE_SALDO":
+      return m.detalle ? `Ajuste de saldo: ${m.detalle}` : "Ajuste de saldo";
+    case "TRANSFERENCIA":
+      return m.detalle ?? "Transferencia entre cuentas";
     default:
       return "Movimiento";
   }
@@ -61,11 +66,11 @@ export async function GET() {
   });
 
   const ingresosHoyARS = movimientosHoy
-    .filter((m) => m.tipo === "INGRESO")
+    .filter((m) => m.tipo === "INGRESO" && m.concepto !== "TRANSFERENCIA")
     .reduce((acc, m) => acc + (m.cuenta.tipo.endsWith("USD") ? m.monto * cotizacionActual : m.monto), 0);
 
   const egresosHoyARS = movimientosHoy
-    .filter((m) => m.tipo === "EGRESO")
+    .filter((m) => m.tipo === "EGRESO" && m.concepto !== "TRANSFERENCIA")
     .reduce((acc, m) => acc + (m.cuenta.tipo.endsWith("USD") ? m.monto * cotizacionActual : m.monto), 0);
 
   const movimientos = movimientosHoy.slice(0, 10).map((m) => ({

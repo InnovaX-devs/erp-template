@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Pencil, Ban, Trash2, Wallet, Plus, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { CuentaFormModal } from "@/components/finanzas/cuenta-form-modal";
 import { TotalesCuentas } from "@/components/finanzas/totales-cuentas";
@@ -10,6 +9,9 @@ import { BarraLimiteMensual } from "@/components/finanzas/barra-limite-mensual";
 import { ResumenPorTipo } from "@/components/finanzas/resumen-por-tipo";
 import type { CuentaDTO } from "@/types/cuenta";
 import { formatCurrency } from "@/lib/currency";
+import { Pencil, Ban, Trash2, DollarSign, ArrowLeftRight, Plus, CheckCircle2 } from "lucide-react";
+import { AjustarSaldoModal } from "@/components/finanzas/ajustar-saldo-modal";
+import { TransferenciaModal } from "@/components/finanzas/transferencia-modal";
 
 const ETIQUETAS_TIPO: Record<string, string> = {
   EFECTIVO_ARS: "Efectivo ARS",
@@ -24,6 +26,14 @@ export default function FinanzasPage() {
   const [cargando, setCargando] = useState(true);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [cuentaEditar, setCuentaEditar] = useState<CuentaDTO | null>(null);
+  const [modalTransferenciaAbierto, setModalTransferenciaAbierto] = useState(false);
+  const [cuentaAjustar, setCuentaAjustar] = useState<CuentaDTO | null>(null);
+  const [modalAjusteAbierto, setModalAjusteAbierto] = useState(false);
+
+  function abrirAjuste(cuenta: CuentaDTO) {
+    setCuentaAjustar(cuenta);
+    setModalAjusteAbierto(true);
+  }
 
   const [busqueda, setBusqueda] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState<FiltroCategoria>("TODAS");
@@ -116,12 +126,20 @@ export default function FinanzasPage() {
           <h1 className="text-xl font-semibold text-[#191c1e] sm:text-2xl">Cuentas financieras</h1>
           <p className="text-sm text-[#45464f]">{cuentas.length} cuentas configuradas</p>
         </div>
-        <button
-          onClick={abrirNueva}
-          className="flex items-center justify-center gap-1.5 self-start rounded-lg bg-[#021541] px-4 py-2 text-sm font-medium text-white hover:opacity-90 sm:self-auto"
-        >
-          <Plus size={16} /> Nueva cuenta
-        </button>
+        <div className="flex gap-2 self-start sm:self-auto">
+          <button
+            onClick={() => setModalTransferenciaAbierto(true)}
+            className="flex items-center justify-center gap-1.5 rounded-lg border border-[#021541] px-4 py-2 text-sm font-medium text-[#021541] hover:bg-[#eceef0]"
+          >
+            <ArrowLeftRight size={16} /> Transferir
+          </button>
+          <button
+            onClick={abrirNueva}
+            className="flex items-center justify-center gap-1.5 rounded-lg bg-[#021541] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+          >
+            <Plus size={16} /> Nueva cuenta
+          </button>
+        </div>
       </div>
 
       <TotalesCuentas cuentas={cuentas} cotizacionUSD={cotizacionUSD} />
@@ -198,11 +216,11 @@ export default function FinanzasPage() {
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1">
                       <button
-                        onClick={() => toast.info("Ver movimientos: próximamente")}
+                        onClick={() => abrirAjuste(cuenta)}
                         className="rounded-lg p-1.5 text-[#45464f] hover:bg-[#eceef0] hover:text-[#191c1e]"
-                        title="Ver movimientos"
+                        title="Ajustar saldo"
                       >
-                        <Wallet size={16} />
+                        <DollarSign size={16} />
                       </button>
                       <button
                         onClick={() => abrirEditar(cuenta)}
@@ -285,11 +303,11 @@ export default function FinanzasPage() {
 
               <div className="mt-3 flex items-center justify-end gap-1 border-t border-[#E2E8F0] pt-2">
                 <button
-                  onClick={() => toast.info("Ver movimientos: próximamente")}
+                  onClick={() => abrirAjuste(cuenta)}
                   className="rounded-lg p-2 text-[#45464f] hover:bg-[#eceef0] hover:text-[#191c1e]"
-                  title="Ver movimientos"
+                  title="Ajustar saldo"
                 >
-                  <Wallet size={16} />
+                  <DollarSign size={16} />
                 </button>
                 <button
                   onClick={() => abrirEditar(cuenta)}
@@ -324,6 +342,19 @@ export default function FinanzasPage() {
         isOpen={modalAbierto}
         onClose={() => setModalAbierto(false)}
         cuentaEditar={cuentaEditar}
+        onSuccess={cargarDatos}
+      />
+      <TransferenciaModal
+        isOpen={modalTransferenciaAbierto}
+        onClose={() => setModalTransferenciaAbierto(false)}
+        cuentas={cuentas}
+        onSuccess={cargarDatos}
+      />
+
+      <AjustarSaldoModal
+        isOpen={modalAjusteAbierto}
+        onClose={() => setModalAjusteAbierto(false)}
+        cuenta={cuentaAjustar}
         onSuccess={cargarDatos}
       />
     </div>

@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
   // para que las tarjetas no queden truncadas si hay más de 200 movimientos.
   const todosEnPeriodo = await prisma.movimientoCaja.findMany({
     where,
-    select: { tipo: true, monto: true, cuenta: { select: { tipo: true } } },
+    select: { tipo: true, monto: true,concepto: true, cuenta: { select: { tipo: true } } },
   });
 
   const configuracion = await prisma.configuracion.findUnique({
@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
   let ingresos = 0;
   let egresos = 0;
   for (const m of todosEnPeriodo) {
+    if (m.concepto === "TRANSFERENCIA") continue; // no es dinero entrando/saliendo del negocio
     const montoEnArs = m.cuenta.tipo.endsWith("USD") ? m.monto * cotizacion : m.monto;
     if (m.tipo === "INGRESO") ingresos += montoEnArs;
     else egresos += montoEnArs;

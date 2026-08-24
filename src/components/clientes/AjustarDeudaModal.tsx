@@ -1,0 +1,188 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { X } from "lucide-react";
+
+import { ajustarDeudaManual } from "@/app/(dashboard)/clientes/actions";
+import type { CuentaOption } from "./CobrarDeudaModal";
+import Select from "@/components/ui/select";
+
+
+export default function AjustarDeudaModal({
+  cliente,
+  cuentas,
+  onClose,
+}: {
+  cliente: { id: number; nombre: string };
+  cuentas: CuentaOption[];
+  onClose: () => void;
+}) {
+  const router = useRouter();
+
+  const [tipo, setTipo] = useState<"aumentar" | "reducir">("aumentar");
+  const [monto, setMonto] = useState("");
+  const [cuentaId, setCuentaId] = useState<number | "">(cuentas[0]?.id ?? "");
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit() {
+    const montoNum = Number(monto);
+
+    if (!montoNum || montoNum <= 0) {
+      setError("Ingresá un monto mayor a $0.");
+      return;
+    }
+
+    if (tipo === "reducir" && !cuentaId) {
+      setError("Elegí una cuenta.");
+      return;
+    }
+
+    setGuardando(true);
+    setError(null);
+
+    const res = await ajustarDeudaManual({
+      clienteId: cliente.id,
+      tipo,
+      monto: montoNum,
+      cuentaId:
+        tipo === "reducir" ? (cuentaId as number) : undefined,
+    });
+
+    setGuardando(false);
+
+    if (!res.success) {
+      setError(res.error);
+      return;
+    }
+
+    if (res.aplicado !== undefined && res.aplicado < montoNum) {
+      alert(
+        `El cliente solo tenía ${res.aplicado.toLocaleString("es-AR", {
+          style: "currency",
+          currency: "ARS",
+        })} de deuda pendiente. Se aplicó ese monto.`
+      );
+    }
+
+    router.refresh();
+    onClose();
+  }
+
+  const cuentaOptions = cuentas.map((cuenta) => ({
+    value: String(cuenta.id),
+    label: cuenta.nombre,
+  }));
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl">
+        <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b border-[#E2E8F0]">
+          <div>
+            <h2 className="text-lg font-bold text-[#191c1e]">
+              Ajuste manual de deuda
+            </h2>
+
+            <p className="text-sm text-[#8a8c94]">
+              {cliente.nombre}
+            </p>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="text-[#45464f] hover:text-[#191c1e]"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="px-5 py-4 space-y-4">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setTipo("aumentar")}
+              className={`py-2 rounded-lg text-sm font-medium border ${
+                tipo === "aumentar"
+                  ? "bg-[#ba1a1a] text-white border-[#ba1a1a]"
+                  : "border-[#c5c6d0] text-[#45464f]"
+              }`}
+            >
+              Aumentar deuda
+            </button>
+
+            <button
+              onClick={() => setTipo("reducir")}
+              className={`py-2 rounded-lg text-sm font-medium border ${
+                tipo === "reducir"
+                  ? "bg-[#0f9d58] text-white border-[#0f9d58]"
+                  : "border-[#c5c6d0] text-[#45464f]"
+              }`}
+            >
+              Reducir deuda
+            </button>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-[#45464f] mb-1">
+              Monto
+            </label>
+
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={monto}
+              onChange={(e) => setMonto(e.target.value)}
+              placeholder="$0,00"
+              className="w-full rounded-lg border border-[#c5c6d0] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#021541]"
+            />
+          </div>
+
+          {tipo === "reducir" && (
+            <div>
+              <label className="block text-xs font-semibold text-[#45464f] mb-1">
+                Cuenta que recibe el pago
+              </label>
+
+              <Select
+                value={cuentaId === "" ? "" : String(cuentaId)}
+                onChange={(value) => setCuentaId(Number(value))}
+                options={cuentaOptions}
+              />
+            </div>
+          )}
+
+          {tipo === "aumentar" && (
+            <p className="text-xs text-[#8a8c94]">
+              Se registra como una venta a cuenta ("Ajuste manual de deuda")
+              sin movimiento de caja.
+            </p>
+          )}
+
+          {error && (
+            <p className="text-sm text-[#ba1a1a]">
+              {error}
+            </p>
+          )}
+        </div>
+
+        <div className="flex gap-2 p-4 border-t border-[#E2E8F0]">
+          <button
+            onClick={onClose}
+            className="flex-1 rounded-full border border-[#c5c6d0] py-2.5 text-sm font-medium hover:bg-[#eceef0]"
+          >
+            Cancelar
+          </button>
+
+          <button
+            onClick={handleSubmit}
+            disabled={guardando}
+            className="flex-1 rounded-full bg-[#021541] text-white py-2.5 text-sm font-medium hover:opacity-90 disabled:opacity-50"
+          >
+            {guardando ? "Guardando..." : "Registrar ajuste"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

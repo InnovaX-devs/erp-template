@@ -68,12 +68,15 @@ export function IngresosPorDia({ datos }: { datos: IngresoPorDia[] }) {
       </div>
 
       {/* h-40 acá es la altura "real" que van a heredar las columnas de abajo */}
-      <div className="flex h-40 gap-1.5 overflow-x-auto pb-1">
+      <div className="flex h-40 justify-center gap-1.5 overflow-x-auto pb-1">
         {datos.map((item) => {
           const valor = valorDe(item, metrica);
           const alturaPct = Math.max((Math.abs(valor) / maximoAbs) * 100, valor !== 0 ? 3 : 0);
           return (
-            <div key={item.fecha} className="flex min-w-[28px] flex-1 flex-col items-center gap-1">
+            <div
+              key={item.fecha}
+              className="flex w-full min-w-[28px] max-w-[48px] flex-1 flex-col items-center gap-1"
+            >
               {/* esta zona sí tiene altura definida (flex-1 dentro de un padre
                   con altura fija), así que el % de la barra ahora funciona */}
               <div className="flex w-full flex-1 items-end">

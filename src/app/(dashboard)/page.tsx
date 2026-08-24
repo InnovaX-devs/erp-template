@@ -93,7 +93,7 @@ export default function DashboardPage() {
         <button
           type="button"
           onClick={() => setModalPrecioAbierto(true)}
-          className="flex items-center gap-1.5 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-text-dim hover:bg-surface-hover"
+          className="flex items-center gap-1.5 cursor-pointer rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-text-dim hover:bg-surface-hover"
         >
           <Tag size={14} /> Consultar precio
         </button>

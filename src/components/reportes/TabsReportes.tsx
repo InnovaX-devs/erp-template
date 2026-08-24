@@ -52,7 +52,7 @@ export function TabsReportes({
             key={t.value}
             type="button"
             onClick={() => cambiarTab(t.value)}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`rounded-lg px-3 py-1.5 text-sm cursor-pointer font-medium transition-colors ${
               tabActual === t.value
                 ? "bg-[#021541] text-white"
                 : "text-[#45464f] hover:bg-[#eceef0] hover:text-[#191c1e]"

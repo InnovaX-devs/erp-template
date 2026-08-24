@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { signIn } from "next-auth/react";
 import type React from "react";
@@ -10,6 +10,7 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [mostrarPassword, setMostrarPassword] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -68,17 +69,28 @@ export function LoginForm() {
         <label htmlFor="password" className="text-sm font-medium text-ink/80">
           Contraseña
         </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-lg border border-ink/15 bg-white px-3.5 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink/30 focus:border-amber"
-          placeholder="••••••••"
-        />
+        <div className="relative">
+          <input
+            id="password"
+            name="password"
+            type={mostrarPassword ? "text" : "password"}
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full rounded-lg border border-ink/15 bg-white px-3.5 py-2.5 pr-10 text-sm text-ink outline-none transition-colors placeholder:text-ink/30 focus:border-amber"
+            placeholder="••••••••"
+          />
+          <button
+            type="button"
+            onClick={() => setMostrarPassword((prev) => !prev)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/40 transition-colors hover:text-ink/70"
+            tabIndex={-1}
+            aria-label={mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+          >
+            {mostrarPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
       </div>
       <button
         type="submit"

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
 export type ClienteConDeuda = {
-  id: number; // antes: string — Cliente.id es Int autoincrement
+  id: number;
   nombre: string;
   apellido: string | null;
   telefono: string | null;
@@ -12,10 +12,13 @@ export type ClienteConDeuda = {
   deuda: number;
 };
 
+export type OrdenClientes = "nombre-asc" | "nombre-desc" | "deuda-desc" | "deuda-asc";
+
 export type ClientesFiltros = {
   busqueda?: string;
   tipo?: "mayorista" | "minorista";
   deuda?: "con-deuda" | "al-dia";
+  orden?: OrdenClientes;
   pagina?: number;
 };
 
@@ -26,7 +29,7 @@ export type Paginacion = {
   pageSize: number;
 };
 
-const UMBRAL_AL_DIA = 0.01; // tolerancia por redondeo de floats
+const UMBRAL_AL_DIA = 0.01;
 const PAGE_SIZE = 25;
 
 export async function getClientesData(filtros: ClientesFiltros = {}) {
@@ -58,7 +61,6 @@ export async function getClientesData(filtros: ClientesFiltros = {}) {
     };
   });
 
-  // Resumen: siempre sobre el total, no sobre lo filtrado
   const resumen = {
     totalClientes: conDeuda.length,
     totalMayoristas: conDeuda.filter((c) => c.esMayorista).length,
@@ -88,7 +90,23 @@ export async function getClientesData(filtros: ClientesFiltros = {}) {
     filtrados = filtrados.filter((c) => c.deuda <= UMBRAL_AL_DIA);
   }
 
-  // Paginado en memoria (post-filtro)
+  const orden = filtros.orden ?? "nombre-asc";
+  filtrados = [...filtrados].sort((a, b) => {
+    const nombreA = `${a.nombre} ${a.apellido ?? ""}`.trim();
+    const nombreB = `${b.nombre} ${b.apellido ?? ""}`.trim();
+    switch (orden) {
+      case "nombre-desc":
+        return nombreB.localeCompare(nombreA);
+      case "deuda-desc":
+        return b.deuda - a.deuda;
+      case "deuda-asc":
+        return a.deuda - b.deuda;
+      case "nombre-asc":
+      default:
+        return nombreA.localeCompare(nombreB);
+    }
+  });
+
   const totalItems = filtrados.length;
   const totalPaginas = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const paginaSolicitada = filtros.pagina ?? 1;
@@ -113,4 +131,82 @@ export async function getCuentasActivas() {
     orderBy: [{ favorita: "desc" }, { nombre: "asc" }],
     select: { id: true, nombre: true, tipo: true, saldoActual: true },
   });
+}
+
+// --- Historial de deuda ---
+
+export type EventoHistorialDeuda = {
+  id: string;
+  tipo: "venta" | "pago";
+  monto: number;
+  fecha: Date;
+  label: string;
+  sublabel: string;
+  ventaId: number;
+  saldoAntes: number;
+  saldoDespues: number;
+};
+
+function labelMedioPago(tipoCuenta: string) {
+  return tipoCuenta === "BANCO_ARS" || tipoCuenta === "BANCO_USD"
+    ? "Pago vía transferencia"
+    : "Pago en efectivo";
+}
+
+export async function getHistorialDeuda(clienteId: number): Promise<EventoHistorialDeuda[]> {
+  const ventas = await prisma.venta.findMany({
+    where: {
+      clienteId,
+      OR: [{ estadoPago: "A_CUENTA" }, { pagos: { some: {} } }],
+    },
+    include: {
+      items: { select: { descripcionLibre: true } },
+      pagos: { include: { cuenta: { select: { tipo: true } } } },
+    },
+    orderBy: { fecha: "asc" },
+  });
+
+  type EventoRaw = Omit<EventoHistorialDeuda, "id" | "saldoAntes" | "saldoDespues">;
+  const eventos: EventoRaw[] = [];
+
+  for (const venta of ventas) {
+    const esAjuste =
+      venta.items.length === 1 && venta.items[0].descripcionLibre === "Ajuste manual de deuda";
+
+    eventos.push({
+      fecha: venta.fecha,
+      monto: venta.totalARS,
+      tipo: "venta",
+      label: esAjuste ? "Ajuste manual" : "Venta a cuenta",
+      sublabel: esAjuste ? "Aumento de deuda" : `Venta #${venta.id}`,
+      ventaId: venta.id,
+    });
+
+    for (const pago of venta.pagos) {
+      eventos.push({
+        fecha: pago.fecha,
+        monto: -pago.monto,
+        tipo: "pago",
+        label: "Pago recibido",
+        sublabel: labelMedioPago(pago.cuenta.tipo),
+        ventaId: venta.id,
+      });
+    }
+  }
+
+  eventos.sort((a, b) => a.fecha.getTime() - b.fecha.getTime());
+
+  let saldo = 0;
+  const historial: EventoHistorialDeuda[] = eventos.map((e, i) => {
+    const saldoAntes = Math.round(saldo * 100) / 100;
+    saldo += e.monto;
+    return {
+      ...e,
+      id: `${e.tipo}-${e.ventaId}-${i}`,
+      saldoAntes,
+      saldoDespues: Math.round(saldo * 100) / 100,
+    };
+  });
+
+  return historial.reverse(); // más reciente primero
 }

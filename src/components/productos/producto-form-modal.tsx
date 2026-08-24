@@ -354,7 +354,7 @@ const handleRemoveImage = () => {
     onSuccess();
     onClose();
   } catch (err: any) {
-    console.error("Error submit producto:", err);
+    console.warn("Error submit producto:", err);
     setErrorMsg(err.message || "Ocurrió un error inesperado al guardar el producto");
   } finally {
     setLoading(false);

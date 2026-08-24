@@ -212,6 +212,7 @@ model PagoVenta {
   cuenta   Cuenta @relation(fields: [cuentaId], references: [id])
   cuentaId Int
   monto    Float
+  fecha    DateTime @default(now())
 
   @@index([ventaId])
 }

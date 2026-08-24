@@ -172,6 +172,46 @@ export async function POST(request: NextRequest) {
       ? Number(body.overrideDecant10ml)
       : null;
 
+    // Evitar duplicados por nombre (insensible a mayúsculas), solo entre
+    // productos activos — un producto desactivado con el mismo nombre no bloquea el alta.
+    const nombreNormalizado = body.nombre.trim();
+    const productoExistente = await prisma.producto.findFirst({
+      where: {
+        nombre: { equals: nombreNormalizado, mode: "insensitive" },
+        activo: true,
+      },
+      select: { id: true, nombre: true },
+    });
+
+    if (productoExistente) {
+      return NextResponse.json(
+        {
+          error: `Ya existe un producto llamado "${productoExistente.nombre}". Modificá el producto existente en vez de crear uno nuevo.`,
+        },
+        { status: 409 }
+      );
+    }
+
+    // Evitar duplicados por código de barras, solo si se cargó uno.
+    // Se chequea contra productos activos e inactivos: un código de barras
+    // es un identificador físico único, no debería reutilizarse aunque el
+    // producto anterior esté desactivado.
+    if (codigoBarras) {
+      const productoConMismoCodigo = await prisma.producto.findFirst({
+        where: { codigoBarras },
+        select: { id: true, nombre: true, codigoBarras: true },
+      });
+
+      if (productoConMismoCodigo) {
+        return NextResponse.json(
+          {
+            error: `El código de barras "${productoConMismoCodigo.codigoBarras}" ya está asignado al producto "${productoConMismoCodigo.nombre}". Modificá el producto existente en vez de crear uno nuevo.`,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     const nuevoProducto = await prisma.producto.create({
       data: {
         nombre: body.nombre.trim(),

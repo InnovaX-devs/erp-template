@@ -16,6 +16,13 @@ const OPCIONES_DEUDA = [
   { value: "al-dia", label: "Al día" },
 ];
 
+const OPCIONES_ORDEN = [
+  { value: "nombre-asc", label: "Nombre A→Z" },
+  { value: "nombre-desc", label: "Nombre Z→A" },
+  { value: "deuda-desc", label: "Mayor deuda" },
+  { value: "deuda-asc", label: "Menor deuda" },
+];
+
 export default function ClientesFilters() {
   const router = useRouter();
   const pathname = usePathname();
@@ -28,6 +35,14 @@ export default function ClientesFilters() {
     const params = new URLSearchParams(searchParams.toString());
     if (value) params.set(key, value);
     else params.delete(key);
+    params.delete("page");
+    startTransition(() => router.push(`${pathname}?${params.toString()}`));
+  }
+
+  function actualizarOrden(value: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value && value !== "nombre-asc") params.set("orden", value);
+    else params.delete("orden");
     params.delete("page");
     startTransition(() => router.push(`${pathname}?${params.toString()}`));
   }
@@ -60,6 +75,13 @@ export default function ClientesFilters() {
         onChange={(value) => actualizarParam("deuda", value)}
         options={OPCIONES_DEUDA}
         className="w-full sm:w-52"
+      />
+
+      <Select
+        value={searchParams.get("orden") ?? "nombre-asc"}
+        onChange={actualizarOrden}
+        options={OPCIONES_ORDEN}
+        className="w-full sm:w-48"
       />
     </div>
   );

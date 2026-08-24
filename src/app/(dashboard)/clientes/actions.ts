@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getHistorialDeuda } from "@/lib/clientes";
 
 export async function eliminarCliente(clienteId: number) { // antes: string
   try {
@@ -166,5 +167,138 @@ export async function cobrarDeuda(clienteId: number, pagos: PagoInput[]) {
   } catch (e) {
     console.error(e);
     return { success: false as const, error: "Ocurrió un error al registrar el cobro." };
+  }
+}
+
+export async function obtenerHistorialDeuda(clienteId: number) {
+  const historial = await getHistorialDeuda(clienteId);
+  return historial.map((h) => ({ ...h, fecha: h.fecha.toISOString() }));
+}
+
+// --- Ajuste manual de deuda ---
+
+type AjusteDeudaInput = {
+  clienteId: number;
+  tipo: "aumentar" | "reducir";
+  monto: number;
+  cuentaId?: number;
+};
+
+export async function ajustarDeudaManual(input: AjusteDeudaInput) {
+  const { clienteId, tipo, monto, cuentaId } = input;
+
+  if (!monto || monto <= 0) {
+    return { success: false as const, error: "Ingresá un monto mayor a $0." };
+  }
+
+  if (tipo === "aumentar") {
+    try {
+      const config = await prisma.configuracion.findUnique({
+        where: { id: "singleton" },
+        select: { cotizacionUSD: true },
+      });
+      const cotizacion = config?.cotizacionUSD ?? 1;
+
+      await prisma.venta.create({
+        data: {
+          clienteId,
+          fecha: new Date(),
+          cotizacionUsada: cotizacion,
+          totalUSD: monto / cotizacion,
+          totalARS: monto,
+          montoPagado: 0,
+          estadoPago: "A_CUENTA",
+          items: {
+            create: [
+              {
+                descripcionLibre: "Ajuste manual de deuda",
+                cantidad: 1,
+                precioUnitarioUSD: monto / cotizacion,
+              },
+            ],
+          },
+        },
+      });
+
+      revalidatePath("/clientes");
+      return { success: true as const };
+    } catch (e) {
+      console.error(e);
+      return { success: false as const, error: "No se pudo registrar el ajuste." };
+    }
+  }
+
+  // tipo === "reducir"
+  if (!cuentaId) {
+    return { success: false as const, error: "Elegí una cuenta." };
+  }
+
+  try {
+    let aplicadoTotal = 0;
+
+    await prisma.$transaction(async (tx) => {
+      const ventasPendientes = await tx.venta.findMany({
+        where: { clienteId, estadoPago: "A_CUENTA" },
+        orderBy: { fecha: "asc" },
+      });
+
+      let restante = monto;
+      const ventasTocadas: number[] = [];
+
+      for (const venta of ventasPendientes) {
+        if (restante <= 0) break;
+        const pendiente = venta.totalARS - venta.montoPagado;
+        if (pendiente <= 0.01) continue;
+
+        const aplicado = Math.min(restante, pendiente);
+        const nuevoPendiente = pendiente - aplicado;
+
+        await tx.pagoVenta.create({
+          data: { ventaId: venta.id, cuentaId, monto: aplicado },
+        });
+
+        await tx.venta.update({
+          where: { id: venta.id },
+          data: {
+            montoPagado: venta.totalARS - nuevoPendiente,
+            estadoPago: nuevoPendiente <= 0.01 ? "PAGADA" : "A_CUENTA",
+          },
+        });
+
+        ventasTocadas.push(venta.id);
+        restante -= aplicado;
+      }
+
+      aplicadoTotal = monto - restante;
+
+      if (aplicadoTotal <= 0.01) {
+        throw new Error("SIN_DEUDA_PENDIENTE");
+      }
+
+      const cuenta = await tx.cuenta.update({
+        where: { id: cuentaId },
+        data: { saldoActual: { increment: aplicadoTotal } },
+      });
+
+      await tx.movimientoCaja.create({
+        data: {
+          cuentaId,
+          tipo: "INGRESO",
+          concepto: "OTRO",
+          monto: aplicadoTotal,
+          saldoResultante: cuenta.saldoActual,
+          ventaId: ventasTocadas.length === 1 ? ventasTocadas[0] : null,
+        },
+      });
+    });
+
+    revalidatePath("/clientes");
+    return { success: true as const, aplicado: aplicadoTotal };
+  } catch (e) {
+    if (e instanceof Error && e.message === "SIN_DEUDA_PENDIENTE") {
+      return { success: false as const, error: "El cliente no tiene deuda pendiente para reducir." };
+    }
+    console.error(e);
+    return { success: false as const, error: "Ocurrió un error al registrar el ajuste." };
   }
 }

@@ -178,7 +178,11 @@ export function ComprobanteVentaDocument({
           <View style={s.infoBlock}>
             <Text style={s.infoLabel}>FECHA</Text>
             <Text style={s.infoValue}>
-              {new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" }).format(venta.fecha)}
+              {new Intl.DateTimeFormat("es-AR", {
+                dateStyle: "short",
+                timeStyle: "short",
+                timeZone: "America/Argentina/Buenos_Aires",
+              }).format(venta.fecha)}
             </Text>
           </View>
           <View style={s.infoBlock}>

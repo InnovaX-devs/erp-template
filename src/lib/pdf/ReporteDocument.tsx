@@ -125,9 +125,14 @@ export function ReporteDocument({
 }) {
   const { kpis, desgloseTipoPrecio, desgloseMetodoCobro, ingresosPorDia, topProductos } = reporte;
 
+  // reporte.fechaFin es el límite exclusivo del rango (medianoche del día siguiente),
+  // igual que rango.hasta en la página web, así que restamos 1ms para mostrar
+  // el último día realmente incluido (mismo criterio que hastaVisible en page.tsx).
+  const fechaFinVisible = new Date(new Date(reporte.fechaFin).getTime() - 1);
+
   const rangoTexto = `${new Intl.DateTimeFormat("es-AR", { dateStyle: "long" }).format(
     new Date(reporte.fechaInicio)
-  )} — ${new Intl.DateTimeFormat("es-AR", { dateStyle: "long" }).format(new Date(reporte.fechaFin))}`;
+  )} — ${new Intl.DateTimeFormat("es-AR", { dateStyle: "long" }).format(fechaFinVisible)}`;
 
   const kpiItems: { label: string; valor: string; sub?: string; destacado?: boolean }[] = [
     {

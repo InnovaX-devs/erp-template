@@ -226,7 +226,7 @@ export default function DashboardPage() {
                 </span>
               )}
             </div>
-            <Link href="/finanzas/movimientos" className="text-xs font-medium text-primary hover:underline">
+            <Link href="/finanzas/flujo-caja" className="text-xs font-medium text-primary hover:underline">
               Ver todo →
             </Link>
           </div>

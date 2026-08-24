@@ -9,7 +9,8 @@ import {
   Wallet,
   History,
   FileText,
-  Droplets,
+  BarChart3,
+  ArrowLeftRight,
   ShoppingCart,
   Package,
   Truck,
@@ -68,11 +69,11 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Calculator,
     children: [
       { label: "Cuentas Financieras", href: "/finanzas", icon: Calculator },
-      { label: "Flujo de Caja", href: "/finanzas/flujo-caja", icon: Calculator },
+      { label: "Flujo de Caja", href: "/finanzas/flujo-caja", icon: ArrowLeftRight },
       { label: "Gastos", href: "/finanzas/gastos", icon: Wallet },
     ],
   },
-  { label: "Reportes", href: "/reportes", icon: Droplets },
+  { label: "Reportes", href: "/reportes", icon: BarChart3 },
 ];
 
 export const EXTRA_TITLES: Record<string, string> = {

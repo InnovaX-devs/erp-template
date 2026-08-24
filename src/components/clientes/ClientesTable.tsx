@@ -42,21 +42,21 @@ export default function ClientesTable({
         <button
           onClick={() => setClienteHistorial(c)}
           title="Historial de deuda"
-          className="text-[#7c3aed] hover:opacity-70"
+          className="text-[#7c3aed] cursor-pointer hover:opacity-70"
         >
           <Clock size={18} />
         </button>
         <button
           onClick={() => setClienteAjuste(c)}
           title="Ajuste manual de deuda"
-          className="text-[#45464f] hover:text-[#021541]"
+          className="text-[#45464f] cursor-pointer hover:text-[#021541]"
         >
           <SlidersHorizontal size={18} />
         </button>
         <button
           onClick={() => onEditar(c)}
           title="Editar"
-          className="text-[#45464f] hover:text-[#021541]"
+          className="text-[#45464f] cursor-pointer hover:text-[#021541]"
         >
           <Pencil size={18} />
         </button>
@@ -64,7 +64,7 @@ export default function ClientesTable({
           onClick={() => handleEliminar(c.id, nombreCompleto(c))}
           disabled={eliminandoId === c.id}
           title="Eliminar"
-          className="text-[#45464f] hover:text-[#ba1a1a] disabled:opacity-50"
+          className="text-[#45464f] hover:text-[#ba1a1a] cursor-pointer disabled:opacity-50"
         >
           <Trash2 size={18} />
         </button>

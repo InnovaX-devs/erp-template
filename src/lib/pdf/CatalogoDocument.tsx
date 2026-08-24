@@ -21,9 +21,8 @@ type ProductoCatalogo = {
 };
 
 const cardStyles = StyleSheet.create({
-  grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
+  grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start" },
   card: {
-    width: "23.5%",
     marginBottom: 12,
     borderWidth: 0.5,
     borderColor: PDF_BRAND.border,
@@ -32,7 +31,6 @@ const cardStyles = StyleSheet.create({
     alignItems: "center",
   },
   cardSinStock: {
-    width: "23.5%",
     marginBottom: 12,
     borderWidth: 0.5,
     borderColor: "#FCA5A5",
@@ -175,19 +173,30 @@ export function CatalogoDocument({
   }
 
   function renderGrid(items: ProductoCatalogo[], sinStockFlag: boolean) {
-    return items.map((p) => (
-      <View key={p.id} style={sinStockFlag ? cardStyles.cardSinStock : cardStyles.card} wrap={false}>
-        <View style={p.fotoUrl ? cardStyles.imageBox : cardStyles.imageBoxPlaceholder}>
+    return items.map((p, index) => {
+      const esUltimaDeLaFila = index % 4 === 3;
+      const estiloPosicion = {
+        width: "23.5%" as const,
+        marginRight: esUltimaDeLaFila ? 0 : "2%",
+      };
+      return (
+        <View
+          key={p.id}
+          style={[sinStockFlag ? cardStyles.cardSinStock : cardStyles.card, estiloPosicion]}
+          wrap={false}
+        >
+          <View style={p.fotoUrl ? cardStyles.imageBox : cardStyles.imageBoxPlaceholder}>
             {p.fotoUrl ? (
-                <Image src={p.fotoUrl} style={cardStyles.image} />
-              ) : (
-                <Text style={cardStyles.placeholderText}>Sin foto</Text>
-              )}
+              <Image src={p.fotoUrl} style={cardStyles.image} />
+            ) : (
+              <Text style={cardStyles.placeholderText}>Sin foto</Text>
+            )}
           </View>
-        <Text style={sinStockFlag ? cardStyles.nombreSinStock : cardStyles.nombre}>{p.nombre}</Text>
-        {renderPrecios(p, sinStockFlag ? "#DC2626" : accent)}
-      </View>
-    ));
+          <Text style={sinStockFlag ? cardStyles.nombreSinStock : cardStyles.nombre}>{p.nombre}</Text>
+          {renderPrecios(p, sinStockFlag ? "#DC2626" : accent)}
+        </View>
+      );
+    });
   }
 
   return (

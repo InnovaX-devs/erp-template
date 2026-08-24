@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { Clock, SlidersHorizontal, Pencil, Trash2 } from "lucide-react";
 import { eliminarCliente } from "@/app/(dashboard)/clientes/actions";
 import DeudaCell from "./DeudaCell";
+import HistorialDeudaModal from "./HistorialDeudaModal";
+import AjustarDeudaModal from "./AjustarDeudaModal";
 import type { ClienteConDeuda } from "@/lib/clientes";
 import type { CuentaOption } from "./CobrarDeudaModal";
 
@@ -18,6 +21,8 @@ export default function ClientesTable({
   onEditar: (cliente: ClienteConDeuda) => void;
 }) {
   const [eliminandoId, setEliminandoId] = useState<number | null>(null);
+  const [clienteHistorial, setClienteHistorial] = useState<ClienteConDeuda | null>(null);
+  const [clienteAjuste, setClienteAjuste] = useState<ClienteConDeuda | null>(null);
 
   async function handleEliminar(id: number, nombre: string) {
     if (!confirm(`¿Eliminar a ${nombre}? Esta acción no se puede deshacer.`)) return;
@@ -25,6 +30,46 @@ export default function ClientesTable({
     const res = await eliminarCliente(id);
     setEliminandoId(null);
     if (!res.success) alert(res.error);
+  }
+
+  function nombreCompleto(c: ClienteConDeuda) {
+    return `${c.nombre} ${c.apellido ?? ""}`.trim();
+  }
+
+  function AccionesRow({ c }: { c: ClienteConDeuda }) {
+    return (
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setClienteHistorial(c)}
+          title="Historial de deuda"
+          className="text-[#7c3aed] hover:opacity-70"
+        >
+          <Clock size={18} />
+        </button>
+        <button
+          onClick={() => setClienteAjuste(c)}
+          title="Ajuste manual de deuda"
+          className="text-[#45464f] hover:text-[#021541]"
+        >
+          <SlidersHorizontal size={18} />
+        </button>
+        <button
+          onClick={() => onEditar(c)}
+          title="Editar"
+          className="text-[#45464f] hover:text-[#021541]"
+        >
+          <Pencil size={18} />
+        </button>
+        <button
+          onClick={() => handleEliminar(c.id, nombreCompleto(c))}
+          disabled={eliminandoId === c.id}
+          title="Eliminar"
+          className="text-[#45464f] hover:text-[#ba1a1a] disabled:opacity-50"
+        >
+          <Trash2 size={18} />
+        </button>
+      </div>
+    );
   }
 
   if (clientes.length === 0) {
@@ -52,9 +97,7 @@ export default function ClientesTable({
           <tbody>
             {clientes.map((c) => (
               <tr key={c.id} className="border-t border-[#E2E8F0]">
-                <td className="px-4 py-4 font-medium text-[#191c1e]">
-                  {c.nombre} {c.apellido ?? ""}
-                </td>
+                <td className="px-4 py-4 font-medium text-[#191c1e]">{nombreCompleto(c)}</td>
                 <td className="px-4 py-4 text-[#45464f]">{c.telefono ?? c.email ?? "—"}</td>
                 <td className="px-4 py-4">
                   <span
@@ -69,26 +112,16 @@ export default function ClientesTable({
                 </td>
                 <td className="px-4 py-4">
                   <DeudaCell
-                    cliente={{ id: c.id, nombre: `${c.nombre} ${c.apellido ?? ""}`.trim() }}
+                    cliente={{ id: c.id, nombre: nombreCompleto(c) }}
                     deuda={c.deuda}
                     umbralAlDia={umbralAlDia}
                     cuentas={cuentas}
                   />
                 </td>
-                <td className="px-4 py-4 text-right space-x-3">
-                  <button
-                    onClick={() => onEditar(c)}
-                    className="text-[#021541] hover:underline text-sm"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleEliminar(c.id, c.nombre)}
-                    disabled={eliminandoId === c.id}
-                    className="text-[#ba1a1a] hover:underline text-sm disabled:opacity-50"
-                  >
-                    {eliminandoId === c.id ? "Eliminando..." : "Eliminar"}
-                  </button>
+                <td className="px-4 py-4 text-right">
+                  <div className="flex justify-end">
+                    <AccionesRow c={c} />
+                  </div>
                 </td>
               </tr>
             ))}
@@ -105,9 +138,7 @@ export default function ClientesTable({
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="font-medium text-[#191c1e] truncate">
-                  {c.nombre} {c.apellido ?? ""}
-                </p>
+                <p className="font-medium text-[#191c1e] truncate">{nombreCompleto(c)}</p>
                 <p className="text-sm text-[#45464f] truncate">{c.telefono ?? c.email ?? "—"}</p>
               </div>
               <span
@@ -123,30 +154,31 @@ export default function ClientesTable({
 
             <div className="mt-3 flex items-center justify-between border-t border-[#E2E8F0] pt-3">
               <DeudaCell
-                cliente={{ id: c.id, nombre: `${c.nombre} ${c.apellido ?? ""}`.trim() }}
+                cliente={{ id: c.id, nombre: nombreCompleto(c) }}
                 deuda={c.deuda}
                 umbralAlDia={umbralAlDia}
                 cuentas={cuentas}
               />
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={() => onEditar(c)}
-                  className="text-[#021541] text-sm font-medium"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => handleEliminar(c.id, c.nombre)}
-                  disabled={eliminandoId === c.id}
-                  className="text-[#ba1a1a] text-sm font-medium disabled:opacity-50"
-                >
-                  {eliminandoId === c.id ? "Eliminando..." : "Eliminar"}
-                </button>
-              </div>
+              <AccionesRow c={c} />
             </div>
           </div>
         ))}
       </div>
+
+      {clienteHistorial && (
+        <HistorialDeudaModal
+          cliente={{ id: clienteHistorial.id, nombre: nombreCompleto(clienteHistorial) }}
+          onClose={() => setClienteHistorial(null)}
+        />
+      )}
+
+      {clienteAjuste && (
+        <AjustarDeudaModal
+          cliente={{ id: clienteAjuste.id, nombre: nombreCompleto(clienteAjuste) }}
+          cuentas={cuentas}
+          onClose={() => setClienteAjuste(null)}
+        />
+      )}
     </>
   );
 }

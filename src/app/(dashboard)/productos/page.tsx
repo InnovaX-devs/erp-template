@@ -171,6 +171,7 @@ export default function ProductosPage() {
       esDecant: producto.seVendePorDecant ?? false,
       overrideDecant5ml: producto.overrideDecant5ml ?? "",
       overrideDecant10ml: producto.overrideDecant10ml ?? "",
+      fotoUrl: producto.fotoUrl ?? "",
     };
   };
 
@@ -226,24 +227,24 @@ export default function ProductosPage() {
       </div>
 
       {/* Tarjetas Resumen */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-[#E2E8F0] bg-white p-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="min-w-0 rounded-2xl border border-[#E2E8F0] bg-white p-4">
           <p className="text-xs uppercase tracking-wide text-[#45464f]">
             Stock a Costo
           </p>
-          <p className="mt-1 text-xl font-semibold text-[#191c1e] sm:text-2xl">
+          <p className="mt-1 truncate text-xl font-semibold text-[#191c1e] sm:text-2xl">
             {formatMoney(resumen.costoARS, "ARS")}
           </p>
-          <p className="mt-1 text-xs font-medium text-[#45464f]">
+          <p className="mt-1 truncate text-xs font-medium text-[#45464f]">
             {formatMoney(resumen.costoUSD, "USD")}
           </p>
         </div>
 
-        <div className="rounded-2xl border border-[#E2E8F0] bg-white p-4">
+        <div className="min-w-0 rounded-2xl border border-[#E2E8F0] bg-white p-4">
           <p className="text-xs uppercase tracking-wide text-[#45464f]">
             Stock a Precio Venta
           </p>
-          <p className="mt-1 text-xl font-semibold text-[#191c1e] sm:text-2xl">
+          <p className="mt-1 truncate text-xl font-semibold text-[#191c1e] sm:text-2xl">
             {formatMoney(resumen.ventaARS, "ARS")}
           </p>
           <p className="mt-1 text-xs font-medium text-[#45464f]">
@@ -251,14 +252,14 @@ export default function ProductosPage() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-[#E2E8F0] bg-white p-4">
+        <div className="min-w-0 rounded-2xl border border-[#E2E8F0] bg-white p-4">
           <p className="text-xs uppercase tracking-wide text-[#45464f]">
             Ganancia Potencial
           </p>
-          <p className="mt-1 text-xl font-semibold text-[#1e7d38] sm:text-2xl">
+          <p className="mt-1 truncate text-xl font-semibold text-[#1e7d38] sm:text-2xl">
             {formatMoney(resumen.gananciaARS, "ARS")}
           </p>
-          <p className="mt-1 text-xs font-medium text-[#1e7d38] opacity-80">
+          <p className="mt-1 truncate text-xs font-medium text-[#1e7d38] opacity-80">
             {formatMoney(resumen.gananciaUSD, "USD")}
           </p>
         </div>

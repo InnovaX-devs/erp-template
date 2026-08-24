@@ -62,7 +62,7 @@ export default function ClientesContent({
         <h1 className="text-xl sm:text-2xl font-semibold text-[#191c1e]">Clientes</h1>
         <button
           onClick={abrirNuevo}
-          className="px-4 py-2 text-sm rounded-lg bg-[#021541] text-white hover:opacity-90 self-start sm:self-auto"
+          className="px-4 py-2 cursor-pointer text-sm rounded-lg bg-[#021541] text-white hover:opacity-90 self-start sm:self-auto"
         >
           + Nuevo cliente
         </button>

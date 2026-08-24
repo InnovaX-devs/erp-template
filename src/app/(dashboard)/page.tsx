@@ -11,8 +11,8 @@ import {
   Wallet,
   Droplets,
   TrendingUp,
-  Settings,
   Eye,
+  EyeOff,
   Zap,
   Package,
   Tag,
@@ -34,7 +34,7 @@ interface Movimiento {
   hora: string;
   descripcion: string;
   monto: number;
-  moneda: "ARS" | "USD";   
+  moneda: "ARS" | "USD";
   tipo: "ingreso" | "egreso";
   ventaId: number | null;
 }
@@ -64,11 +64,14 @@ const ACCESOS_RAPIDOS = [
   { label: "Reportes", href: "/reportes", icon: Droplets },
 ];
 
+const OCULTO = "••••••";
+
 export default function DashboardPage() {
   const [datos, setDatos] = useState<DashboardData | null>(null);
   const [cargando, setCargando] = useState(true);
   const [modalCuentasAbierto, setModalCuentasAbierto] = useState(false);
   const [modalPrecioAbierto, setModalPrecioAbierto] = useState(false);
+  const [mostrarSaldos, setMostrarSaldos] = useState(true);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -109,51 +112,62 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Saldo total */}
         <div className="rounded-2xl bg-ink p-6 text-ivory">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <p className="text-xs uppercase tracking-widest text-ivory/50">Saldo Total</p>
-              <Eye size={13} className="text-ivory/40" />
+          {/* Parte de arriba: label + ojito + monto -> va a /finanzas */}
+          <Link href="/finanzas" className="block rounded-xl -m-1 p-1 transition-opacity hover:opacity-95">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs uppercase tracking-widest text-ivory/50">Saldo Total</p>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setMostrarSaldos((prev) => !prev);
+                  }}
+                  className="cursor-pointer rounded p-0.5 text-ivory/40 hover:text-ivory/70"
+                  title={mostrarSaldos ? "Ocultar saldos" : "Mostrar saldos"}
+                >
+                  {mostrarSaldos ? <Eye size={13} /> : <EyeOff size={13} />}
+                </button>
+              </div>
             </div>
-            <Link
-              href="/finanzas"
-              className="rounded-lg bg-white/10 p-2 hover:bg-white/15"
-              title="Ir a Cuentas Financieras"
+
+            <p className="mt-1 font-display text-3xl font-semibold">
+              {cargando ? "..." : mostrarSaldos ? formatCurrency(datos?.cuentas.saldoTotal ?? 0, "ARS") : OCULTO}
+            </p>
+          </Link>
+
+          {/* Parte de abajo: grid de cuentas (no clickeable) + "Ver todas" -> abre el modal */}
+          <div>
+            {!cargando && datos && datos.cuentas.principales.length > 0 && (
+              <div className="mt-6 grid grid-cols-2 gap-4 border-t border-white/10 pt-4 sm:grid-cols-5">
+                {datos.cuentas.principales.slice(0, 5).map((c) => (
+                  <div key={c.id} className="min-w-0">
+                    <p className="flex items-center gap-1.5 truncate text-[11px] uppercase tracking-wide text-primary/60">
+                      {c.color && (
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: c.color }}
+                        />
+                      )}
+                      {c.nombre}
+                    </p>
+                    <p className="truncate text-sm font-semibold text-white">
+                      {mostrarSaldos ? formatCurrency(c.saldoActual, c.tipo.endsWith("USD") ? "USD" : "ARS") : OCULTO}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setModalCuentasAbierto(true)}
+              className="mt-4 cursor-pointer text-xs font-medium text-amber hover:underline"
             >
-              <Settings size={16} />
-            </Link>
+              Ver todas ({datos?.cuentas.totalCantidad ?? 0}) →
+            </button>
           </div>
-
-          <p className="mt-1 font-display text-3xl font-semibold">
-            {cargando ? "..." : formatCurrency(datos?.cuentas.saldoTotal ?? 0, "ARS")}
-          </p>
-
-          {!cargando && datos && datos.cuentas.principales.length > 0 && (
-            <div className="mt-6 grid grid-cols-2 gap-4 border-t border-white/10 pt-4 sm:grid-cols-5">
-              {datos.cuentas.principales.slice(0, 5).map((c) => (
-                <div key={c.id} className="min-w-0">
-                  <p className="flex items-center gap-1.5 truncate text-[11px] uppercase tracking-wide text-primary/60">
-                    {c.color && (
-                      <span
-                        className="h-2 w-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: c.color }}
-                      />
-                    )}
-                    {c.nombre}
-                  </p>
-                  <p className="truncate text-sm font-semibold text-white">
-                    {formatCurrency(c.saldoActual, c.tipo.endsWith("USD") ? "USD" : "ARS")}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <button
-            onClick={() => setModalCuentasAbierto(true)}
-            className="mt-4 text-xs font-medium text-amber hover:underline"
-          >
-            Ver todas ({datos?.cuentas.totalCantidad ?? 0}) →
-          </button>
         </div>
 
         {/* Hoy */}
@@ -301,7 +315,7 @@ export default function DashboardPage() {
       </div>
 
       <TodasCuentasModal isOpen={modalCuentasAbierto} onClose={() => setModalCuentasAbierto(false)} />
-          {modalPrecioAbierto && <ModalConsultarPrecio onClose={() => setModalPrecioAbierto(false)} />}
+      {modalPrecioAbierto && <ModalConsultarPrecio onClose={() => setModalPrecioAbierto(false)} />}
     </div>
   );
 }

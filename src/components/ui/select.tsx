@@ -66,7 +66,7 @@ export default function Select({ value, onChange, options, className = "" }: Sel
         onKeyDown={handleKeyDown}
         aria-haspopup="listbox"
         aria-expanded={abierto}
-        className="flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text hover:bg-surface-hover focus:outline-none focus:ring-1 focus:ring-primary"
+        className="flex w-full items-center cursor-pointer justify-between gap-2 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-text hover:bg-surface-hover focus:outline-none focus:ring-1 focus:ring-primary"
       >
         <span className="truncate">{seleccionado?.label}</span>
         <ChevronDown

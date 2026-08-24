@@ -2,6 +2,7 @@
 
 import { Search } from "lucide-react";
 import DateInput from "@/components/ui/date-input";
+import Select from "@/components/ui/select";
 import { CAMPO_OPTIONS, ORIGEN_OPTIONS } from "@/lib/historial-precio-labels";
 
 export type HistorialFiltrosState = {
@@ -40,34 +41,28 @@ export function HistorialFiltros({ filtros, onChange }: Props) {
 
       <div>
         <label className="block text-xs font-medium text-[#45464f]">Campo</label>
-        <select
+        <Select
           value={filtros.campo}
-          onChange={(e) => set("campo", e.target.value)}
-          className="mt-1 w-full rounded-lg border border-[#c5c6d0] bg-white px-3 py-2 text-sm text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
-        >
-          <option value="">Todos</option>
-          {CAMPO_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => set("campo", v)}
+          options={[
+            { value: "", label: "Todos" },
+            ...CAMPO_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
+          ]}
+          className="mt-1"
+        />
       </div>
 
       <div>
         <label className="block text-xs font-medium text-[#45464f]">Origen</label>
-        <select
+        <Select
           value={filtros.origen}
-          onChange={(e) => set("origen", e.target.value)}
-          className="mt-1 w-full rounded-lg border border-[#c5c6d0] bg-white px-3 py-2 text-sm text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
-        >
-          <option value="">Todos</option>
-          {ORIGEN_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => set("origen", v)}
+          options={[
+            { value: "", label: "Todos" },
+            ...ORIGEN_OPTIONS.map((o) => ({ value: o.value, label: o.label })),
+          ]}
+          className="mt-1"
+        />
       </div>
 
       <div>

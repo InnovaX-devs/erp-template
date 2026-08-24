@@ -93,8 +93,6 @@ export function ProductoFormModal({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  
-
   const fetchAuxiliares = useCallback(async () => {
     try {
       const [resMarcas, resCategorias] = await Promise.all([
@@ -163,7 +161,8 @@ export function ProductoFormModal({
           fotoUrl: "",
           overrideDecant5ml: "",
           overrideDecant10ml: "",
-        }); setPreviewUrl(null);
+        });
+        setPreviewUrl(null);
       }
       setSelectedFile(null);
       setErrorMsg("");
@@ -249,123 +248,123 @@ export function ProductoFormModal({
       return;
     }
 
-  setSelectedFile(file);
-  setPreviewUrl(URL.createObjectURL(file));
-  setErrorMsg("");
-};
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setErrorMsg("");
+  };
 
-const handleRemoveImage = () => {
-  setSelectedFile(null);
-  setPreviewUrl(null);
-  setFormData((prev) => ({ ...prev, fotoUrl: "" }));
-  if (fileInputRef.current) {
-    fileInputRef.current.value = "";
-  }
-};
+  const handleRemoveImage = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setFormData((prev) => ({ ...prev, fotoUrl: "" }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setErrorMsg("");
+    e.preventDefault();
+    setErrorMsg("");
 
-  // Validaciones de obligatorios
-  if (
-    !formData.nombre.trim() ||
-    formData.stockActual === "" ||
-    formData.precioCosto === "" ||
-    formData.precioVenta === ""
-  ) {
-    setErrorMsg("Por favor completa los campos obligatorios (*)");
-    return;
-  }
+    // Validaciones de obligatorios
+    if (
+      !formData.nombre.trim() ||
+      formData.stockActual === "" ||
+      formData.precioCosto === "" ||
+      formData.precioVenta === ""
+    ) {
+      setErrorMsg("Por favor completa los campos obligatorios (*)");
+      return;
+    }
 
-  setLoading(true);
+    setLoading(true);
 
-  try {
-    let finalFotoUrl = formData.fotoUrl || null;
+    try {
+      let finalFotoUrl = formData.fotoUrl || null;
 
-    // Si el usuario seleccionó un archivo nuevo
-    if (selectedFile) {
-      const uploadData = new FormData();
-      uploadData.append("file", selectedFile);
+      // Si el usuario seleccionó un archivo nuevo
+      if (selectedFile) {
+        const uploadData = new FormData();
+        uploadData.append("file", selectedFile);
 
-      // Si se está editando y el producto tenía una foto anterior, la enviamos para que el servidor la elimine
-      if (productoEditar?.fotoUrl) {
-        uploadData.append("fotoUrlAnterior", productoEditar.fotoUrl);
+        // Si se está editando y el producto tenía una foto anterior, la enviamos para que el servidor la elimine
+        if (productoEditar?.fotoUrl) {
+          uploadData.append("fotoUrlAnterior", productoEditar.fotoUrl);
+        }
+
+        const resUpload = await fetch("/api/upload", {
+          method: "POST",
+          body: uploadData,
+        });
+
+        if (!resUpload.ok) {
+          const errData = await resUpload.json();
+          throw new Error(errData.error || "Error al subir la imagen");
+        }
+
+        const { url } = await resUpload.json();
+        finalFotoUrl = url;
       }
 
-      const resUpload = await fetch("/api/upload", {
-        method: "POST",
-        body: uploadData,
+      // Formateo del payload
+      const payload = {
+        ...formData,
+        nombre: formData.nombre?.trim() || "",
+        codigoBarras: formData.codigoBarras?.trim() || null,
+        ubicacion: formData.ubicacion?.trim() || null,
+        marcaId: formData.marcaId ? Number(formData.marcaId) : null,
+        categoriaId: formData.categoriaId ? Number(formData.categoriaId) : null,
+        contenidoMl: formData.contenidoMl === "" ? null : Number(formData.contenidoMl),
+        stockActual: Number(formData.stockActual),
+        stockMinimo: formData.stockMinimo === "" ? 0 : Number(formData.stockMinimo),
+        precioCosto: Number(formData.precioCosto),
+        precioVenta: Number(formData.precioVenta),
+        overrideDecant5ml: formData.overrideDecant5ml === "" ? null : Number(formData.overrideDecant5ml),
+        overrideDecant10ml: formData.overrideDecant10ml === "" ? null : Number(formData.overrideDecant10ml),
+        precioMayorista:
+          formData.precioMayorista === "" || formData.precioMayorista === null
+            ? null
+            : Number(formData.precioMayorista),
+        precioOferta:
+          formData.precioOferta === "" || formData.precioOferta === null
+            ? null
+            : Number(formData.precioOferta),
+        fotoUrl: finalFotoUrl,
+      };
+
+      // IMPORTANTE: URL absoluta con "/" al inicio
+      const url = productoEditar?.id
+        ? `/api/productos/${productoEditar.id}`
+        : "/api/productos";
+      const method = productoEditar?.id ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
-      if (!resUpload.ok) {
-        const errData = await resUpload.json();
-        throw new Error(errData.error || "Error al subir la imagen");
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || data.message || "Error al guardar el producto");
       }
 
-      const { url } = await resUpload.json();
-      finalFotoUrl = url;
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      console.warn("Error submit producto:", err);
+      setErrorMsg(err.message || "Ocurrió un error inesperado al guardar el producto");
+    } finally {
+      setLoading(false);
     }
-
-    // Formateo del payload
-    const payload = {
-      ...formData,
-      nombre: formData.nombre?.trim() || "",
-      codigoBarras: formData.codigoBarras?.trim() || null,
-      ubicacion: formData.ubicacion?.trim() || null,
-      marcaId: formData.marcaId ? Number(formData.marcaId) : null,
-      categoriaId: formData.categoriaId ? Number(formData.categoriaId) : null,
-      contenidoMl: formData.contenidoMl === "" ? null : Number(formData.contenidoMl),
-      stockActual: Number(formData.stockActual),
-      stockMinimo: formData.stockMinimo === "" ? 0 : Number(formData.stockMinimo),
-      precioCosto: Number(formData.precioCosto),
-      precioVenta: Number(formData.precioVenta),
-      overrideDecant5ml: formData.overrideDecant5ml === "" ? null : Number(formData.overrideDecant5ml),
-      overrideDecant10ml: formData.overrideDecant10ml === "" ? null : Number(formData.overrideDecant10ml),
-      precioMayorista:
-        formData.precioMayorista === "" || formData.precioMayorista === null
-          ? null
-          : Number(formData.precioMayorista),
-      precioOferta:
-        formData.precioOferta === "" || formData.precioOferta === null
-          ? null
-          : Number(formData.precioOferta),
-      fotoUrl: finalFotoUrl,
-    };
-
-    // IMPORTANTE: URL absoluta con "/" al inicio
-    const url = productoEditar?.id
-      ? `/api/productos/${productoEditar.id}`
-      : "/api/productos";
-    const method = productoEditar?.id ? "PUT" : "POST";
-
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.error || data.message || "Error al guardar el producto");
-    }
-
-    onSuccess();
-    onClose();
-  } catch (err: any) {
-    console.warn("Error submit producto:", err);
-    setErrorMsg(err.message || "Ocurrió un error inesperado al guardar el producto");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm overflow-y-auto">
-      <div className="w-full max-w-2xl rounded-2xl border border-border bg-surface p-6 shadow-2xl my-8">
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/60 p-0 sm:p-4 backdrop-blur-sm overflow-y-auto">
+      <div className="w-full max-w-2xl sm:rounded-2xl border-0 sm:border border-border bg-surface p-4 sm:p-6 shadow-2xl my-0 sm:my-8 max-h-full sm:max-h-[95vh] min-h-screen sm:min-h-0 overflow-y-auto">
         <div className="flex items-center justify-between border-b border-border pb-4">
-          <h2 className="text-xl font-semibold text-text">
+          <h2 className="text-lg sm:text-xl font-semibold text-text">
             {productoEditar ? "Editar Producto" : "Nuevo Producto"}
           </h2>
           <button
@@ -415,8 +414,8 @@ const handleRemoveImage = () => {
             </div>
           </div>
 
-          {/* Ubicación, Marca y Categoría */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+          {/* Ubicación, Contenido, Marca y Categoría */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <label className="block text-xs font-medium text-text-dim">
                 Ubicación en depósito
@@ -545,7 +544,7 @@ const handleRemoveImage = () => {
 
           {/* Precios */}
           <div className="rounded-xl border border-border bg-surface-hover/30 p-4 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-text-dim">
                 Precios
               </span>
@@ -567,7 +566,7 @@ const handleRemoveImage = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
               <div>
                 <label className="block text-xs font-medium text-text-dim">
                   Costo *
@@ -646,7 +645,7 @@ const handleRemoveImage = () => {
           </div>
 
           {/* Toggles */}
-          <div className="flex flex-col sm:flex-row gap-6 pt-2">
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 pt-2">
             <label className="flex items-center gap-2 text-sm text-text cursor-pointer">
               <input
                 type="checkbox"
@@ -685,7 +684,7 @@ const handleRemoveImage = () => {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-medium text-text-dim">
                     Precio decant 5ml
@@ -730,12 +729,12 @@ const handleRemoveImage = () => {
             </div>
           )}
 
-          <div className="col-span-2 space-y-2">
+          <div className="space-y-2">
             <label className="block text-sm font-medium text-text">
               Imagen del Producto
             </label>
 
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               {/* Previsualización */}
               {previewUrl ? (
                 <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-border bg-surface">
@@ -761,7 +760,7 @@ const handleRemoveImage = () => {
               )}
 
               {/* Input oculto e invocación desde el Botón */}
-              <div>
+              <div className="w-full sm:w-auto">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -774,7 +773,7 @@ const handleRemoveImage = () => {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={loading}
-                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text shadow-sm hover:bg-surface/80 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
+                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text shadow-sm hover:bg-surface/80 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
                 >
                   <svg
                     className="h-4 w-4"
@@ -800,18 +799,18 @@ const handleRemoveImage = () => {
           </div>
 
           {/* Botones de acción principal */}
-          <div className="flex justify-end gap-3 border-t border-border pt-4">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3 border-t border-border pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-dim hover:bg-surface-hover"
+              className="w-full sm:w-auto rounded-lg border cursor-pointer border-border px-4 py-2 text-sm font-medium text-text-dim hover:bg-surface-hover"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="w-full sm:w-auto rounded-lg bg-[#021541] cursor-pointer px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {loading ? "Guardando..." : "Guardar Producto"}
             </button>
@@ -821,8 +820,8 @@ const handleRemoveImage = () => {
 
       {/* Pop-up Alta Rápida Marca */}
       {mostrarAltaMarca && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
-          <div className="w-80 rounded-xl border border-border bg-surface p-4 shadow-xl">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-xs rounded-xl border border-border bg-surface p-4 shadow-xl">
             <h3 className="text-sm font-semibold text-text">Nueva Marca</h3>
             <input
               type="text"
@@ -854,8 +853,8 @@ const handleRemoveImage = () => {
 
       {/* Pop-up Alta Rápida Categoría */}
       {mostrarAltaCategoria && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
-          <div className="w-80 rounded-xl border border-border bg-surface p-4 shadow-xl">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-xs rounded-xl border border-border bg-surface p-4 shadow-xl">
             <h3 className="text-sm font-semibold text-text">Nueva Categoría</h3>
             <input
               type="text"

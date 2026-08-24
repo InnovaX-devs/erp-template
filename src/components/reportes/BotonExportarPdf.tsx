@@ -41,7 +41,7 @@ export function BotonExportarPdf({
       type="button"
       onClick={exportar}
       disabled={cargando}
-      className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text hover:bg-surface-hover disabled:opacity-50"
+      className="flex items-center gap-1.5 cursor-pointer rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text hover:bg-surface-hover disabled:opacity-50"
     >
       <FileDown size={14} /> {cargando ? "Generando…" : "Exportar PDF"}
     </button>

@@ -73,5 +73,8 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: "Reportes", href: "/reportes", icon: Droplets },
-  { label: "Configuración", href: "/configuracion", icon: PackagePlus },
 ];
+
+export const EXTRA_TITLES: Record<string, string> = {
+  "/configuracion": "Configuración",
+};

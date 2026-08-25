@@ -336,7 +336,7 @@ function NuevaVentaContenido() {
           <button
             type="button"
             onClick={() => setModalPrecioAbierto(true)}
-            className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[#c5c6d0] bg-white px-3 py-2 text-sm font-medium text-[#45464f] hover:bg-[#eceef0]"
+            className="flex items-center gap-1.5 whitespace-nowrap cursor-pointer rounded-lg border border-[#c5c6d0] bg-white px-3 py-2 text-sm font-medium text-[#45464f] hover:bg-[#eceef0]"
           >
             <Tag size={14} /> <span className="hidden sm:inline">Consultar precio</span>
             <span className="sm:hidden">Precio</span>

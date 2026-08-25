@@ -2,7 +2,20 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { BarcodeInput } from "@/components/ui/barcode-input";
-import Select  from "@/components/ui/select";
+import Select from "@/components/ui/select";
+
+function calcularPorcentaje(costo: number, precio: number): number {
+  if (!costo || costo <= 0) return 0;
+  return ((precio - costo) / costo) * 100;
+}
+
+function calcularPrecioDesdePorcentaje(costo: number, porcentaje: number): number {
+  return costo * (1 + porcentaje / 100);
+}
+
+function redondear2(valor: number): number {
+  return Math.round(valor * 100) / 100;
+}
 
 export interface ProductoFormData {
   id?: string;
@@ -93,6 +106,9 @@ export function ProductoFormModal({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  const [porcentajeVenta, setPorcentajeVenta] = useState<number | "">("");
+  const [porcentajeMayorista, setPorcentajeMayorista] = useState<number | "">("");
+
   const fetchAuxiliares = useCallback(async () => {
     try {
       const [resMarcas, resCategorias] = await Promise.all([
@@ -141,6 +157,18 @@ export function ProductoFormModal({
           fotoUrl: productoEditar.fotoUrl ?? "",
         });
         setPreviewUrl(productoEditar.fotoUrl || null);
+
+        const costoInicial = Number(productoEditar.precioCosto) || 0;
+        setPorcentajeVenta(
+          costoInicial > 0 && productoEditar.precioVenta !== ""
+            ? redondear2(calcularPorcentaje(costoInicial, Number(productoEditar.precioVenta)))
+            : ""
+        );
+        setPorcentajeMayorista(
+          costoInicial > 0 && productoEditar.precioMayorista !== "" && productoEditar.precioMayorista != null
+            ? redondear2(calcularPorcentaje(costoInicial, Number(productoEditar.precioMayorista)))
+            : ""
+        );
       } else {
         setFormData({
           nombre: "",
@@ -163,6 +191,8 @@ export function ProductoFormModal({
           overrideDecant10ml: "",
         });
         setPreviewUrl(null);
+        setPorcentajeVenta("");
+        setPorcentajeMayorista("");
       }
       setSelectedFile(null);
       setErrorMsg("");
@@ -252,6 +282,88 @@ export function ProductoFormModal({
     setPreviewUrl(URL.createObjectURL(file));
     setErrorMsg("");
   };
+
+  function handleCostoChange(valorStr: string) {
+    const nuevoCosto = valorStr === "" ? "" : Number(valorStr);
+    const costoNumerico = nuevoCosto === "" ? 0 : nuevoCosto;
+
+    setFormData((prev) => {
+      const nuevoPrecioVenta =
+        porcentajeVenta !== "" && costoNumerico > 0
+          ? redondear2(calcularPrecioDesdePorcentaje(costoNumerico, porcentajeVenta))
+          : prev.precioVenta;
+
+      const nuevoPrecioMayorista =
+        porcentajeMayorista !== "" && costoNumerico > 0
+          ? redondear2(calcularPrecioDesdePorcentaje(costoNumerico, porcentajeMayorista))
+          : prev.precioMayorista;
+
+      return {
+        ...prev,
+        precioCosto: nuevoCosto,
+        precioVenta: nuevoPrecioVenta,
+        precioMayorista: nuevoPrecioMayorista,
+      };
+    });
+  }
+
+  function handleCostoBlur() {
+    const costo = Number(formData.precioCosto) || 0;
+    if (costo <= 0) return;
+
+    if (porcentajeVenta === "" && formData.precioVenta !== "") {
+      setPorcentajeVenta(redondear2(calcularPorcentaje(costo, Number(formData.precioVenta))));
+    }
+    if (porcentajeMayorista === "" && formData.precioMayorista !== "") {
+      setPorcentajeMayorista(redondear2(calcularPorcentaje(costo, Number(formData.precioMayorista))));
+    }
+  }
+
+  function handlePrecioVentaChange(valorStr: string) {
+    const nuevoPrecio = valorStr === "" ? "" : Number(valorStr);
+    setFormData((prev) => ({ ...prev, precioVenta: nuevoPrecio }));
+
+    const costo = Number(formData.precioCosto) || 0;
+    setPorcentajeVenta(
+      nuevoPrecio !== "" && costo > 0 ? redondear2(calcularPorcentaje(costo, nuevoPrecio)) : ""
+    );
+  }
+
+  function handlePorcentajeVentaChange(valorStr: string) {
+    const nuevoPorcentaje = valorStr === "" ? "" : Number(valorStr);
+    setPorcentajeVenta(nuevoPorcentaje);
+
+    const costo = Number(formData.precioCosto) || 0;
+    if (nuevoPorcentaje !== "" && costo > 0) {
+      setFormData((prev) => ({
+        ...prev,
+        precioVenta: redondear2(calcularPrecioDesdePorcentaje(costo, nuevoPorcentaje)),
+      }));
+    }
+  }
+
+  function handlePrecioMayoristaChange(valorStr: string) {
+    const nuevoPrecio = valorStr === "" ? "" : Number(valorStr);
+    setFormData((prev) => ({ ...prev, precioMayorista: nuevoPrecio }));
+
+    const costo = Number(formData.precioCosto) || 0;
+    setPorcentajeMayorista(
+      nuevoPrecio !== "" && costo > 0 ? redondear2(calcularPorcentaje(costo, nuevoPrecio)) : ""
+    );
+  }
+
+  function handlePorcentajeMayoristaChange(valorStr: string) {
+    const nuevoPorcentaje = valorStr === "" ? "" : Number(valorStr);
+    setPorcentajeMayorista(nuevoPorcentaje);
+
+    const costo = Number(formData.precioCosto) || 0;
+    if (nuevoPorcentaje !== "" && costo > 0) {
+      setFormData((prev) => ({
+        ...prev,
+        precioMayorista: redondear2(calcularPrecioDesdePorcentaje(costo, nuevoPorcentaje)),
+      }));
+    }
+  }
 
   const handleRemoveImage = () => {
     setSelectedFile(null);
@@ -549,24 +661,22 @@ export function ProductoFormModal({
                 Precios
               </span>
               <div className="flex items-center gap-2">
-                <label className="text-xs text-text-dim">Moneda:</label>
-                <select
+                <label className="whitespace-nowrap text-xs text-text-dim">Moneda:</label>
+                <Select
                   value={formData.monedaPrecio}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      monedaPrecio: e.target.value as "ARS" | "USD",
-                    })
+                  onChange={(v) =>
+                    setFormData({ ...formData, monedaPrecio: v as "ARS" | "USD" })
                   }
-                  className="rounded-md border border-border bg-surface px-2 py-1 text-xs text-text font-medium"
-                >
-                  <option value="USD">USD ($)</option>
-                  <option value="ARS">ARS ($)</option>
-                </select>
+                  options={[
+                    { value: "USD", label: "USD ($)" },
+                    { value: "ARS", label: "ARS ($)" },
+                  ]}
+                  className="w-36 shrink-0"
+                />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-xs font-medium text-text-dim">
                   Costo *
@@ -576,53 +686,12 @@ export function ProductoFormModal({
                   step="0.01"
                   required
                   value={formData.precioCosto}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      precioCosto:
-                        e.target.value === "" ? "" : Number(e.target.value),
-                    })
-                  }
+                  onChange={(e) => handleCostoChange(e.target.value)}
+                  onBlur={handleCostoBlur}
                   className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-medium text-text-dim">
-                  Venta (Minorista) *
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={formData.precioVenta}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      precioVenta:
-                        e.target.value === "" ? "" : Number(e.target.value),
-                    })
-                  }
-                  className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-text-dim">
-                  Mayorista
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.precioMayorista}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      precioMayorista:
-                        e.target.value === "" ? "" : Number(e.target.value),
-                    })
-                  }
-                  className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
-                />
-              </div>
+
               <div>
                 <label className="block text-xs font-medium text-text-dim">
                   Oferta
@@ -640,6 +709,64 @@ export function ProductoFormModal({
                   }
                   className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-text-dim">
+                  Venta (Minorista) *
+                </label>
+                <div className="mt-1 flex gap-2">
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={formData.precioVenta}
+                    onChange={(e) => handlePrecioVentaChange(e.target.value)}
+                    className="w-full min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
+                  />
+                  <div className="relative w-20 shrink-0">
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="0"
+                      value={porcentajeVenta}
+                      onChange={(e) => handlePorcentajeVentaChange(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-surface py-2 pl-2 pr-6 text-sm text-text focus:border-primary focus:outline-none"
+                    />
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-text-dim">
+                      %
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-text-dim">
+                  Mayorista (opcional)
+                </label>
+                <div className="mt-1 flex gap-2">
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Sin precio mayorista"
+                    value={formData.precioMayorista}
+                    onChange={(e) => handlePrecioMayoristaChange(e.target.value)}
+                    className="w-full min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
+                  />
+                  <div className="relative w-20 shrink-0">
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="0"
+                      value={porcentajeMayorista}
+                      onChange={(e) => handlePorcentajeMayoristaChange(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-surface py-2 pl-2 pr-6 text-sm text-text focus:border-primary focus:outline-none"
+                    />
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-text-dim">
+                      %
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

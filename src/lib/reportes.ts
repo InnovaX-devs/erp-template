@@ -353,9 +353,9 @@ export function calcularIngresosPorDia(
 }
 
 /**
- * Ranking de productos por monto cobrado, agrupado por (producto, presentación).
- * Los ítems "Varios / Muestra" (sin productoId) quedan afuera: no tienen
- * catálogo, foto ni nombre para mostrar en el ranking.
+ * Ranking de productos por cantidad de unidades vendidas, agrupado por
+ * (producto, presentación). Los ítems "Varios / Muestra" (sin productoId)
+ * quedan afuera: no tienen catálogo, foto ni nombre para mostrar en el ranking.
  */
 export function calcularTopProductos(ventas: VentaParaReporte[], limite = 10): TopProductoItem[] {
   const acumulado = new Map<string, TopProductoItem>();
@@ -390,7 +390,7 @@ export function calcularTopProductos(ventas: VentaParaReporte[], limite = 10): T
   }
 
   return Array.from(acumulado.values())
-    .sort((a, b) => b.montoARS - a.montoARS)
+    .sort((a, b) => b.cantidad - a.cantidad)
     .slice(0, limite);
 }
 

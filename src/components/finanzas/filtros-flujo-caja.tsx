@@ -93,7 +93,7 @@ export function FiltrosFlujoCaja({ filtros, onChange, cuentas }: Props) {
             className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
               filtros.periodoRapido === p
                 ? "bg-[#021541] text-white"
-                : "border border-[#c5c6d0] bg-white text-[#45464f] hover:bg-[#eceef0] hover:text-[#191c1e]"
+                : "border border-[#c5c6d0] bg-white text-[#45464f] hover:bg-[#eceef0] cursor-pointer hover:text-[#191c1e]"
             }`}
           >
             {p === "HOY" ? "Hoy" : p === "SEMANA" ? "Esta semana" : "Este mes"}

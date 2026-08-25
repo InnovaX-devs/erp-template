@@ -140,7 +140,7 @@ export function Sidebar({ logoUrl }: { logoUrl: string | null }) {
                       setGrupoAbierto(abierto ? null : item.label)
                     }
                     className={cn(
-                      "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+                      "flex w-full items-center gap-3 cursor-pointer rounded-lg px-3 py-2.5 text-sm transition-colors",
                       tieneActivo
                         ? "text-ivory"
                         : "text-text-dim hover:bg-surface-hover hover:text-text"

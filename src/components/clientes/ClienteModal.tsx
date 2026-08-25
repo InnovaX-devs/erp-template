@@ -24,7 +24,7 @@ export default function ClienteModal({
           <button
             onClick={onClose}
             aria-label="Cerrar"
-            className="text-[#45464f] hover:text-[#191c1e] text-lg leading-none"
+            className="text-[#45464f] cursor-pointer hover:text-[#191c1e] text-lg leading-none"
           >
             ✕
           </button>

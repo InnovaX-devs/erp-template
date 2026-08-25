@@ -48,7 +48,7 @@ export function SelectorPeriodoAnalisis({ periodo, onChange }: Props) {
           className={`px-3 py-1.5 text-sm ${
             periodo.modo === "mes"
               ? "bg-[#021541] text-white"
-              : "text-[#45464f] hover:bg-[#eceef0]"
+              : "text-[#45464f] hover:bg-[#eceef0] cursor-pointer"
           }`}
         >
           Por mes
@@ -65,7 +65,7 @@ export function SelectorPeriodoAnalisis({ periodo, onChange }: Props) {
           className={`px-3 py-1.5 text-sm ${
             periodo.modo === "rango"
               ? "bg-[#021541] text-white"
-              : "text-[#45464f] hover:bg-[#eceef0]"
+              : "text-[#45464f] hover:bg-[#eceef0] cursor-pointer"
           }`}
         >
           Rango libre
@@ -99,7 +99,7 @@ export function SelectorPeriodoAnalisis({ periodo, onChange }: Props) {
                 className={`rounded-md px-2.5 py-1 text-xs ${
                   periodo.mes === a.mes
                     ? "bg-[#e3e6f5] font-medium text-[#021541]"
-                    : "text-[#45464f] hover:bg-[#eceef0]"
+                    : "text-[#45464f] hover:bg-[#eceef0] cursor-pointer"
                 }`}
               >
                 {a.label}

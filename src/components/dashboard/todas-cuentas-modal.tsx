@@ -11,6 +11,7 @@ import type { CuentaDTO } from "@/types/cuenta";
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  saldoTotal: number;
 }
 
 function esBanco(tipo: CuentaDTO["tipo"]) {
@@ -21,7 +22,7 @@ function esUSD(tipo: CuentaDTO["tipo"]) {
   return tipo.endsWith("USD");
 }
 
-export function TodasCuentasModal({ isOpen, onClose }: Props) {
+export function TodasCuentasModal({ isOpen, onClose, saldoTotal }: Props) {
   const [cuentas, setCuentas] = useState<CuentaDTO[]>([]);
   const [cargando, setCargando] = useState(true);
   const [categoria, setCategoria] = useState<FiltroCategoria>("TODAS");
@@ -55,11 +56,6 @@ export function TodasCuentasModal({ isOpen, onClose }: Props) {
     });
   }, [cuentas, categoria, moneda, busqueda]);
 
-  const totalARS = useMemo(
-    () => cuentas.filter((c) => !esUSD(c.tipo)).reduce((acc, c) => acc + c.saldoActual, 0),
-    [cuentas]
-  );
-
   if (!isOpen) return null;
 
   function copiarAlias(valor: string) {
@@ -74,7 +70,7 @@ export function TodasCuentasModal({ isOpen, onClose }: Props) {
           <div>
             <h2 className="text-lg font-semibold text-text">Todas las cuentas</h2>
             <p className="mt-0.5 text-sm text-text-dim">
-              ARS: <span className="font-semibold text-text">{formatCurrency(totalARS, "ARS")}</span>
+              Saldo total: <span className="font-semibold text-text">{formatCurrency(saldoTotal, "ARS")}</span>
             </p>
           </div>
           <button onClick={onClose} className="rounded-lg p-1.5 text-text-dim hover:bg-surface-hover hover:text-text">

@@ -11,14 +11,21 @@ export function BusinessHeader({
   configuracion: Configuracion;
   titulo: string;
 }) {
-  const detalle = [INSTAGRAM_HANDLE, configuracion.telefono].filter(Boolean).join("  ·  ");
+  const detalle = [
+    INSTAGRAM_HANDLE,
+    configuracion.telefono ? `Tel: ${configuracion.telefono}` : null,
+  ]
+    .filter(Boolean)
+    .join("  ·  ");
 
   return (
     <View style={pdfStyles.header} fixed>
       <View style={{ flexDirection: "row", alignItems: "center" }}>
-        {configuracion.logoUrl && (
-          <Image src={configuracion.logoUrl} style={[pdfStyles.logo, { marginRight: 10 }]} />
-        )}
+        <View style={pdfStyles.logoBox}>
+          {configuracion.logoUrl ? (
+            <Image src={configuracion.logoUrl} style={pdfStyles.logo} />
+          ) : null}
+        </View>
         <View>
           <Text style={pdfStyles.businessName}>{configuracion.nombreNegocio}</Text>
           {detalle && <Text style={pdfStyles.businessDetail}>{detalle}</Text>}
@@ -26,7 +33,7 @@ export function BusinessHeader({
       </View>
       <View>
         <Text style={pdfStyles.docTitle}>{titulo.toUpperCase()}</Text>
-        <Text style={[pdfStyles.docTitle, { marginTop: 2, color: "#8B93A3", fontSize: 8 }]}>
+        <Text style={pdfStyles.docDate}>
           {new Intl.DateTimeFormat("es-AR", { dateStyle: "short" }).format(new Date())}
         </Text>
       </View>

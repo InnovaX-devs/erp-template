@@ -75,7 +75,7 @@ export function ModalConsultarPrecio({ onClose }: Props) {
             className="flex-1 bg-transparent text-sm text-text placeholder:text-text-dim focus:outline-none"
           />
           {cargando && <Loader2 size={16} className="animate-spin text-text-dim" />}
-          <button onClick={onClose} className="text-text-dim hover:text-text" aria-label="Cerrar">
+          <button onClick={onClose} className="text-text-dim cursor-pointer hover:text-text" aria-label="Cerrar">
             <X size={18} />
           </button>
         </div>

@@ -6,6 +6,7 @@ import { Package, DollarSign, CheckCircle2 } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { marcarArmado, marcarRetirado } from "@/app/(dashboard)/ventas/actions";
 import { ModalCobrarPedido } from "./modal-cobrar-pedido";
+import { ModalDetallePedido } from "./modal-detalle-pedido";
 import type { PedidoListItem } from "@/types/venta";
 
 const formatoFecha = new Intl.DateTimeFormat("es-AR", {
@@ -21,9 +22,11 @@ interface Props {
 
 export function CardPedido({ pedido, onCambio }: Props) {
   const [modalCobroAbierto, setModalCobroAbierto] = useState(false);
+  const [modalDetalleAbierto, setModalDetalleAbierto] = useState(false);
   const [procesando, setProcesando] = useState(false);
 
-  async function handleArmado() {
+  async function handleArmado(e: React.MouseEvent) {
+    e.stopPropagation();
     setProcesando(true);
     const resultado = await marcarArmado(pedido.id);
     setProcesando(false);
@@ -35,7 +38,8 @@ export function CardPedido({ pedido, onCambio }: Props) {
     onCambio();
   }
 
-  async function handleRetirado() {
+  async function handleRetirado(e: React.MouseEvent) {
+    e.stopPropagation();
     setProcesando(true);
     const resultado = await marcarRetirado(pedido.id);
     setProcesando(false);
@@ -50,7 +54,10 @@ export function CardPedido({ pedido, onCambio }: Props) {
   const estaPagado = pedido.estadoPago === "PAGADA";
 
   return (
-    <div className="rounded-lg border border-border bg-surface px-3 py-2.5 shadow-sm">
+    <div
+      onClick={() => setModalDetalleAbierto(true)}
+      className="cursor-pointer rounded-lg border border-border bg-surface px-3 py-2.5 shadow-sm transition-colors hover:border-[#021541]/30"
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-xs font-mono text-text-dim">#{pedido.id}</p>
@@ -86,7 +93,10 @@ export function CardPedido({ pedido, onCambio }: Props) {
           {!estaPagado && (
             <button
               type="button"
-              onClick={() => setModalCobroAbierto(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setModalCobroAbierto(true);
+              }}
               className="flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-xs font-medium text-success hover:bg-success/20"
             >
               <DollarSign size={11} /> Cobrar
@@ -107,12 +117,18 @@ export function CardPedido({ pedido, onCambio }: Props) {
       </div>
 
       {modalCobroAbierto && (
-        <ModalCobrarPedido
-          pedido={pedido}
-          tieneCliente={pedido.clienteNombre != null}
-          onClose={() => setModalCobroAbierto(false)}
-          onCobrado={onCambio}
-        />
+        <div onClick={(e) => e.stopPropagation()}>
+          <ModalCobrarPedido
+            pedido={pedido}
+            tieneCliente={pedido.clienteNombre != null}
+            onClose={() => setModalCobroAbierto(false)}
+            onCobrado={onCambio}
+          />
+        </div>
+      )}
+
+      {modalDetalleAbierto && (
+        <ModalDetallePedido pedidoId={pedido.id} onClose={() => setModalDetalleAbierto(false)} onCambio={onCambio} />
       )}
     </div>
   );

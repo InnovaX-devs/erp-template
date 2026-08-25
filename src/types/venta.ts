@@ -53,3 +53,29 @@ export type FiltrosPedidos = {
 export type ResultadoListadoPedidos = {
   pedidos: PedidoListItem[];
 };
+
+export type PedidoDetalleItem = {
+  id: number;
+  productoNombre: string;
+  cantidad: number;
+  presentacion: "FRASCO" | "DECANT_5ML" | "DECANT_10ML";
+  precioUnitarioUSD: number;
+  precioUnitarioARS: number;
+  subtotalARS: number;
+};
+
+export type PedidoDetalle = {
+  id: number;
+  fecha: string;
+  clienteNombre: string | null;
+  estadoPago: EstadoPago;
+  armado: boolean;
+  enviado: boolean;
+  retirado: boolean;
+  totalARS: number;
+  montoPagado: number;
+  gananciaARS: number;
+  gananciaPorcentaje: number;
+  pagos: { montoARS: number; tipoCuenta: string }[];
+  items: PedidoDetalleItem[];
+};

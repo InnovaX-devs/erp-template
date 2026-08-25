@@ -319,6 +319,7 @@ export default function DashboardPage() {
         onClose={() => setModalCuentasAbierto(false)}
         saldoTotal={datos?.cuentas.saldoTotal ?? 0}
       />
+      {modalPrecioAbierto && <ModalConsultarPrecio onClose={() => setModalPrecioAbierto(false)} />}
     </div>
   );
 }

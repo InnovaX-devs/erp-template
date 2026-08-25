@@ -9,77 +9,63 @@ import type { Prisma } from "@prisma/client";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-async function getVapersCategoriaId(): Promise<number | null> {
-  const categoria = await prisma.categoria.findFirst({
-    where: { nombre: { equals: "Vapers", mode: "insensitive" } },
-    select: { id: true },
-  });
-  return categoria?.id ?? null;
-}
+type TipoDocumentoPdf =
+  | "LISTA_GENERAL"
+  | "LISTA_MAYORISTA"
+  | "CATALOGO"
+  | "CATALOGO_MAYORISTA"
+  | "CATALOGO_DECANTS";
+
+const SIN_CATEGORIA = "SIN_CATEGORIA";
 
 export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
 
-  const q = sp.get("q")?.trim() ?? "";
-  const marcaId = sp.get("marcaId");
-  const categoriaId = sp.get("categoriaId");
-  const precioMin = sp.get("precioMin");
-  const precioMax = sp.get("precioMax");
-
-  const tipoPrecio =
-    sp.get("tipoPrecio") === "MAYORISTA"
-      ? "MAYORISTA"
-      : sp.get("tipoPrecio") === "AMBOS"
-      ? "AMBOS"
-      : "MINORISTA";
-
-  const tipoProducto =
-    sp.get("tipoProducto") === "VAPERS"
-      ? "VAPERS"
-      : sp.get("tipoProducto") === "DECANTS"
-      ? "DECANTS"
-      : "PERFUMES";
-
   const moneda = sp.get("moneda") === "USD" ? "USD" : "ARS";
-  const documento = sp.get("documento") === "CATALOGO" ? "CATALOGO" : "LISTA";
-  const modoDecant = tipoProducto === "DECANTS";
+  const tipoDocumento = (sp.get("tipoDocumento") as TipoDocumentoPdf) ?? "LISTA_GENERAL";
 
-  const vapersCategoriaId = await getVapersCategoriaId();
+  const documento = tipoDocumento.startsWith("CATALOGO") ? "CATALOGO" : "LISTA";
+  const modoDecant = tipoDocumento === "CATALOGO_DECANTS";
+  const tipoPrecio: "MINORISTA" | "MAYORISTA" = tipoDocumento.endsWith("MAYORISTA")
+    ? "MAYORISTA"
+    : "MINORISTA";
+
+  // Categorías a EXCLUIR. "SIN_CATEGORIA" es un valor especial (no es un id
+  // real de la tabla Categoria) que representa a los productos sin categoría
+  // asignada (categoriaId = NULL).
+  const excluidosRaw = sp.get("categoriasExcluidas")
+    ? sp.get("categoriasExcluidas")!.split(",")
+    : [];
+  const excluirSinCategoria = excluidosRaw.includes(SIN_CATEGORIA);
+  const categoriasExcluidas = excluidosRaw
+    .filter((v) => v !== SIN_CATEGORIA)
+    .map((v) => Number(v))
+    .filter((n) => !Number.isNaN(n));
+
+  // En SQL, "categoriaId NOT IN (...)" excluye por sí solo las filas con
+  // categoriaId = NULL. Por eso armamos el filtro a mano según los 4 casos
+  // posibles, en vez de confiar en ese comportamiento implícito.
+  let filtroCategoria: Prisma.ProductoWhereInput = {};
+  if (categoriasExcluidas.length > 0 && excluirSinCategoria) {
+    // Excluir categorías puntuales Y excluir sin-categoría:
+    // el NOT IN ya deja afuera los NULL, así que alcanza con esto.
+    filtroCategoria = { categoriaId: { notIn: categoriasExcluidas } };
+  } else if (categoriasExcluidas.length > 0 && !excluirSinCategoria) {
+    // Excluir categorías puntuales pero CONSERVAR los sin categoría.
+    filtroCategoria = {
+      OR: [{ categoriaId: { notIn: categoriasExcluidas } }, { categoriaId: null }],
+    };
+  } else if (categoriasExcluidas.length === 0 && excluirSinCategoria) {
+    // Solo excluir los que no tienen categoría.
+    filtroCategoria = { categoriaId: { not: null } };
+  }
+  // Si no hay nada excluido, filtroCategoria queda {} (no se filtra nada).
 
   const where: Prisma.ProductoWhereInput = {
     activo: true,
-    ...(q ? { nombre: { contains: q, mode: "insensitive" } } : {}),
-    ...(marcaId ? { marcaId: Number(marcaId) } : {}),
-    ...(categoriaId ? { categoriaId: Number(categoriaId) } : {}),
-    ...(tipoProducto === "VAPERS"
-      ? { categoriaId: vapersCategoriaId ?? -1 }
-      : tipoProducto === "PERFUMES"
-      ? vapersCategoriaId !== null
-        ? { OR: [{ categoriaId: { not: vapersCategoriaId } }, { categoriaId: null }] }
-        : {}
-      : {
-          seVendePorDecant: true,
-          ...(vapersCategoriaId !== null
-            ? { OR: [{ categoriaId: { not: vapersCategoriaId } }, { categoriaId: null }] }
-            : {}),
-        }),
-    ...(!modoDecant && (tipoPrecio === "MINORISTA" || tipoPrecio === "AMBOS") && (precioMin || precioMax)
-      ? {
-          precioVenta: {
-            ...(precioMin ? { gte: Number(precioMin) } : {}),
-            ...(precioMax ? { lte: Number(precioMax) } : {}),
-          },
-        }
-      : {}),
-    ...(!modoDecant && tipoPrecio === "MAYORISTA"
-      ? {
-          precioMayorista: {
-            not: null,
-            ...(precioMin ? { gte: Number(precioMin) } : {}),
-            ...(precioMax ? { lte: Number(precioMax) } : {}),
-          },
-        }
-      : {}),
+    ...filtroCategoria,
+    ...(modoDecant ? { seVendePorDecant: true } : {}),
+    ...(!modoDecant && tipoPrecio === "MAYORISTA" ? { precioMayorista: { not: null } } : {}),
   };
 
   const [productos, configuracion] = await Promise.all([
@@ -103,6 +89,13 @@ export async function GET(request: NextRequest) {
     obtenerConfiguracion(),
   ]);
 
+  if (productos.length === 0) {
+    const mensaje = modoDecant
+      ? "No hay productos que se vendan por decant con los filtros seleccionados."
+      : "No hay productos que coincidan con los filtros seleccionados.";
+    return NextResponse.json({ error: mensaje }, { status: 404 });
+  }
+
   const documentoPdf =
     documento === "LISTA" ? (
       <ListaPreciosDocument
@@ -124,8 +117,8 @@ export async function GET(request: NextRequest) {
 
   const buffer = await renderToBuffer(documentoPdf);
 
-  const nombreTipo = tipoProducto.toLowerCase();
-  const filename = `${documento === "LISTA" ? "lista-precios" : "catalogo"}-${nombreTipo}-${moneda.toLowerCase()}.pdf`;
+  const sufijo = tipoDocumento.toLowerCase().replace(/_/g, "-");
+  const filename = `${sufijo}-${moneda.toLowerCase()}.pdf`;
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {

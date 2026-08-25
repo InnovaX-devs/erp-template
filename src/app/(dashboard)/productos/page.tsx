@@ -5,6 +5,7 @@ import { cn } from "@/lib/cn";
 import { ProductoFormModal, type ProductoFormData } from "@/components/productos/producto-form-modal";
 import { FormulaDecantModal } from "@/components/productos/formula-decant-modal";
 import { PdfGeneratorModal } from "@/components/productos/pdf-generator-modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FileText, Search, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { Pencil, ImageIcon, Ban, X } from "lucide-react";
@@ -90,6 +91,7 @@ export default function ProductosPage() {
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [imagenPreview, setImagenPreview] = useState<string | null>(null);
   const [desactivandoId, setDesactivandoId] = useState<number | null>(null);
+  const [productoADesactivar, setProductoADesactivar] = useState<Producto | null>(null);
   const [configDecant, setConfigDecant] = useState({
     costoEnvaseDecantARS: 1500,
     multiplicadorInsumoDecant: 2.5,
@@ -335,15 +337,16 @@ export default function ProductosPage() {
     setIsModalOpen(true);
   };
 
-  async function handleDesactivar(producto: Producto) {
-    const confirmar = window.confirm(
-      `¿Desactivar "${producto.nombre}"? Va a dejar de aparecer en el catálogo, listas de precios y PDFs.`
-    );
-    if (!confirmar) return;
+  function handleDesactivar(producto: Producto) {
+    setProductoADesactivar(producto);
+  }
 
-    setDesactivandoId(Number(producto.id));
+  async function confirmarDesactivar() {
+    if (!productoADesactivar) return;
+
+    setDesactivandoId(Number(productoADesactivar.id));
     try {
-      const res = await fetch(`/api/productos/${producto.id}/estado`, {
+      const res = await fetch(`/api/productos/${productoADesactivar.id}/estado`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ activo: false }),
@@ -352,7 +355,8 @@ export default function ProductosPage() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "No se pudo desactivar el producto");
       }
-      cargarProductos();
+      await cargarProductos();
+      setProductoADesactivar(null);
     } catch (err) {
       console.warn("Error al desactivar producto:", err);
       alert(err instanceof Error ? err.message : "No se pudo desactivar el producto");
@@ -805,56 +809,99 @@ export default function ProductosPage() {
                     : toArs(valor, p.monedaPrecio, cotizacion);
 
                 return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => handleAbrirEditar(p)}
-                    className="w-full p-4 text-left active:bg-[#eceef0]"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-[#191c1e]">{p.nombre}</p>
-                        <p className="truncate text-xs text-[#45464f]">{p.marca?.nombre ?? "-"}</p>
+                  <div key={p.id} className="p-4">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleAbrirEditar(p)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleAbrirEditar(p);
+                      }}
+                      className="cursor-pointer active:opacity-80"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-[#191c1e]">{p.nombre}</p>
+                          <p className="truncate text-xs text-[#45464f]">{p.marca?.nombre ?? "-"}</p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-[#e1f2e6] px-2.5 py-1 text-xs font-semibold text-[#1e7d38]">
+                          +{porcentajeGanancia.toFixed(1)}%
+                        </span>
                       </div>
-                      <span className="shrink-0 rounded-full bg-[#e1f2e6] px-2.5 py-1 text-xs font-semibold text-[#1e7d38]">
-                        +{porcentajeGanancia.toFixed(1)}%
-                      </span>
+
+                      <div className="mt-3 grid grid-cols-2 gap-y-2 text-sm">
+                        <div>
+                          <p className="text-xs text-[#45464f]">Stock</p>
+                          <p
+                            className={cn(
+                              "font-medium",
+                              p.stockActual <= 5 ? "text-[#ba1a1a]" : "text-[#191c1e]"
+                            )}
+                          >
+                            {p.stockActual} u.
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#45464f]">Costo</p>
+                          <p className="font-mono text-[#45464f]">
+                            {formatCurrency(convertir(p.precioCosto), monedaVista)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#45464f]">Venta</p>
+                          <p className="font-mono font-medium text-[#191c1e]">
+                            {formatCurrency(convertir(p.precioVenta), monedaVista)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#45464f]">Mayorista</p>
+                          <p className="font-mono text-[#45464f]">
+                            {p.precioMayorista != null
+                              ? formatCurrency(convertir(p.precioMayorista), monedaVista)
+                              : "-"}
+                          </p>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="mt-3 grid grid-cols-2 gap-y-2 text-sm">
-                      <div>
-                        <p className="text-xs text-[#45464f]">Stock</p>
-                        <p
-                          className={cn(
-                            "font-medium",
-                            p.stockActual <= 5 ? "text-[#ba1a1a]" : "text-[#191c1e]"
-                          )}
-                        >
-                          {p.stockActual} u.
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-[#45464f]">Costo</p>
-                        <p className="font-mono text-[#45464f]">
-                          {formatCurrency(convertir(p.precioCosto), monedaVista)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-[#45464f]">Venta</p>
-                        <p className="font-mono font-medium text-[#191c1e]">
-                          {formatCurrency(convertir(p.precioVenta), monedaVista)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-[#45464f]">Mayorista</p>
-                        <p className="font-mono text-[#45464f]">
-                          {p.precioMayorista != null
-                            ? formatCurrency(convertir(p.precioMayorista), monedaVista)
-                            : "-"}
-                        </p>
-                      </div>
+                    <div className="mt-3 flex items-center justify-end gap-1 border-t border-[#E2E8F0] pt-3">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAbrirEditar(p);
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-[#021541] hover:bg-[#E9EEF9]"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (p.fotoUrl) setImagenPreview(p.fotoUrl);
+                        }}
+                        disabled={!p.fotoUrl}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-[#16A34A] hover:bg-[#E7F8EC] disabled:opacity-30"
+                      >
+                        <ImageIcon className="h-3.5 w-3.5" />
+                        Foto
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDesactivar(p);
+                        }}
+                        disabled={desactivandoId === Number(p.id)}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-[#8a93a6] hover:bg-[#FEF2F2] hover:text-[#ba1a1a] disabled:opacity-40"
+                      >
+                        <Ban className="h-3.5 w-3.5" />
+                        Desactivar
+                      </button>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -908,6 +955,17 @@ export default function ProductosPage() {
       />
 
       <PdfGeneratorModal isOpen={isPdfModalOpen} onClose={() => setIsPdfModalOpen(false)} />
+
+      <ConfirmDialog
+        isOpen={!!productoADesactivar}
+        onClose={() => setProductoADesactivar(null)}
+        onConfirm={confirmarDesactivar}
+        title={`¿Desactivar "${productoADesactivar?.nombre}"?`}
+        description="Va a dejar de aparecer en el catálogo, listas de precios y PDFs."
+        confirmLabel="Desactivar"
+        variant="danger"
+        loading={desactivandoId === Number(productoADesactivar?.id)}
+      />
 
       {imagenPreview && (
         <div

@@ -140,12 +140,12 @@ export default function ClienteForm({
         />
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-[#191c1e]">
+      <label className="flex items-center gap-2 text-sm cursor-pointer text-[#191c1e]">
         <input
           type="checkbox"
           checked={values.esMayorista}
           onChange={(e) => update("esMayorista", e.target.checked)}
-          className="rounded border-[#c5c6d0]"
+          className="rounded border-[#c5c6d0] cursor-pointer"
         />
         Cliente mayorista
       </label>
@@ -157,7 +157,7 @@ export default function ClienteForm({
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm rounded-lg border border-[#c5c6d0]"
+            className="px-4 py-2 text-sm rounded-lg cursor-pointer border border-[#c5c6d0] hover:bg-[#e8e9f1] transition-colors"
           >
             Cancelar
           </button>
@@ -165,7 +165,7 @@ export default function ClienteForm({
         <button
           type="submit"
           disabled={enviando}
-          className="px-4 py-2 text-sm rounded-lg bg-[#021541] text-white disabled:opacity-50"
+          className="px-4 py-2 text-sm rounded-lg cursor-pointer bg-[#021541] text-white disabled:opacity-50 hover:opacity-90 transition-colors"
         >
           {enviando ? "Guardando..." : esEdicion ? "Guardar cambios" : "Crear cliente"}
         </button>

@@ -64,7 +64,7 @@ export function RangoFechas({ desde, hasta, onCambiar }: RangoFechasProps) {
       <button
         type="button"
         onClick={() => setAbierto((a) => !a)}
-        className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+        className={`flex items-center gap-2 rounded-lg border cursor-pointer px-3 py-2 text-sm font-medium transition-colors ${
           hayFiltro
             ? "border-primary bg-primary/5 text-primary"
             : "border-border bg-bg text-text-dim hover:text-text"

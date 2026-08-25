@@ -219,7 +219,7 @@ export function HistorialVentas() {
             <button
               type="button"
               onClick={() => cargar(true)}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#c5c6d0] text-[#45464f] hover:bg-[#eceef0]"
+              className="flex h-9 w-9 shrink-0 items-center cursor-pointer justify-center rounded-lg border border-[#c5c6d0] text-[#45464f] hover:bg-[#eceef0]"
               aria-label="Actualizar"
             >
               <RefreshCw className={cn("h-4 w-4", recargando && "animate-spin")} />
@@ -298,7 +298,7 @@ export function HistorialVentas() {
                           type="button"
                           onClick={() => descargarComprobante(venta.id)}
                           disabled={descargando === venta.id}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#c5c6d0] text-[#45464f] hover:bg-[#eceef0] disabled:opacity-50"
+                          className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-[#c5c6d0] text-[#45464f] hover:bg-[#eceef0] disabled:opacity-50"
                           aria-label={`Descargar comprobante de la venta #${venta.id}`}
                         >
                           {descargando === venta.id ? (

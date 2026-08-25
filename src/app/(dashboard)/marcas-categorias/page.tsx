@@ -241,13 +241,13 @@ function TablaSeccion({ titulo, singular, endpoint }: SeccionProps) {
                     <div className="flex items-center justify-end gap-3">
                       <button
                         onClick={() => handleOpenEditar(item)}
-                        className="text-sm text-[#021541] hover:underline"
+                        className="text-sm cursor-pointer text-[#021541] hover:underline"
                       >
                         Editar
                       </button>
                       <button
                         onClick={() => handleEliminar(item)}
-                        className="text-sm text-[#ba1a1a] hover:underline"
+                        className="text-sm text-[#ba1a1a] cursor-pointer hover:underline"
                       >
                         Eliminar
                       </button>

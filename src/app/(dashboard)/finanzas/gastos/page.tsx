@@ -67,7 +67,7 @@ export default function GastosPage() {
             className={`px-4 py-2 text-sm font-medium ${
               pestana === tab
                 ? "border-b-2 border-[#021541] text-[#021541]"
-                : "text-[#45464f] hover:text-[#191c1e]"
+                : "text-[#45464f] hover:text-[#191c1e] cursor-pointer"
             }`}
           >
             {tab === "listado" ? "Listado" : "Análisis"}

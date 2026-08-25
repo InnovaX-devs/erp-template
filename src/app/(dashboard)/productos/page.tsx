@@ -5,8 +5,12 @@ import { cn } from "@/lib/cn";
 import { ProductoFormModal, type ProductoFormData } from "@/components/productos/producto-form-modal";
 import { FormulaDecantModal } from "@/components/productos/formula-decant-modal";
 import { PdfGeneratorModal } from "@/components/productos/pdf-generator-modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FileText, Search, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
+import { Pencil, ImageIcon, Ban, X } from "lucide-react";
+import { toArs, toUsd, formatCurrency } from "@/lib/currency";
+import Select from "@/components/ui/select";
 
 interface Producto {
   id: string;
@@ -80,9 +84,14 @@ export default function ProductosPage() {
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>("activos");
   const [ordenarPor, setOrdenarPor] = useState<OrdenarPor>("");
 
+  const [monedaVista, setMonedaVista] = useState<"USD" | "ARS">("USD");
+
   // Estados para el Modal de Fórmula Decant
   const [isFormulaDecantOpen, setIsFormulaDecantOpen] = useState(false);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [imagenPreview, setImagenPreview] = useState<string | null>(null);
+  const [desactivandoId, setDesactivandoId] = useState<number | null>(null);
+  const [productoADesactivar, setProductoADesactivar] = useState<Producto | null>(null);
   const [configDecant, setConfigDecant] = useState({
     costoEnvaseDecantARS: 1500,
     multiplicadorInsumoDecant: 2.5,
@@ -328,13 +337,41 @@ export default function ProductosPage() {
     setIsModalOpen(true);
   };
 
+  function handleDesactivar(producto: Producto) {
+    setProductoADesactivar(producto);
+  }
+
+  async function confirmarDesactivar() {
+    if (!productoADesactivar) return;
+
+    setDesactivandoId(Number(productoADesactivar.id));
+    try {
+      const res = await fetch(`/api/productos/${productoADesactivar.id}/estado`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activo: false }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "No se pudo desactivar el producto");
+      }
+      await cargarProductos();
+      setProductoADesactivar(null);
+    } catch (err) {
+      console.warn("Error al desactivar producto:", err);
+      alert(err instanceof Error ? err.message : "No se pudo desactivar el producto");
+    } finally {
+      setDesactivandoId(null);
+    }
+  }
+
   const inicioRango = productosFiltrados.length === 0 ? 0 : (paginaActual - 1) * elementosPorPagina + 1;
   const finRango = Math.min(paginaActual * elementosPorPagina, productosFiltrados.length);
 
   return (
     <div className="p-4 space-y-5 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-[#191c1e] sm:text-2xl">
             Catálogo de Productos
@@ -344,7 +381,7 @@ export default function ProductosPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+        <div className="grid grid-cols-2 gap-2 lg:flex lg:flex-wrap">
           <button
             type="button"
             onClick={() => setIsPdfModalOpen(true)}
@@ -417,9 +454,9 @@ export default function ProductosPage() {
 
       {/* Búsqueda + Filtros */}
       <div className="space-y-3 rounded-2xl border border-[#E2E8F0] bg-white p-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-1">
-            <div className="relative w-full sm:w-80">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center lg:flex-1">
+            <div className="relative w-full md:w-80">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#45464f]" />
               <input
                 type="text"
@@ -453,9 +490,37 @@ export default function ProductosPage() {
                 </span>
               )}
             </button>
+
+            <div className="flex overflow-hidden rounded-lg border border-[#c5c6d0] md:hidden">
+              <button
+                type="button"
+                onClick={() => setMonedaVista("USD")}
+                className={cn(
+                  "flex-1 px-3 py-2 text-sm font-medium transition-colors",
+                  monedaVista === "USD"
+                    ? "bg-[#021541] text-white"
+                    : "bg-white text-[#45464f] hover:bg-[#eceef0]"
+                )}
+              >
+                USD
+              </button>
+              <button
+                type="button"
+                onClick={() => setMonedaVista("ARS")}
+                className={cn(
+                  "flex-1 px-3 py-2 text-sm font-medium transition-colors",
+                  monedaVista === "ARS"
+                    ? "bg-[#021541] text-white"
+                    : "bg-white text-[#45464f] hover:bg-[#eceef0]"
+                )}
+              >
+                ARS
+              </button>
+            </div>
+
           </div>
 
-          <p className="text-xs text-[#45464f] sm:text-right">
+          <p className="text-xs text-[#45464f] lg:text-right">
             Mostrando {inicioRango}–{finRango} de {productosFiltrados.length} productos
           </p>
         </div>
@@ -463,93 +528,91 @@ export default function ProductosPage() {
         {/* Panel de filtros — solo visible si mostrarFiltros es true */}
         {mostrarFiltros && (
           <div className="space-y-3 border-t border-[#E2E8F0] pt-3">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               <div>
                 <label className="block text-xs font-medium text-[#45464f]">Marca</label>
-                <select
-                  value={filtroMarcaId}
-                  onChange={(e) => setFiltroMarcaId(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-[#c5c6d0] bg-white px-3 py-2 text-sm text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
-                >
-                  <option value="">Todas las marcas</option>
-                  {marcas.map((m) => (
-                    <option key={m.id} value={String(m.id)}>
-                      {m.nombre}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                    value={filtroMarcaId}
+                    onChange={setFiltroMarcaId}
+                    options={[
+                      { value: "", label: "Todas las marcas" },
+                      ...marcas.map((m) => ({ value: String(m.id), label: m.nombre })),
+                    ]}
+                    className="mt-1"
+                  /> 
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-[#45464f]">Categoría</label>
-                <select
+                <Select
                   value={filtroCategoriaId}
-                  onChange={(e) => setFiltroCategoriaId(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-[#c5c6d0] bg-white px-3 py-2 text-sm text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
-                >
-                  <option value="">Todas las categorías</option>
-                  {categorias.map((c) => (
-                    <option key={c.id} value={String(c.id)}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setFiltroCategoriaId}
+                  options={[
+                    { value: "", label: "Todas las categorías" },
+                    ...categorias.map((c) => ({ value: String(c.id), label: c.nombre })),
+                  ]}
+                  className="mt-1"
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-[#45464f]">Stock</label>
-                <select
+                <Select
                   value={filtroStock}
-                  onChange={(e) => setFiltroStock(e.target.value as FiltroStock)}
-                  className="mt-1 w-full rounded-lg border border-[#c5c6d0] bg-white px-3 py-2 text-sm text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
-                >
-                  <option value="todos">Todos</option>
-                  <option value="sin_stock">Sin stock</option>
-                  <option value="stock_bajo">Stock bajo</option>
-                </select>
+                  onChange={(v) => setFiltroStock(v as FiltroStock)}
+                  options={[
+                    { value: "todos", label: "Todos" },
+                    { value: "sin_stock", label: "Sin stock" },
+                    { value: "stock_bajo", label: "Stock bajo" },
+                  ]}
+                  className="mt-1"
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-[#45464f]">Foto</label>
-                <select
+                <Select
                   value={filtroFoto}
-                  onChange={(e) => setFiltroFoto(e.target.value as FiltroFoto)}
-                  className="mt-1 w-full rounded-lg border border-[#c5c6d0] bg-white px-3 py-2 text-sm text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
-                >
-                  <option value="todas">Todas</option>
-                  <option value="con_foto">Con foto</option>
-                  <option value="sin_foto">Sin foto</option>
-                </select>
+                  onChange={(v) => setFiltroFoto(v as FiltroFoto)}
+                  options={[
+                    { value: "todas", label: "Todas" },
+                    { value: "con_foto", label: "Con foto" },
+                    { value: "sin_foto", label: "Sin foto" },
+                  ]}
+                  className="mt-1"
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-[#45464f]">Estado</label>
-                <select
+                <Select
                   value={filtroEstado}
-                  onChange={(e) => setFiltroEstado(e.target.value as FiltroEstado)}
-                  className="mt-1 w-full rounded-lg border border-[#c5c6d0] bg-white px-3 py-2 text-sm text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
-                >
-                  <option value="activos">Activos</option>
-                  <option value="inactivos">Inactivos</option>
-                  <option value="todos">Todos</option>
-                </select>
+                  onChange={(v) => setFiltroEstado(v as FiltroEstado)}
+                  options={[
+                    { value: "activos", label: "Activos" },
+                    { value: "inactivos", label: "Inactivos" },
+                    { value: "todos", label: "Todos" },
+                  ]}
+                  className="mt-1"
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-[#45464f]">Ordenar por</label>
-                <select
+                <Select
                   value={ordenarPor}
-                  onChange={(e) => setOrdenarPor(e.target.value as OrdenarPor)}
-                  className="mt-1 w-full rounded-lg border border-[#c5c6d0] bg-white px-3 py-2 text-sm text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
-                >
-                  <option value="">Sin ordenar</option>
-                  <option value="nombre_asc">Nombre (A-Z)</option>
-                  <option value="nombre_desc">Nombre (Z-A)</option>
-                  <option value="stock_asc">Stock (menor a mayor)</option>
-                  <option value="stock_desc">Stock (mayor a menor)</option>
-                  <option value="ganancia_asc">% Ganancia (menor a mayor)</option>
-                  <option value="ganancia_desc">% Ganancia (mayor a menor)</option>
-                </select>
+                  onChange={(v) => setOrdenarPor(v as OrdenarPor)}
+                  options={[
+                    { value: "", label: "Sin ordenar" },
+                    { value: "nombre_asc", label: "Nombre (A-Z)" },
+                    { value: "nombre_desc", label: "Nombre (Z-A)" },
+                    { value: "stock_asc", label: "Stock (menor a mayor)" },
+                    { value: "stock_desc", label: "Stock (mayor a menor)" },
+                    { value: "ganancia_asc", label: "% Ganancia (menor a mayor)" },
+                    { value: "ganancia_desc", label: "% Ganancia (mayor a menor)" },
+                  ]}
+                  className="mt-1"
+                />
               </div>
             </div>
 
@@ -610,61 +673,120 @@ export default function ProductosPage() {
         ) : (
           <>
             <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[720px] text-sm">
-                <thead className="bg-[#F1F5F9]">
-                  <tr className="text-left text-[11px] font-bold uppercase tracking-wider text-[#45464f]">
+              <table className="w-full min-w-[900px] text-sm">
+                <thead className="bg-[#021541]">
+                  <tr className="text-left text-[11px] font-bold uppercase tracking-wider text-white">
                     <th className="px-4 py-3">Producto</th>
                     <th className="px-4 py-3">Marca</th>
                     <th className="px-4 py-3">Stock</th>
                     <th className="px-4 py-3">Costo</th>
-                    <th className="px-4 py-3">Venta</th>
-                    <th className="px-4 py-3">% Ganancia</th>
+                    <th className="px-4 py-3 text-[#4ADE80]">Venta</th>
+                    <th className="px-4 py-3">Gan. Min.</th>
                     <th className="px-4 py-3">Mayorista</th>
-                    <th className="px-4 py-3 text-right">Acción</th>
+                    <th className="px-4 py-3 text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {productosPaginados.map((p) => {
-                    const porcentajeGanancia =
-                      p.precioCosto > 0
-                        ? ((p.precioVenta - p.precioCosto) / p.precioCosto) * 100
-                        : 0;
+                    const cotizacion = configDecant.cotizacionUSD;
+                    const costo = {
+                      usd: toUsd(p.precioCosto, p.monedaPrecio, cotizacion),
+                      ars: toArs(p.precioCosto, p.monedaPrecio, cotizacion),
+                    };
+                    const venta = {
+                      usd: toUsd(p.precioVenta, p.monedaPrecio, cotizacion),
+                      ars: toArs(p.precioVenta, p.monedaPrecio, cotizacion),
+                    };
+                    const mayorista =
+                      p.precioMayorista != null
+                        ? {
+                            usd: toUsd(p.precioMayorista, p.monedaPrecio, cotizacion),
+                            ars: toArs(p.precioMayorista, p.monedaPrecio, cotizacion),
+                          }
+                        : null;
+
+                    const gananciaPct =
+                      p.precioCosto > 0 ? ((p.precioVenta - p.precioCosto) / p.precioCosto) * 100 : 0;
+
+                    const stockColor =
+                      p.stockActual <= 0
+                        ? "bg-[#ba1a1a]"
+                        : p.stockMinimo != null && p.stockActual <= p.stockMinimo
+                        ? "bg-[#d97706]"
+                        : "bg-[#1e7d38]";
 
                     return (
-                      <tr key={p.id} className="border-t border-[#E2E8F0]">
-                        <td className="px-4 py-3 font-medium text-[#191c1e]">{p.nombre}</td>
-                        <td className="px-4 py-3 text-[#45464f]">{p.marca?.nombre ?? "-"}</td>
+                      <tr key={p.id} className="border-t border-[#E2E8F0] hover:bg-[#F8FAFC]">
+                        <td className="px-4 py-3 font-semibold text-[#191c1e]">{p.nombre}</td>
+                        <td className="px-4 py-3 text-[#5b6472]">{p.marca?.nombre ?? "-"}</td>
                         <td className="px-4 py-3">
-                          <span
-                            className={cn(
-                              "font-medium",
-                              p.stockActual <= 5 ? "text-[#ba1a1a]" : "text-[#191c1e]"
-                            )}
-                          >
-                            {p.stockActual} u.
+                          <span className="inline-flex items-center gap-1.5 font-medium text-[#191c1e]">
+                            <span className={cn("h-2 w-2 rounded-full", stockColor)} />
+                            {p.stockActual}
                           </span>
                         </td>
-                        <td className="px-4 py-3 font-mono text-[#45464f]">
-                          {formatMoney(p.precioCosto, p.monedaPrecio)}
+                        <td className="px-4 py-3">
+                          <div className="font-semibold text-[#191c1e]">
+                            {formatCurrency(costo.usd, "USD")}{" "}
+                            <span className="text-[10px] font-medium text-[#8a93a6]">USD</span>
+                          </div>
+                          <div className="text-xs text-[#a3aab5]">{formatCurrency(costo.ars, "ARS")}</div>
                         </td>
-                        <td className="px-4 py-3 font-mono font-medium text-[#191c1e]">
-                          {formatMoney(p.precioVenta, p.monedaPrecio)}
+                        <td className="bg-[#F0FDF4] px-4 py-3">
+                          <div className="font-bold text-[#15803D]">
+                            {formatCurrency(venta.usd, "USD")}{" "}
+                            <span className="text-[10px] font-medium text-[#4ADE80]">USD</span>
+                          </div>
+                          <div className="text-xs text-[#86D89C]">{formatCurrency(venta.ars, "ARS")}</div>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="rounded-full bg-[#e1f2e6] px-2.5 py-1 text-xs font-semibold text-[#1e7d38]">
-                            +{porcentajeGanancia.toFixed(1)}%
+                          <span className={cn("font-bold", gananciaPct >= 0 ? "text-[#15803D]" : "text-[#ba1a1a]")}>
+                            {gananciaPct >= 0 ? "+" : ""}
+                            {gananciaPct.toFixed(0)}%
                           </span>
                         </td>
-                        <td className="px-4 py-3 font-mono text-[#45464f]">
-                          {p.precioMayorista ? formatMoney(p.precioMayorista, p.monedaPrecio) : "-"}
+                        <td className="px-4 py-3">
+                          {mayorista ? (
+                            <>
+                              <div className="font-bold text-[#1D4ED8]">
+                                {formatCurrency(mayorista.usd, "USD")}{" "}
+                                <span className="text-[10px] font-medium text-[#93B4F5]">USD</span>
+                              </div>
+                              <div className="text-xs text-[#93B4F5]">{formatCurrency(mayorista.ars, "ARS")}</div>
+                            </>
+                          ) : (
+                            <span className="text-[#a3aab5]">-</span>
+                          )}
                         </td>
-                        <td className="px-4 py-3 text-right">
-                          <button
-                            onClick={() => handleAbrirEditar(p)}
-                            className="text-[#45464f] hover:text-[#021541]"
-                          >
-                            ⋮
-                          </button>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleAbrirEditar(p)}
+                              className="rounded-lg p-1.5 text-[#021541] hover:bg-[#E9EEF9]"
+                              title="Editar producto"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => p.fotoUrl && setImagenPreview(p.fotoUrl)}
+                              disabled={!p.fotoUrl}
+                              className="rounded-lg p-1.5 text-[#16A34A] hover:bg-[#E7F8EC] disabled:opacity-30"
+                              title={p.fotoUrl ? "Ver foto" : "Sin foto cargada"}
+                            >
+                              <ImageIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDesactivar(p)}
+                              disabled={desactivandoId === Number(p.id)}
+                              className="rounded-lg p-1.5 text-[#8a93a6] hover:bg-[#FEF2F2] hover:text-[#ba1a1a] disabled:opacity-40"
+                              title="Desactivar producto"
+                            >
+                              <Ban className="h-4 w-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -680,55 +802,106 @@ export default function ProductosPage() {
                     ? ((p.precioVenta - p.precioCosto) / p.precioCosto) * 100
                     : 0;
 
+                const cotizacion = configDecant.cotizacionUSD;
+                const convertir = (valor: number) =>
+                  monedaVista === "USD"
+                    ? toUsd(valor, p.monedaPrecio, cotizacion)
+                    : toArs(valor, p.monedaPrecio, cotizacion);
+
                 return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => handleAbrirEditar(p)}
-                    className="w-full p-4 text-left active:bg-[#eceef0]"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-[#191c1e]">{p.nombre}</p>
-                        <p className="truncate text-xs text-[#45464f]">{p.marca?.nombre ?? "-"}</p>
+                  <div key={p.id} className="p-4">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleAbrirEditar(p)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleAbrirEditar(p);
+                      }}
+                      className="cursor-pointer active:opacity-80"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-[#191c1e]">{p.nombre}</p>
+                          <p className="truncate text-xs text-[#45464f]">{p.marca?.nombre ?? "-"}</p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-[#e1f2e6] px-2.5 py-1 text-xs font-semibold text-[#1e7d38]">
+                          +{porcentajeGanancia.toFixed(1)}%
+                        </span>
                       </div>
-                      <span className="shrink-0 rounded-full bg-[#e1f2e6] px-2.5 py-1 text-xs font-semibold text-[#1e7d38]">
-                        +{porcentajeGanancia.toFixed(1)}%
-                      </span>
+
+                      <div className="mt-3 grid grid-cols-2 gap-y-2 text-sm">
+                        <div>
+                          <p className="text-xs text-[#45464f]">Stock</p>
+                          <p
+                            className={cn(
+                              "font-medium",
+                              p.stockActual <= 5 ? "text-[#ba1a1a]" : "text-[#191c1e]"
+                            )}
+                          >
+                            {p.stockActual} u.
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#45464f]">Costo</p>
+                          <p className="font-mono text-[#45464f]">
+                            {formatCurrency(convertir(p.precioCosto), monedaVista)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#45464f]">Venta</p>
+                          <p className="font-mono font-medium text-[#191c1e]">
+                            {formatCurrency(convertir(p.precioVenta), monedaVista)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#45464f]">Mayorista</p>
+                          <p className="font-mono text-[#45464f]">
+                            {p.precioMayorista != null
+                              ? formatCurrency(convertir(p.precioMayorista), monedaVista)
+                              : "-"}
+                          </p>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="mt-3 grid grid-cols-2 gap-y-2 text-sm">
-                      <div>
-                        <p className="text-xs text-[#45464f]">Stock</p>
-                        <p
-                          className={cn(
-                            "font-medium",
-                            p.stockActual <= 5 ? "text-[#ba1a1a]" : "text-[#191c1e]"
-                          )}
-                        >
-                          {p.stockActual} u.
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-[#45464f]">Costo</p>
-                        <p className="font-mono text-[#45464f]">
-                          {formatMoney(p.precioCosto, p.monedaPrecio)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-[#45464f]">Venta</p>
-                        <p className="font-mono font-medium text-[#191c1e]">
-                          {formatMoney(p.precioVenta, p.monedaPrecio)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-[#45464f]">Mayorista</p>
-                        <p className="font-mono text-[#45464f]">
-                          {p.precioMayorista ? formatMoney(p.precioMayorista, p.monedaPrecio) : "-"}
-                        </p>
-                      </div>
+                    <div className="mt-3 flex items-center justify-end gap-1 border-t border-[#E2E8F0] pt-3">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAbrirEditar(p);
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-[#021541] hover:bg-[#E9EEF9]"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (p.fotoUrl) setImagenPreview(p.fotoUrl);
+                        }}
+                        disabled={!p.fotoUrl}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-[#16A34A] hover:bg-[#E7F8EC] disabled:opacity-30"
+                      >
+                        <ImageIcon className="h-3.5 w-3.5" />
+                        Foto
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDesactivar(p);
+                        }}
+                        disabled={desactivandoId === Number(p.id)}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-[#8a93a6] hover:bg-[#FEF2F2] hover:text-[#ba1a1a] disabled:opacity-40"
+                      >
+                        <Ban className="h-3.5 w-3.5" />
+                        Desactivar
+                      </button>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -782,6 +955,40 @@ export default function ProductosPage() {
       />
 
       <PdfGeneratorModal isOpen={isPdfModalOpen} onClose={() => setIsPdfModalOpen(false)} />
+
+      <ConfirmDialog
+        isOpen={!!productoADesactivar}
+        onClose={() => setProductoADesactivar(null)}
+        onConfirm={confirmarDesactivar}
+        title={`¿Desactivar "${productoADesactivar?.nombre}"?`}
+        description="Va a dejar de aparecer en el catálogo, listas de precios y PDFs."
+        confirmLabel="Desactivar"
+        variant="danger"
+        loading={desactivandoId === Number(productoADesactivar?.id)}
+      />
+
+      {imagenPreview && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setImagenPreview(null)}
+        >
+          <div className="relative max-h-[80vh] max-w-lg" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setImagenPreview(null)}
+              className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#191c1e] shadow-lg"
+              aria-label="Cerrar"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <img
+              src={imagenPreview}
+              alt="Foto del producto"
+              className="max-h-[80vh] max-w-full rounded-lg object-contain shadow-2xl"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

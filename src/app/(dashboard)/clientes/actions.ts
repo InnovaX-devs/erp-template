@@ -208,6 +208,8 @@ export async function ajustarDeudaManual(input: AjusteDeudaInput) {
           totalARS: monto,
           montoPagado: 0,
           estadoPago: "A_CUENTA",
+          armado: true,   // ← agregar: no es un pedido físico, no hay nada que armar
+          retirado: true, // ← agregar: no es algo que el cliente "retire"
           items: {
             create: [
               {

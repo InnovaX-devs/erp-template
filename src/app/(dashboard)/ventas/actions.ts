@@ -13,7 +13,9 @@ import type {
   FiltrosPedidos,
   ResultadoListadoPedidos,
   PedidoListItem,
+  PedidoDetalle,
 } from "@/types/venta"; 
+
 
 type ItemInput = {
   productoId: number;
@@ -50,6 +52,10 @@ type ResultadoVenta =
   presentacion: "FRASCO" | "DECANT_5ML" | "DECANT_10ML";
   abrioFrascoCerrado: boolean;
 };
+
+type ResultadoDetallePedido =
+  | { success: true; pedido: PedidoDetalle }
+  | { success: false; error: string };
 
 type ResultadoDescontarStock =
   | { success: true }
@@ -596,6 +602,112 @@ export async function marcarEnviado(ventaId: number): Promise<ResultadoAccionPed
   }
 }
 
+export async function obtenerDetallePedido(ventaId: number): Promise<ResultadoDetallePedido> {
+  try {
+    const [venta, configuracion] = await Promise.all([
+      prisma.venta.findUnique({
+        where: { id: ventaId },
+        include: {
+          cliente: { select: { nombre: true, apellido: true } },
+          items: {
+            include: {
+              producto: {
+                select: { nombre: true, precioCosto: true, monedaPrecio: true, contenidoMl: true },
+              },
+            },
+          },
+          pagos: {
+            include: {
+              cuenta: { select: { tipo: true } },
+            },
+          },
+        },
+      }),
+      getConfiguracionCacheada(),
+    ]);
+
+    if (!venta) {
+      return { success: false, error: "El pedido no existe" };
+    }
+
+    const costoEnvaseDecantARS = configuracion?.costoEnvaseDecantARS ?? 0;
+
+    // Misma lógica que listarVentas: costo real por ítem según presentación.
+    const costoTotalARS = venta.items.reduce((acc, item) => {
+      if (!item.producto) return acc;
+
+      const costoProductoARS =
+        item.producto.monedaPrecio === "USD"
+          ? item.producto.precioCosto * venta.cotizacionUsada
+          : item.producto.precioCosto;
+
+      let costoItemARS: number;
+
+      switch (item.presentacion) {
+        case "FRASCO":
+          costoItemARS = costoProductoARS * item.cantidad;
+          break;
+
+        case "DECANT_5ML":
+        case "DECANT_10ML": {
+          if (!item.producto.contenidoMl || item.producto.contenidoMl <= 0) {
+            return acc;
+          }
+          const ml = item.presentacion === "DECANT_5ML" ? 5 : 10;
+          const costoPerfumeARS = (costoProductoARS / item.producto.contenidoMl) * ml;
+          costoItemARS = (costoPerfumeARS + costoEnvaseDecantARS) * item.cantidad;
+          break;
+        }
+
+        default:
+          costoItemARS = 0;
+      }
+
+      return acc + costoItemARS;
+    }, 0);
+
+    const gananciaARS = venta.totalARS - costoTotalARS;
+    const gananciaPorcentaje = costoTotalARS > 0 ? (gananciaARS / costoTotalARS) * 100 : 0;
+
+    const pedido: PedidoDetalle = {
+      id: venta.id,
+      fecha: venta.fecha.toISOString(),
+      clienteNombre: venta.cliente
+        ? `${venta.cliente.nombre}${venta.cliente.apellido ? " " + venta.cliente.apellido : ""}`
+        : null,
+      estadoPago: venta.estadoPago,
+      armado: venta.armado,
+      enviado: venta.enviado,
+      retirado: venta.retirado,
+      totalARS: venta.totalARS,
+      montoPagado: venta.montoPagado,
+      gananciaARS,
+      gananciaPorcentaje,
+      pagos: venta.pagos.map((p) => {
+        const esCuentaUSD = p.cuenta.tipo === "EFECTIVO_USD" || p.cuenta.tipo === "BANCO_USD";
+        return {
+          montoARS: esCuentaUSD ? p.monto * venta.cotizacionUsada : p.monto,
+          tipoCuenta: p.cuenta.tipo,
+        };
+      }),
+      items: venta.items.map((item) => ({
+        id: item.id,
+        productoNombre: item.producto?.nombre ?? item.descripcionLibre ?? "Producto",
+        cantidad: item.cantidad,
+        presentacion: item.presentacion,
+        precioUnitarioUSD: item.precioUnitarioUSD,
+        precioUnitarioARS: item.precioUnitarioUSD * venta.cotizacionUsada,
+        subtotalARS: item.precioUnitarioUSD * venta.cotizacionUsada * item.cantidad,
+      })),
+    };
+
+    return { success: true, pedido };
+  } catch (e) {
+    console.error(e);
+    return { success: false, error: "Error al obtener el detalle del pedido" };
+  }
+}
+
 export async function marcarRetirado(ventaId: number): Promise<ResultadoAccionPedido> {
   try {
     const venta = await prisma.venta.findUnique({ where: { id: ventaId } });
@@ -689,6 +801,54 @@ export async function registrarCobroPedido(
     return { success: true };
   } catch (e) {
     const mensaje = e instanceof Error ? e.message : "Error al registrar el cobro";
+    return { success: false, error: mensaje };
+  }
+}
+
+export async function cancelarPedido(ventaId: number): Promise<ResultadoAccionPedido> {
+  try {
+    const venta = await prisma.venta.findUnique({
+      where: { id: ventaId },
+      include: { items: true },
+    });
+    if (!venta) return { success: false, error: "El pedido no existe" };
+
+    if (venta.estadoPago === "CANCELADA" || venta.estadoPago === "ANULADA") {
+      return { success: false, error: "El pedido ya está cancelado" };
+    }
+
+    if (venta.montoPagado > 0) {
+      return {
+        success: false,
+        error: "Este pedido tiene pagos registrados. Devolvé el dinero al cliente antes de cancelarlo.",
+      };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Si estaba armado, el stock real ya se había descontado en marcarArmado. Se repone.
+      if (venta.armado) {
+        for (const item of venta.items) {
+          const unidadesADevolver =
+            item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
+          if (unidadesADevolver === 0) continue;
+
+          await tx.producto.update({
+            where: { id: item.productoId! },
+            data: { stockActual: { increment: unidadesADevolver } },
+          });
+        }
+      }
+
+      await tx.venta.update({
+        where: { id: ventaId },
+        data: { estadoPago: "CANCELADA" },
+      });
+    });
+
+    revalidatePath("/ventas/pedidos");
+    return { success: true };
+  } catch (e) {
+    const mensaje = e instanceof Error ? e.message : "Error al cancelar el pedido";
     return { success: false, error: mensaje };
   }
 }

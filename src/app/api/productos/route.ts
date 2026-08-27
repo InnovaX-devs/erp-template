@@ -15,7 +15,6 @@ export async function GET(request: NextRequest) {
     const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize") ?? 50)));
 
     const where: Prisma.ProductoWhereInput = {
-      activo: true,
       ...(q ? { nombre: { contains: q, mode: "insensitive" } } : {}),
     };
 

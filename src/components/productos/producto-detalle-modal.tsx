@@ -1,8 +1,9 @@
 "use client";
 
-import { Pencil, Ban, X } from "lucide-react";
+import { Pencil, Ban, X, CheckCircle, ImageIcon } from "lucide-react";
 import { toArs, toUsd, formatCurrency } from "@/lib/currency";
 import { calcularPreciosDecant } from "@/lib/calculos/decants";
+
 
 function resolverPrecioDecant(
   producto: {
@@ -78,6 +79,7 @@ interface ProductoDetalle {
   overrideDecant5ml?: number | null;
   overrideDecant10ml?: number | null;
   seVendePorDecant?: boolean;
+  activo: boolean;
 }
 
 interface ConfigDecant {
@@ -321,10 +323,23 @@ export function ProductoDetalleModal({
           <button
             type="button"
             onClick={onDesactivar}
-            className="flex items-center justify-center gap-2 rounded-lg border border-[#f5c2c2] bg-[#fdecec] px-4 py-2.5 text-sm font-medium text-[#ba1a1a] hover:bg-[#f8d7d7]"
+            className={
+              producto.activo
+                ? "flex items-center justify-center gap-2 rounded-lg border border-[#f5c2c2] bg-[#fdecec] px-4 py-2.5 text-sm font-medium text-[#ba1a1a] hover:bg-[#f8d7d7]"
+                : "flex items-center justify-center gap-2 rounded-lg border border-[#b7dfc0] bg-[#e7f8ec] px-4 py-2.5 text-sm font-medium text-[#1e7d38] hover:bg-[#d9f2df]"
+            }
           >
-            <Ban className="h-4 w-4" />
-            Desactivar
+            {producto.activo ? (
+              <>
+                <Ban className="h-4 w-4" />
+                Desactivar
+              </>
+            ) : (
+              <>
+                <CheckCircle className="h-4 w-4" />
+                Activar
+              </>
+            )}
           </button>
         </div>
       </div>

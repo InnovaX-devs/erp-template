@@ -8,9 +8,12 @@ import { PdfGeneratorModal } from "@/components/productos/pdf-generator-modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FileText, Search, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
-import { Pencil, ImageIcon, Ban, X } from "lucide-react";
+import { Pencil, ImageIcon, Ban, CheckCircle, X } from "lucide-react";
 import { toArs, toUsd, formatCurrency } from "@/lib/currency";
 import Select from "@/components/ui/select";
+import { ProductoDetalleModal } from "@/components/productos/producto-detalle-modal";
+
+
 
 interface Producto {
   id: string;
@@ -45,8 +48,6 @@ interface Categoria {
   id: string | number;
   nombre: string;
 }
-
-const COTIZACION_USD = 1200;
 
 type FiltroStock = "todos" | "sin_stock" | "stock_bajo";
 type FiltroFoto = "todas" | "con_foto" | "sin_foto";
@@ -86,11 +87,14 @@ export default function ProductosPage() {
 
   const [monedaVista, setMonedaVista] = useState<"USD" | "ARS">("USD");
 
+  // junto a los demás useState:
+  const [productoDetalle, setProductoDetalle] = useState<Producto | null>(null);
+
   // Estados para el Modal de Fórmula Decant
   const [isFormulaDecantOpen, setIsFormulaDecantOpen] = useState(false);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [imagenPreview, setImagenPreview] = useState<string | null>(null);
-  const [desactivandoId, setDesactivandoId] = useState<number | null>(null);
+  const [desactivandoId, setDesactivandoId] = useState<string | null>(null);
   const [productoADesactivar, setProductoADesactivar] = useState<Producto | null>(null);
   const [configDecant, setConfigDecant] = useState({
     costoEnvaseDecantARS: 1500,
@@ -99,6 +103,7 @@ export default function ProductosPage() {
     offsetDecant5mlARS: 200,
     cotizacionUSD: 1200,
   });
+  const cotizacion = configDecant.cotizacionUSD;
 
   useEffect(() => {
     fetch("/api/configuracion")
@@ -137,7 +142,7 @@ export default function ProductosPage() {
   const cargarProductos = useCallback(async () => {
     try {
       setCargando(true);
-      const res = await fetch("/api/productos");
+      const res = await fetch("/api/productos?all=true");
       if (res.ok) {
         const data = await res.json();
         // Si la API devuelve un objeto paginado { items, total }, tomamos items
@@ -177,7 +182,11 @@ export default function ProductosPage() {
   const conteoStockBajo = useMemo(
     () =>
       productosBusqueda.filter(
-        (p) => p.activo && p.stockActual > 0 && p.stockActual <= 5
+        (p) =>
+          p.activo &&
+          p.stockActual > 0 &&
+          p.stockMinimo != null &&
+          p.stockActual <= p.stockMinimo
       ).length,
     [productosBusqueda]
   );
@@ -194,7 +203,11 @@ export default function ProductosPage() {
       if (filtroStock === "sin_stock" && p.stockActual > 0) return false;
       if (
         filtroStock === "stock_bajo" &&
-        !(p.stockActual > 0 && p.stockActual <= 5)
+        !(
+          p.stockActual > 0 &&
+          p.stockMinimo != null &&
+          p.stockActual <= p.stockMinimo
+        )
       )
         return false;
 
@@ -268,9 +281,9 @@ export default function ProductosPage() {
 
     productosFiltrados.forEach((p) => {
       const costoEnUSD =
-        p.monedaPrecio === "USD" ? p.precioCosto : p.precioCosto / COTIZACION_USD;
+        p.monedaPrecio === "USD" ? p.precioCosto : p.precioCosto / configDecant.cotizacionUSD;
       const ventaEnUSD =
-        p.monedaPrecio === "USD" ? p.precioVenta : p.precioVenta / COTIZACION_USD;
+        p.monedaPrecio === "USD" ? p.precioVenta : p.precioVenta / configDecant.cotizacionUSD;
 
       costoTotalUSD += costoEnUSD * p.stockActual;
       ventaTotalUSD += ventaEnUSD * p.stockActual;
@@ -280,13 +293,13 @@ export default function ProductosPage() {
 
     return {
       costoUSD: costoTotalUSD,
-      costoARS: costoTotalUSD * COTIZACION_USD,
+      costoARS: costoTotalUSD * configDecant.cotizacionUSD,
       ventaUSD: ventaTotalUSD,
-      ventaARS: ventaTotalUSD * COTIZACION_USD,
+      ventaARS: ventaTotalUSD * configDecant.cotizacionUSD,
       gananciaUSD: gananciaTotalUSD,
-      gananciaARS: gananciaTotalUSD * COTIZACION_USD,
+      gananciaARS: gananciaTotalUSD * configDecant.cotizacionUSD,
     };
-  }, [productosFiltrados]);
+  }, [productosFiltrados, configDecant.cotizacionUSD]);
 
   // 4. Paginación
   const totalPaginas = Math.ceil(productosFiltrados.length / elementosPorPagina) || 1;
@@ -337,29 +350,38 @@ export default function ProductosPage() {
     setIsModalOpen(true);
   };
 
-  function handleDesactivar(producto: Producto) {
+  function handleCambiarEstado(producto: Producto) {
     setProductoADesactivar(producto);
   }
 
-  async function confirmarDesactivar() {
+  async function confirmarCambiarEstado() {
     if (!productoADesactivar) return;
 
-    setDesactivandoId(Number(productoADesactivar.id));
+    const nuevoEstado = !productoADesactivar.activo;
+
+    setDesactivandoId(productoADesactivar.id);
+
     try {
       const res = await fetch(`/api/productos/${productoADesactivar.id}/estado`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ activo: false }),
+        body: JSON.stringify({ activo: nuevoEstado }),
       });
+
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "No se pudo desactivar el producto");
+        throw new Error(data.error || "No se pudo cambiar el estado del producto");
       }
+
       await cargarProductos();
       setProductoADesactivar(null);
     } catch (err) {
-      console.warn("Error al desactivar producto:", err);
-      alert(err instanceof Error ? err.message : "No se pudo desactivar el producto");
+      console.warn("Error al cambiar estado del producto:", err);
+      alert(
+        err instanceof Error
+          ? err.message
+          : "No se pudo cambiar el estado del producto"
+      );
     } finally {
       setDesactivandoId(null);
     }
@@ -716,7 +738,11 @@ export default function ProductosPage() {
                         : "bg-[#1e7d38]";
 
                     return (
-                      <tr key={p.id} className="border-t border-[#E2E8F0] hover:bg-[#F8FAFC]">
+                      <tr
+                        key={p.id}
+                        onClick={() => setProductoDetalle(p)}
+                        className="cursor-pointer border-t border-[#E2E8F0] hover:bg-[#F8FAFC]"
+                      >
                         <td className="px-4 py-3 font-semibold text-[#191c1e]">{p.nombre}</td>
                         <td className="px-4 py-3 text-[#5b6472]">{p.marca?.nombre ?? "-"}</td>
                         <td className="px-4 py-3">
@@ -759,7 +785,10 @@ export default function ProductosPage() {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center justify-end gap-2">
+                          <div
+                            className="flex items-center justify-end gap-2"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <button
                               type="button"
                               onClick={() => handleAbrirEditar(p)}
@@ -779,12 +808,21 @@ export default function ProductosPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleDesactivar(p)}
-                              disabled={desactivandoId === Number(p.id)}
-                              className="rounded-lg p-1.5 text-[#8a93a6] hover:bg-[#FEF2F2] hover:text-[#ba1a1a] disabled:opacity-40"
-                              title="Desactivar producto"
+                              onClick={() => handleCambiarEstado(p)}
+                              disabled={desactivandoId === p.id}
+                              className={cn(
+                                "rounded-lg p-1.5 disabled:opacity-40",
+                                p.activo
+                                  ? "text-[#8a93a6] hover:bg-[#FEF2F2] hover:text-[#ba1a1a]"
+                                  : "text-[#1e7d38] hover:bg-[#E7F8EC]"
+                              )}
+                              title={p.activo ? "Desactivar producto" : "Activar producto"}
                             >
-                              <Ban className="h-4 w-4" />
+                              {p.activo ? (
+                                <Ban className="h-4 w-4" />
+                              ) : (
+                                <CheckCircle className="h-4 w-4" />
+                              )}
                             </button>
                           </div>
                         </td>
@@ -813,9 +851,9 @@ export default function ProductosPage() {
                     <div
                       role="button"
                       tabIndex={0}
-                      onClick={() => handleAbrirEditar(p)}
+                      onClick={() => setProductoDetalle(p)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") handleAbrirEditar(p);
+                        if (e.key === "Enter") setProductoDetalle(p);
                       }}
                       className="cursor-pointer active:opacity-80"
                     >
@@ -835,7 +873,9 @@ export default function ProductosPage() {
                           <p
                             className={cn(
                               "font-medium",
-                              p.stockActual <= 5 ? "text-[#ba1a1a]" : "text-[#191c1e]"
+                              p.stockMinimo != null && p.stockActual <= p.stockMinimo
+                                ? "text-[#ba1a1a]"
+                                : "text-[#191c1e]"
                             )}
                           >
                             {p.stockActual} u.
@@ -892,13 +932,21 @@ export default function ProductosPage() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDesactivar(p);
+                          handleCambiarEstado(p);
                         }}
-                        disabled={desactivandoId === Number(p.id)}
-                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-[#8a93a6] hover:bg-[#FEF2F2] hover:text-[#ba1a1a] disabled:opacity-40"
+                        disabled={desactivandoId === p.id}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-40",
+                          p.activo
+                            ? "text-[#8a93a6] hover:bg-[#FEF2F2] hover:text-[#ba1a1a]"
+                            : "text-[#1e7d38] hover:bg-[#E7F8EC]"
+                        )}
                       >
-                        <Ban className="h-3.5 w-3.5" />
-                        Desactivar
+                        {p.activo ? (
+                          <Ban className="h-3.5 w-3.5" />
+                        ) : (
+                          <CheckCircle className="h-3.5 w-3.5" />
+                        )}
                       </button>
                     </div>
                   </div>
@@ -959,12 +1007,34 @@ export default function ProductosPage() {
       <ConfirmDialog
         isOpen={!!productoADesactivar}
         onClose={() => setProductoADesactivar(null)}
-        onConfirm={confirmarDesactivar}
-        title={`¿Desactivar "${productoADesactivar?.nombre}"?`}
-        description="Va a dejar de aparecer en el catálogo, listas de precios y PDFs."
-        confirmLabel="Desactivar"
-        variant="danger"
-        loading={desactivandoId === Number(productoADesactivar?.id)}
+        onConfirm={confirmarCambiarEstado}
+        title={
+          productoADesactivar?.activo
+            ? `¿Desactivar "${productoADesactivar?.nombre}"?`
+            : `¿Activar "${productoADesactivar?.nombre}"?`
+        }
+        description={
+          productoADesactivar?.activo
+            ? "Va a dejar de aparecer en el catálogo, listas de precios y PDFs."
+            : "El producto volverá a aparecer en el catálogo, listas de precios y PDFs."
+        }
+        confirmLabel={productoADesactivar?.activo ? "Desactivar" : "Activar"}
+        variant={productoADesactivar?.activo ? "danger" : "default"}
+        loading={desactivandoId === productoADesactivar?.id}
+      />
+      <ProductoDetalleModal
+        isOpen={!!productoDetalle}
+        producto={productoDetalle}
+        configDecant={configDecant}
+        onClose={() => setProductoDetalle(null)}
+        onEditar={() => {
+          if (productoDetalle) handleAbrirEditar(productoDetalle);
+          setProductoDetalle(null);
+        }}
+        onDesactivar={() => {
+          if (productoDetalle) handleCambiarEstado(productoDetalle);
+          setProductoDetalle(null);
+        }}
       />
 
       {imagenPreview && (

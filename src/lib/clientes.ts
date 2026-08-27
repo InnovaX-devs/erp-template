@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 export type ClienteConDeuda = {
   id: number;
@@ -32,97 +33,153 @@ export type Paginacion = {
 const UMBRAL_AL_DIA = 0.01;
 const PAGE_SIZE = 25;
 
+const SELECT_BASE = {
+  id: true,
+  nombre: true,
+  apellido: true,
+  telefono: true,
+  email: true,
+  direccion: true,
+  localidad: true,
+  esMayorista: true,
+} satisfies Prisma.ClienteSelect;
+
+const ORDEN_NOMBRE_MAP: Record<string, Prisma.ClienteOrderByWithRelationInput> = {
+  "nombre-asc": { nombre: "asc" },
+  "nombre-desc": { nombre: "desc" },
+};
+
 export async function getClientesData(filtros: ClientesFiltros = {}) {
-  const clientesAll = await prisma.cliente.findMany({
-    orderBy: { nombre: "asc" },
-    include: {
-      ventas: {
-        where: { estadoPago: "A_CUENTA" },
-        select: { totalARS: true, montoPagado: true },
-      },
-    },
-  });
-
-  const conDeuda: ClienteConDeuda[] = clientesAll.map((c) => {
-    const deuda = c.ventas.reduce(
-      (sum, v) => sum + Math.max(0, v.totalARS - v.montoPagado),
-      0
-    );
-    return {
-      id: c.id,
-      nombre: c.nombre,
-      apellido: c.apellido,
-      telefono: c.telefono,
-      email: c.email,
-      direccion: c.direccion,
-      localidad: c.localidad,
-      esMayorista: c.esMayorista,
-      deuda: Math.round(deuda * 100) / 100,
-    };
-  });
-
-  const resumen = {
-    totalClientes: conDeuda.length,
-    totalMayoristas: conDeuda.filter((c) => c.esMayorista).length,
-    deudaTotal: conDeuda.reduce((sum, c) => sum + c.deuda, 0),
-  };
-
-  let filtrados = conDeuda;
-
-  if (filtros.busqueda) {
-    const q = filtros.busqueda.toLowerCase();
-    filtrados = filtrados.filter(
-      (c) =>
-        c.nombre.toLowerCase().includes(q) ||
-        (c.apellido?.toLowerCase().includes(q) ?? false)
-    );
-  }
-
-  if (filtros.tipo) {
-    filtrados = filtrados.filter((c) =>
-      filtros.tipo === "mayorista" ? c.esMayorista : !c.esMayorista
-    );
-  }
-
-  if (filtros.deuda === "con-deuda") {
-    filtrados = filtrados.filter((c) => c.deuda > UMBRAL_AL_DIA);
-  } else if (filtros.deuda === "al-dia") {
-    filtrados = filtrados.filter((c) => c.deuda <= UMBRAL_AL_DIA);
-  }
-
   const orden = filtros.orden ?? "nombre-asc";
-  filtrados = [...filtrados].sort((a, b) => {
-    const nombreA = `${a.nombre} ${a.apellido ?? ""}`.trim();
-    const nombreB = `${b.nombre} ${b.apellido ?? ""}`.trim();
-    switch (orden) {
-      case "nombre-desc":
-        return nombreB.localeCompare(nombreA);
-      case "deuda-desc":
-        return b.deuda - a.deuda;
-      case "deuda-asc":
-        return a.deuda - b.deuda;
-      case "nombre-asc":
-      default:
-        return nombreA.localeCompare(nombreB);
-    }
-  });
-
-  const totalItems = filtrados.length;
-  const totalPaginas = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   const paginaSolicitada = filtros.pagina ?? 1;
-  const pagina = Math.min(Math.max(1, paginaSolicitada), totalPaginas);
 
-  const inicio = (pagina - 1) * PAGE_SIZE;
-  const clientesPagina = filtrados.slice(inicio, inicio + PAGE_SIZE);
+  // 1) Deuda agregada por cliente: UNA fila por cliente con ventas A_CUENTA,
+  //    en vez de traer cada venta pendiente individual con `include`.
+  const deudaPorCliente = await getDeudaPorCliente();
 
-  const paginacion: Paginacion = {
-    pagina,
-    totalPaginas,
-    totalItems,
-    pageSize: PAGE_SIZE,
+  // 2) Resumen global (independiente de los filtros aplicados).
+  const [totalClientes, totalMayoristas] = await Promise.all([
+    prisma.cliente.count(),
+    prisma.cliente.count({ where: { esMayorista: true } }),
+  ]);
+  const deudaTotal = Array.from(deudaPorCliente.values()).reduce((sum, d) => sum + d, 0);
+  const resumen = {
+    totalClientes,
+    totalMayoristas,
+    deudaTotal: redondear(deudaTotal),
   };
+
+  // 3) Where clause de Prisma para lo que SÍ vive en columnas reales.
+  const where: Prisma.ClienteWhereInput = {};
+  if (filtros.busqueda) {
+    where.OR = [
+      { nombre: { contains: filtros.busqueda, mode: "insensitive" } },
+      { apellido: { contains: filtros.busqueda, mode: "insensitive" } },
+    ];
+  }
+  if (filtros.tipo) {
+    where.esMayorista = filtros.tipo === "mayorista";
+  }
+
+  const ordenaPorDeuda = orden === "deuda-asc" || orden === "deuda-desc";
+  const filtraPorDeuda = filtros.deuda === "con-deuda" || filtros.deuda === "al-dia";
+
+  let clientesPagina: ClienteConDeuda[];
+  let pagina: number;
+  let totalItems: number;
+  let totalPaginas: number;
+
+  if (!ordenaPorDeuda && !filtraPorDeuda) {
+    // Caso común: búsqueda, tipo, orden por nombre y paginación, todo en la DB.
+    totalItems = await prisma.cliente.count({ where });
+    totalPaginas = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+    pagina = Math.min(Math.max(1, paginaSolicitada), totalPaginas);
+
+    const clientes = await prisma.cliente.findMany({
+      where,
+      orderBy: ORDEN_NOMBRE_MAP[orden] ?? { nombre: "asc" },
+      skip: (pagina - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      select: SELECT_BASE,
+    });
+
+    clientesPagina = clientes.map((c) => ({
+      ...c,
+      deuda: deudaPorCliente.get(c.id) ?? 0,
+    }));
+  } else {
+    // Filtrar/ordenar por deuda no se puede resolver con where/orderBy de Prisma
+    // porque no es una columna. Acotamos el universo con búsqueda/tipo en la DB
+    // (sin include de ventas) y sólo ahí resolvemos deuda + paginación en memoria.
+    const candidatos = await prisma.cliente.findMany({
+      where,
+      select: SELECT_BASE,
+    });
+
+    let conDeuda: ClienteConDeuda[] = candidatos.map((c) => ({
+      ...c,
+      deuda: deudaPorCliente.get(c.id) ?? 0,
+    }));
+
+    if (filtros.deuda === "con-deuda") {
+      conDeuda = conDeuda.filter((c) => c.deuda > UMBRAL_AL_DIA);
+    } else if (filtros.deuda === "al-dia") {
+      conDeuda = conDeuda.filter((c) => c.deuda <= UMBRAL_AL_DIA);
+    }
+
+    conDeuda.sort((a, b) => {
+      const nombreA = `${a.nombre} ${a.apellido ?? ""}`.trim();
+      const nombreB = `${b.nombre} ${b.apellido ?? ""}`.trim();
+      switch (orden) {
+        case "nombre-desc":
+          return nombreB.localeCompare(nombreA);
+        case "deuda-desc":
+          return b.deuda - a.deuda;
+        case "deuda-asc":
+          return a.deuda - b.deuda;
+        case "nombre-asc":
+        default:
+          return nombreA.localeCompare(nombreB);
+      }
+    });
+
+    totalItems = conDeuda.length;
+    totalPaginas = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+    pagina = Math.min(Math.max(1, paginaSolicitada), totalPaginas);
+
+    const inicio = (pagina - 1) * PAGE_SIZE;
+    clientesPagina = conDeuda.slice(inicio, inicio + PAGE_SIZE);
+  }
+
+  const paginacion: Paginacion = { pagina, totalPaginas, totalItems, pageSize: PAGE_SIZE };
 
   return { clientes: clientesPagina, resumen, umbralAlDia: UMBRAL_AL_DIA, paginacion };
+}
+
+async function getDeudaPorCliente(): Promise<Map<number, number>> {
+  // Traemos sólo columnas escalares de Venta (sin include de Cliente ni de
+  // arrays anidados) para clampear la deuda POR VENTA antes de sumar, igual
+  // que hacía el código original. Un groupBy con _sum no sirve acá: sumaría
+  // totalARS y montoPagado por separado y clampearía recién al final, lo que
+  // deja que un sobrepago en una venta compense deuda de otra — no es lo
+  // mismo matemáticamente y con montos de plata de por medio no vale la pena
+  // el atajo.
+  const ventasPendientes = await prisma.venta.findMany({
+    where: { estadoPago: "A_CUENTA", clienteId: { not: null } },
+    select: { clienteId: true, totalARS: true, montoPagado: true },
+  });
+
+  const mapa = new Map<number, number>();
+  for (const v of ventasPendientes) {
+    if (v.clienteId == null) continue;
+    const deudaVenta = Math.max(0, v.totalARS - v.montoPagado);
+    mapa.set(v.clienteId, redondear((mapa.get(v.clienteId) ?? 0) + deudaVenta));
+  }
+  return mapa;
+}
+
+function redondear(n: number) {
+  return Math.round(n * 100) / 100;
 }
 
 export async function getCuentasActivas() {

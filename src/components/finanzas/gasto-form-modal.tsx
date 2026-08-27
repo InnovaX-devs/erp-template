@@ -158,7 +158,7 @@ export function GastoFormModal({ isOpen, onClose, onSuccess }: Props) {
       <div className="w-full max-w-lg rounded-2xl border border-border bg-surface p-6 shadow-2xl my-8">
         <div className="flex items-center justify-between border-b border-border pb-4">
           <h2 className="text-xl font-semibold text-text">Nuevo gasto</h2>
-          <button onClick={onClose} className="rounded-lg p-1 text-text-dim hover:bg-surface-hover hover:text-text">
+          <button onClick={onClose} className="rounded-lg cursor-pointer p-1 text-text-dim hover:bg-surface-hover hover:text-text">
             ✕
           </button>
         </div>
@@ -208,7 +208,7 @@ export function GastoFormModal({ isOpen, onClose, onSuccess }: Props) {
                 type="button"
                 disabled={creandoCategoria || !nuevaCategoria.trim()}
                 onClick={crearCategoria}
-                className="shrink-0 rounded-lg border border-primary px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 disabled:opacity-50"
+                className="shrink-0 rounded-lg border border-primary px-3 py-1.5 text-xs cursor-pointer font-medium text-primary hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {creandoCategoria ? "..." : "+ Agregar"}
               </button>
@@ -283,7 +283,7 @@ export function GastoFormModal({ isOpen, onClose, onSuccess }: Props) {
             <button type="button" onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-dim hover:bg-surface-hover">
               Cancelar
             </button>
-            <button type="submit" disabled={loading} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50">
+            <button type="submit" disabled={loading} className="rounded-lg cursor-pointer bg-[#021541] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50">
               {loading ? "Guardando..." : "Guardar gasto"}
             </button>
           </div>

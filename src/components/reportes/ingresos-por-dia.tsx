@@ -58,7 +58,7 @@ export function IngresosPorDia({ datos }: { datos: IngresoPorDia[] }) {
               className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                 metrica === t.value
                   ? "bg-[#021541] text-white"
-                  : "text-[#45464f] hover:bg-[#eceef0] hover:text-[#191c1e]"
+                  : "text-[#45464f] hover:bg-[#eceef0] hover:text-[#191c1e] cursor-pointer"
               }`}
             >
               {t.label}

@@ -123,7 +123,7 @@ export function CuentaFormModal({ isOpen, onClose, cuentaEditar, onSuccess }: Pr
           <h2 className="text-xl font-semibold text-text">
             {cuentaEditar ? "Editar cuenta" : "Nueva cuenta"}
           </h2>
-          <button onClick={onClose} className="rounded-lg p-1 text-text-dim hover:bg-surface-hover hover:text-text">
+          <button onClick={onClose} className="rounded-lg cursor-pointer p-1 text-text-dim hover:bg-surface-hover hover:text-text">
             ✕
           </button>
         </div>
@@ -301,7 +301,7 @@ export function CuentaFormModal({ isOpen, onClose, cuentaEditar, onSuccess }: Pr
             <button
               type="submit"
               disabled={loading}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="rounded-lg bg-[#021541] px-4 py-2 cursor-pointer text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {loading ? "Guardando..." : cuentaEditar ? "Guardar cambios" : "Crear cuenta"}
             </button>

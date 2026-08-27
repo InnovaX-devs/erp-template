@@ -493,7 +493,7 @@ export default function ProductosPage() {
               type="button"
               onClick={() => setMostrarFiltros((prev) => !prev)}
               className={cn(
-                "inline-flex items-center justify-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
+                "inline-flex items-center cursor-pointer justify-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
                 mostrarFiltros
                   ? "border-[#021541] bg-[#021541] text-white"
                   : "border-[#c5c6d0] bg-white text-[#45464f] hover:bg-[#eceef0]"

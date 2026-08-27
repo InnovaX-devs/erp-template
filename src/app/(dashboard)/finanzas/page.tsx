@@ -129,13 +129,13 @@ export default function FinanzasPage() {
         <div className="flex gap-2 self-start sm:self-auto">
           <button
             onClick={() => setModalTransferenciaAbierto(true)}
-            className="flex items-center justify-center gap-1.5 rounded-lg border border-[#021541] px-4 py-2 text-sm font-medium text-[#021541] hover:bg-[#eceef0]"
+            className="flex items-center justify-center cursor-pointer gap-1.5 rounded-lg border border-[#021541] px-4 py-2 text-sm font-medium text-[#021541] hover:bg-[#eceef0]"
           >
             <ArrowLeftRight size={16} /> Transferir
           </button>
           <button
             onClick={abrirNueva}
-            className="flex items-center justify-center gap-1.5 rounded-lg bg-[#021541] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+            className="flex items-center justify-center cursor-pointer gap-1.5 rounded-lg bg-[#021541] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
           >
             <Plus size={16} /> Nueva cuenta
           </button>

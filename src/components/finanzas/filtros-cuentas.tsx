@@ -37,7 +37,9 @@ export function FiltrosCuentas({
               type="button"
               onClick={() => onCategoriaChange(c)}
               className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                categoria === c ? "bg-[#021541] text-white" : "text-[#45464f] hover:text-[#191c1e]"
+                categoria === c
+                  ? "bg-[#021541] text-white cursor-default"
+                  : "text-[#45464f] hover:text-[#191c1e] cursor-pointer"
               }`}
             >
               {c === "TODAS" ? "Todas" : c === "BANCO" ? "Banco" : "Efectivo"}
@@ -52,7 +54,9 @@ export function FiltrosCuentas({
               type="button"
               onClick={() => onMonedaChange(m)}
               className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                moneda === m ? "bg-[#021541] text-white" : "text-[#45464f] hover:text-[#191c1e]"
+                moneda === m
+                  ? "bg-[#021541] text-white cursor-default"
+                  : "text-[#45464f] hover:text-[#191c1e] cursor-pointer"
               }`}
             >
               {m === "ARS_USD" ? "ARS+USD" : m}

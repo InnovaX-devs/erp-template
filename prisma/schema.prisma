@@ -108,6 +108,7 @@ model HistorialPrecio {
 
   @@index([productoId])
   @@index([fecha])
+  @@index([productoId, campo])
 }
 
 model Cliente {

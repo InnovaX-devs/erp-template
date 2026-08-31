@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { obtenerReporte } from "../../(dashboard)/reportes/queries";
+import { obtenerKpisDelDia } from "../../(dashboard)/reportes/queries";
 import { rangoParaTab } from "@/lib/reportes";
 import { formatHoraAR, inicioFinHoyAR } from "@/lib/timezone";
 
@@ -33,37 +33,44 @@ function descripcionMovimiento(m: {
 export async function GET() {
   const { inicio: inicioHoy, fin: finHoy } = inicioFinHoyAR();
 
-  const configuracion = await prisma.configuracion.findUnique({
-    where: { id: "singleton" },
-    select: { cotizacionUSD: true },
-  });
-  const cotizacionActual = configuracion?.cotizacionUSD ?? 1000;
+  // Todo esto es independiente entre sí -> se pide junto, no en fila
+  const [configuracion, cuentas, movimientosHoy, [porArmar, armados], reporteHoy] = await Promise.all([
+    prisma.configuracion.findUnique({
+      where: { id: "singleton" },
+      select: { cotizacionUSD: true },
+    }),
+    prisma.cuenta.findMany({
+      where: { activa: true },
+      orderBy: [{ favorita: "desc" }, { saldoActual: "desc" }],
+    }),
+    prisma.movimientoCaja.findMany({
+      where: { fecha: { gte: inicioHoy, lt: finHoy } },
+      include: {
+        gasto: { select: { concepto: true } },
+        cuenta: { select: { tipo: true } },
+      },
+      orderBy: { fecha: "desc" },
+    }),
+    Promise.all([
+      prisma.venta.count({
+        where: { armado: false, estadoPago: { notIn: ["ANULADA", "CANCELADA"] } },
+      }),
+      prisma.venta.count({
+        where: { armado: true, retirado: false, estadoPago: { notIn: ["ANULADA", "CANCELADA"] } },
+      }),
+    ]),
+    obtenerKpisDelDia(rangoParaTab("diario")),
+  ]);
 
-  // --- Cuentas / saldo total ---
-  const cuentas = await prisma.cuenta.findMany({
-    where: { activa: true },
-    orderBy: [{ favorita: "desc" }, { saldoActual: "desc" }],
-  });
+  const cotizacionActual = configuracion?.cotizacionUSD ?? 1000;
 
   let saldoTotal = 0;
   for (const c of cuentas) {
     saldoTotal += c.tipo.endsWith("USD") ? c.saldoActual * cotizacionActual : c.saldoActual;
   }
 
-
-  const reporteHoy = await obtenerReporte(rangoParaTab("diario"));
-  const gananciaHoyARS = reporteHoy.kpis.gananciaNetaARS;
-  const cantidadVentasHoy = reporteHoy.kpis.cantidadVentas;
-
-  // --- Movimientos de caja de hoy (ingresos/egresos reales) ---
-  const movimientosHoy = await prisma.movimientoCaja.findMany({
-    where: { fecha: { gte: inicioHoy, lt: finHoy } },
-    include: {
-      gasto: { select: { concepto: true } },
-      cuenta: { select: { tipo: true } },
-    },
-    orderBy: { fecha: "desc" },
-  });
+  const gananciaHoyARS = reporteHoy.gananciaNetaARS;
+  const cantidadVentasHoy = reporteHoy.cantidadVentas;
 
   const ingresosHoyARS = movimientosHoy
     .filter((m) => m.tipo === "INGRESO" && m.concepto !== "TRANSFERENCIA")
@@ -81,16 +88,6 @@ export async function GET() {
     moneda: m.cuenta.tipo.endsWith("USD") ? "USD" as const : "ARS" as const,
     tipo: m.tipo === "INGRESO" ? ("ingreso" as const) : ("egreso" as const),
   }));
-
-  // --- Pedidos por armar / armados (global, no solo hoy) ---
-  const [porArmar, armados] = await Promise.all([
-    prisma.venta.count({
-      where: { armado: false, estadoPago: { notIn: ["ANULADA", "CANCELADA"] } },
-    }),
-    prisma.venta.count({
-      where: { armado: true, retirado: false, estadoPago: { notIn: ["ANULADA", "CANCELADA"] } },
-    }),
-  ]);
 
   return NextResponse.json({
     cuentas: {

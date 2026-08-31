@@ -191,10 +191,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Evitar duplicados por código de barras, solo si se cargó uno.
-    // Se chequea contra productos activos e inactivos: un código de barras
-    // es un identificador físico único, no debería reutilizarse aunque el
-    // producto anterior esté desactivado.
+  
     if (codigoBarras) {
       const productoConMismoCodigo = await prisma.producto.findFirst({
         where: { codigoBarras },
@@ -230,6 +227,7 @@ export async function POST(request: NextRequest) {
         overrideDecant5ml,
         overrideDecant10ml,
         seVendePorDecant: Boolean(body.esDecant),
+        fotoUrl: body.fotoUrl || null,
         activo: true,
       },
     });

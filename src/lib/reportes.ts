@@ -1,3 +1,4 @@
+// lib/reportes.ts
 import type { TipoCuenta } from "@prisma/client";
 import type {
   DesgloseMetodoCobroItem,
@@ -14,22 +15,20 @@ import {
   siguienteDiaAR,
 } from "@/lib/timezone";
 
-// --- Tipos de entrada ya "aplanados" desde Prisma (ver queries.ts) ---
-
 export type ItemVentaParaReporte = {
   productoId: number | null;
   cantidad: number;
   precioUnitarioUSD: number;
   tipoPrecio: "MINORISTA" | "MAYORISTA";
   costoUnitarioARS: number;
-  presentacion: "FRASCO" | "DECANT_5ML" | "DECANT_10ML"; 
-  nombreProducto: string | null; 
-  fotoUrl: string | null; 
+  presentacion: "FRASCO" | "DECANT_5ML" | "DECANT_10ML";
+  nombreProducto: string | null;
+  fotoUrl: string | null;
 };
 
 export type VentaParaReporte = {
   id: number;
-  fecha: Date; 
+  fecha: Date;
   totalARS: number;
   totalUSD: number;
   montoPagado: number;
@@ -49,6 +48,13 @@ export type ReporteCalculado = {
   kpis: ReporteKPIs;
   desgloseTipoPrecio: DesgloseTipoPrecioItem[];
   desgloseMetodoCobro: DesgloseMetodoCobroItem[];
+};
+
+// Venta ya con proporcionCobrada/factorDescuento calculados una sola vez,
+// para no recalcularlos en cada una de las 3 funciones que recorren ventas.
+export type VentaEnriquecida = VentaParaReporte & {
+  proporcionCobrada: number;
+  factorDescuento: number;
 };
 
 /**
@@ -74,11 +80,29 @@ export function costoHistoricoDelProducto(
 }
 
 /**
+ * Calcula proporcionCobrada y factorDescuento una sola vez por venta.
+ * Llamar UNA vez en queries.ts y pasar el resultado a calcularReporte,
+ * calcularIngresosPorDia y calcularTopProductos (antes cada una lo
+ * recalculaba por su cuenta sobre el mismo array de ventas).
+ */
+export function enriquecerVentas(ventas: VentaParaReporte[]): VentaEnriquecida[] {
+  return ventas.map((venta) => {
+    const proporcionCobrada = venta.totalARS > 0 ? Math.min(venta.montoPagado / venta.totalARS, 1) : 0;
+    const montoListaVentaARS = venta.items.reduce(
+      (acc, item) => acc + item.cantidad * item.precioUnitarioUSD * venta.cotizacionUsada,
+      0
+    );
+    const factorDescuento = montoListaVentaARS > 0 ? venta.totalARS / montoListaVentaARS : 1;
+    return { ...venta, proporcionCobrada, factorDescuento };
+  });
+}
+
+/**
  * egresosGastosARS: SOLO movimientos de caja con concepto GASTO. No incluye
  * pagos a proveedores (eso es conversión de efectivo en stock, no una pérdida
  * del período) — esos se reflejan aparte en calcularFlujoCaja.
  */
-export function calcularReporte(ventas: VentaParaReporte[], egresosGastosARS: number): ReporteCalculado {
+export function calcularReporte(ventas: VentaEnriquecida[], egresosGastosARS: number): ReporteCalculado {
   let ingresosARS = 0; // cobrado
   let ingresosFacturadosARS = 0; // facturado (informativo)
   let ingresosUSD = 0;
@@ -100,21 +124,7 @@ export function calcularReporte(ventas: VentaParaReporte[], egresosGastosARS: nu
     ingresosARS += venta.montoPagado;
     ingresosUSD += venta.totalUSD;
 
-    // Proporción de la venta que efectivamente se cobró (0 a 1, con clamp por
-    // las dudas de redondeos). Se usa para reconocer ingreso/costo/desglose
-    // solo por la parte que realmente entró — así una venta A_CUENTA pagada a
-    // la mitad no infla el resultado con plata que todavía no cobraste.
-    const proporcionCobrada = venta.totalARS > 0 ? Math.min(venta.montoPagado / venta.totalARS, 1) : 0;
-
-    // Precio de lista (sin descuento) de todos los ítems de la venta, para
-    // poder prorratear el descuento global de la venta a nivel ítem.
-    const montoListaVentaARS = venta.items.reduce(
-      (acc, item) => acc + item.cantidad * item.precioUnitarioUSD * venta.cotizacionUsada,
-      0
-    );
-    // Factor que absorbe el descuento: precio real facturado / precio de lista.
-    // Sin descuento, factor = 1. Si no hay monto de lista (caso borde), no corrige.
-    const factorDescuento = montoListaVentaARS > 0 ? venta.totalARS / montoListaVentaARS : 1;
+    const { proporcionCobrada, factorDescuento } = venta;
 
     for (const item of venta.items) {
       itemsVendidos += item.cantidad;
@@ -123,16 +133,13 @@ export function calcularReporte(ventas: VentaParaReporte[], egresosGastosARS: nu
       const montoItemConDescuentoARS = montoListaItemARS * factorDescuento;
 
       const grupo = totalesTipoPrecio[item.tipoPrecio];
-      // El desglose solo refleja lo efectivamente cobrado, igual que ingresosARS.
       grupo.montoARS += montoItemConDescuentoARS * proporcionCobrada;
       grupo.ventas.add(venta.id);
 
-      // El costo también se reconoce proporcional a lo cobrado.
       costoVentaARS += item.costoUnitarioARS * item.cantidad * proporcionCobrada;
     }
 
     for (const pago of venta.pagos) {
-      // Los pagos ya son plata real cobrada: no llevan descuento ni prorrateo.
       const actual = totalesPorCuenta.get(pago.cuentaId) ?? {
         cuentaNombre: pago.cuentaNombre,
         tipoCuenta: pago.tipoCuenta,
@@ -185,15 +192,11 @@ export function calcularReporte(ventas: VentaParaReporte[], egresosGastosARS: nu
   };
 }
 
-// --- Rango de fechas por tab (sin cambios) ---
-
 export type TabReporte = "diario" | "semanal" | "mensual" | "periodo" | "cuenta";
 
 function fechaASumaDias(fecha: string, dias: number): string {
   const date = new Date(`${fecha}T00:00:00Z`);
-
   date.setUTCDate(date.getUTCDate() + dias);
-
   return date.toISOString().slice(0, 10);
 }
 
@@ -204,38 +207,24 @@ function inicioDelDiaAR(d: Date): Date {
 function finDelDiaAR(d: Date): Date {
   const fecha = fechaISOAR(d);
   const siguiente = siguienteDiaAR(fecha);
-
   return inicioDiaAR(siguiente);
 }
 
 function inicioDeSemanaAR(d: Date): Date {
   const fecha = fechaISOAR(d);
-
-  // Usamos UTC solamente para calcular el día de la semana
-  // sobre la fecha calendario YYYY-MM-DD.
   const auxiliar = new Date(`${fecha}T00:00:00Z`);
-
   const dia = auxiliar.getUTCDay();
-
-  // Lunes = inicio de semana
   const diff = dia === 0 ? 6 : dia - 1;
-
   const lunes = fechaASumaDias(fecha, -diff);
-
   return inicioDiaAR(lunes);
 }
 
 function inicioDeMesAR(d: Date): Date {
   const fecha = fechaISOAR(d);
-
   const [anio, mes] = fecha.split("-");
-
   return inicioDiaAR(`${anio}-${mes}-01`);
 }
 
-/** Parsea "yyyy-mm-dd" como fecha LOCAL. A diferencia de `new Date(str)`,
- * que interpreta un string sin hora como medianoche UTC y puede devolver
- * el día anterior en husos negativos como Argentina (UTC-3). */
 function parseFechaLocal(fechaStr: string): Date {
   const [anio, mes, dia] = fechaStr.split("-").map(Number);
   return new Date(anio, mes - 1, dia);
@@ -251,42 +240,23 @@ export function rangoParaTab(
   switch (tab) {
     case "diario": {
       const { inicio, fin } = inicioFinHoyAR();
-
-      return {
-        desde: inicio,
-        hasta: fin,
-      };
+      return { desde: inicio, hasta: fin };
     }
-
     case "semanal": {
       const desde = inicioDeSemanaAR(ahora);
       const { fin: hasta } = inicioFinHoyAR();
-
-      return {
-        desde,
-        hasta,
-      };
+      return { desde, hasta };
     }
-
     case "mensual": {
       const desde = inicioDeMesAR(ahora);
       const { fin: hasta } = inicioFinHoyAR();
-
-      return {
-        desde,
-        hasta,
-      };
+      return { desde, hasta };
     }
-
     case "periodo":
     case "cuenta":
     default: {
-      const fechaDesde =
-        desdeParam ?? fechaISOAR(ahora);
-
-      const fechaHasta =
-        hastaParam ?? fechaISOAR(ahora);
-
+      const fechaDesde = desdeParam ?? fechaISOAR(ahora);
+      const fechaHasta = hastaParam ?? fechaISOAR(ahora);
       return {
         desde: inicioDiaAR(fechaDesde),
         hasta: inicioDiaAR(siguienteDiaAR(fechaHasta)),
@@ -302,12 +272,9 @@ export function claveFecha(d: Date): string {
 /**
  * Ingresos/ganancia/ítems por día calendario dentro de [desde, hasta].
  * Incluye días sin ventas con valores en cero, así el gráfico no salta fechas.
- * Usa el mismo criterio "cobrado" que calcularReporte: ingresosARS = suma de
- * montoPagado (no hay fecha de pago en el schema, así que el pago se atribuye
- * al día de la venta, igual que en el resto del reporte).
  */
 export function calcularIngresosPorDia(
-  ventas: VentaParaReporte[],
+  ventas: VentaEnriquecida[],
   egresosGastosPorDiaARS: Map<string, number>,
   desde: Date,
   hasta: Date
@@ -315,29 +282,21 @@ export function calcularIngresosPorDia(
   const porDia = new Map<string, { ingresosARS: number; costoARS: number; items: number }>();
 
   let fechaCursor = fechaISOAR(desde);
-  const fechaFin = fechaISOAR(
-    new Date(hasta.getTime() - 1)
-  );
+  const fechaFin = fechaISOAR(new Date(hasta.getTime() - 1));
 
   while (fechaCursor <= fechaFin) {
-    porDia.set(fechaCursor, {
-      ingresosARS: 0,
-      costoARS: 0,
-      items: 0,
-    });
-
+    porDia.set(fechaCursor, { ingresosARS: 0, costoARS: 0, items: 0 });
     fechaCursor = siguienteDiaAR(fechaCursor);
   }
 
   for (const venta of ventas) {
     const clave = claveFecha(venta.fecha);
     const bucket = porDia.get(clave) ?? { ingresosARS: 0, costoARS: 0, items: 0 };
-    const proporcionCobrada = venta.totalARS > 0 ? Math.min(venta.montoPagado / venta.totalARS, 1) : 0;
 
     bucket.ingresosARS += venta.montoPagado;
     for (const item of venta.items) {
       bucket.items += item.cantidad;
-      bucket.costoARS += item.costoUnitarioARS * item.cantidad * proporcionCobrada;
+      bucket.costoARS += item.costoUnitarioARS * item.cantidad * venta.proporcionCobrada;
     }
     porDia.set(clave, bucket);
   }
@@ -355,18 +314,13 @@ export function calcularIngresosPorDia(
 /**
  * Ranking de productos por cantidad de unidades vendidas, agrupado por
  * (producto, presentación). Los ítems "Varios / Muestra" (sin productoId)
- * quedan afuera: no tienen catálogo, foto ni nombre para mostrar en el ranking.
+ * quedan afuera.
  */
-export function calcularTopProductos(ventas: VentaParaReporte[], limite = 10): TopProductoItem[] {
+export function calcularTopProductos(ventas: VentaEnriquecida[], limite = 10): TopProductoItem[] {
   const acumulado = new Map<string, TopProductoItem>();
 
   for (const venta of ventas) {
-    const proporcionCobrada = venta.totalARS > 0 ? Math.min(venta.montoPagado / venta.totalARS, 1) : 0;
-    const montoListaVentaARS = venta.items.reduce(
-      (acc, item) => acc + item.cantidad * item.precioUnitarioUSD * venta.cotizacionUsada,
-      0
-    );
-    const factorDescuento = montoListaVentaARS > 0 ? venta.totalARS / montoListaVentaARS : 1;
+    const { proporcionCobrada, factorDescuento } = venta;
 
     for (const item of venta.items) {
       if (item.productoId == null) continue;

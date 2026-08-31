@@ -1,3 +1,4 @@
+// (dashboard)/reportes/queries.ts
 import { prisma } from "@/lib/prisma";
 import {
   calcularReporte,
@@ -5,17 +6,15 @@ import {
   calcularTopProductos,
   claveFecha,
   costoHistoricoDelProducto,
+  enriquecerVentas,
   type VentaParaReporte,
 } from "@/lib/reportes";
 import type { ReporteData } from "@/types/reporte";
 
 export type RangoFechas = { desde: Date; hasta: Date };
 
-// Estados de venta que no representan ingreso real y se excluyen de todos los cálculos.
 const ESTADOS_EXCLUIDOS = ["ANULADA", "CANCELADA"] as const;
 
-// ml que consume cada presentación de decant. FRASCO no está acá porque
-// representa el producto entero (no se prorratea).
 const ML_POR_PRESENTACION: Record<"DECANT_5ML" | "DECANT_10ML", number> = {
   DECANT_5ML: 5,
   DECANT_10ML: 10,
@@ -59,17 +58,25 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
 
   const cotizacionActual = config?.cotizacionUSD ?? 1000;
 
-  // Reconstrucción de costo histórico (ver lib/reportes.ts).
   const productoIds = Array.from(
     new Set(ventasRaw.flatMap((v) => v.items.map((i) => i.productoId).filter((id): id is number => id != null)))
   );
-  const historial = productoIds.length
-    ? await prisma.historialPrecio.findMany({
-        where: { productoId: { in: productoIds }, campo: "COSTO" },
-        orderBy: { fecha: "asc" },
-        select: { productoId: true, valorNuevo: true, fecha: true },
-      })
-    : [];
+
+  // historial y movimientosEgreso son independientes entre sí -> en paralelo.
+  const [historial, movimientosEgreso] = await Promise.all([
+    productoIds.length
+      ? prisma.historialPrecio.findMany({
+          where: { productoId: { in: productoIds }, campo: "COSTO" },
+          orderBy: { fecha: "asc" },
+          select: { productoId: true, valorNuevo: true, fecha: true },
+        })
+      : Promise.resolve([]),
+    prisma.movimientoCaja.findMany({
+      where: { tipo: "EGRESO", concepto: "GASTO", fecha: { gte: desde, lt: hasta } },
+      select: { monto: true, fecha: true, cuenta: { select: { tipo: true } } },
+    }),
+  ]);
+
   const historialPorProducto = new Map<number, { valorNuevo: number; fecha: Date }[]>();
   for (const h of historial) {
     const lista = historialPorProducto.get(h.productoId) ?? [];
@@ -102,7 +109,6 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
             : null;
 
         if (mlDecant && item.producto.contenidoMl) {
-          // Decant: costo proporcional a los ml vendidos, no el frasco entero.
           costoUnitarioARS = (costoFrascoARS / item.producto.contenidoMl) * mlDecant;
         } else {
           costoUnitarioARS = costoFrascoARS;
@@ -114,8 +120,8 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
         cantidad: item.cantidad,
         precioUnitarioUSD: item.precioUnitarioUSD,
         tipoPrecio: item.tipoPrecio,
-        presentacion: item.presentacion, 
-        nombreProducto: item.producto?.nombre ?? null, 
+        presentacion: item.presentacion,
+        nombreProducto: item.producto?.nombre ?? null,
         fotoUrl: item.producto?.fotoUrl ?? null,
         costoUnitarioARS,
       };
@@ -128,11 +134,6 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
     })),
   }));
 
-  const movimientosEgreso = await prisma.movimientoCaja.findMany({
-    where: { tipo: "EGRESO", concepto: "GASTO", fecha: { gte: desde, lt: hasta } },
-    select: { monto: true, fecha: true, cuenta: { select: { tipo: true } } }, 
-  });
-
   let egresosGastosARS = 0;
   const egresosGastosPorDiaARS = new Map<string, number>();
   for (const m of movimientosEgreso) {
@@ -143,9 +144,12 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
     egresosGastosPorDiaARS.set(clave, (egresosGastosPorDiaARS.get(clave) ?? 0) + montoARS);
   }
 
-  const { kpis, desgloseTipoPrecio, desgloseMetodoCobro } = calcularReporte(ventas, egresosGastosARS);
-  const ingresosPorDia = calcularIngresosPorDia(ventas, egresosGastosPorDiaARS, desde, hasta);
-  const topProductos = calcularTopProductos(ventas);
+  // Se calcula UNA sola vez y se reusa en las 3 funciones de abajo.
+  const ventasEnriquecidas = enriquecerVentas(ventas);
+
+  const { kpis, desgloseTipoPrecio, desgloseMetodoCobro } = calcularReporte(ventasEnriquecidas, egresosGastosARS);
+  const ingresosPorDia = calcularIngresosPorDia(ventasEnriquecidas, egresosGastosPorDiaARS, desde, hasta);
+  const topProductos = calcularTopProductos(ventasEnriquecidas);
 
   return {
     fechaInicio: desde.toISOString(),
@@ -185,7 +189,6 @@ export async function obtenerKpisDelDia(rango: RangoFechas): Promise<{ gananciaN
             presentacion: true,
             producto: {
               select: { id: true, precioCosto: true, monedaPrecio: true, contenidoMl: true },
-              // sin nombre/fotoUrl: acá no hacen falta
             },
           },
         },
@@ -202,13 +205,21 @@ export async function obtenerKpisDelDia(rango: RangoFechas): Promise<{ gananciaN
   const productoIds = Array.from(
     new Set(ventasRaw.flatMap((v) => v.items.map((i) => i.productoId).filter((id): id is number => id != null)))
   );
-  const historial = productoIds.length
-    ? await prisma.historialPrecio.findMany({
-        where: { productoId: { in: productoIds }, campo: "COSTO" },
-        orderBy: { fecha: "asc" },
-        select: { productoId: true, valorNuevo: true, fecha: true },
-      })
-    : [];
+
+  const [historial, movimientosEgreso] = await Promise.all([
+    productoIds.length
+      ? prisma.historialPrecio.findMany({
+          where: { productoId: { in: productoIds }, campo: "COSTO" },
+          orderBy: { fecha: "asc" },
+          select: { productoId: true, valorNuevo: true, fecha: true },
+        })
+      : Promise.resolve([]),
+    prisma.movimientoCaja.findMany({
+      where: { tipo: "EGRESO", concepto: "GASTO", fecha: { gte: desde, lt: hasta } },
+      select: { monto: true, cuenta: { select: { tipo: true } } },
+    }),
+  ]);
+
   const historialPorProducto = new Map<number, { valorNuevo: number; fecha: Date }[]>();
   for (const h of historial) {
     const lista = historialPorProducto.get(h.productoId) ?? [];
@@ -261,17 +272,13 @@ export async function obtenerKpisDelDia(rango: RangoFechas): Promise<{ gananciaN
     })),
   }));
 
-  const movimientosEgreso = await prisma.movimientoCaja.findMany({
-    where: { tipo: "EGRESO", concepto: "GASTO", fecha: { gte: desde, lt: hasta } },
-    select: { monto: true, cuenta: { select: { tipo: true } } },
-  });
-
   let egresosGastosARS = 0;
   for (const m of movimientosEgreso) {
     const esUSD = m.cuenta.tipo === "EFECTIVO_USD" || m.cuenta.tipo === "BANCO_USD";
     egresosGastosARS += esUSD ? m.monto * cotizacionActual : m.monto;
   }
 
-  const { kpis } = calcularReporte(ventas, egresosGastosARS);
+  const ventasEnriquecidas = enriquecerVentas(ventas);
+  const { kpis } = calcularReporte(ventasEnriquecidas, egresosGastosARS);
   return { gananciaNetaARS: kpis.gananciaNetaARS, cantidadVentas: kpis.cantidadVentas };
 }

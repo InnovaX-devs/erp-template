@@ -106,6 +106,9 @@ export function ProductoFormModal({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  const [productoInactivoId, setProductoInactivoId] = useState<string | null>(null);
+  const [reactivando, setReactivando] = useState(false);
+
   const [porcentajeVenta, setPorcentajeVenta] = useState<number | "">("");
   const [porcentajeMayorista, setPorcentajeMayorista] = useState<number | "">("");
 
@@ -196,6 +199,7 @@ export function ProductoFormModal({
       }
       setSelectedFile(null);
       setErrorMsg("");
+      setProductoInactivoId(null);
     }
   }, [productoEditar, isOpen, fetchAuxiliares]);
 
@@ -377,6 +381,7 @@ export function ProductoFormModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
+    setProductoInactivoId(null);
 
     // Validaciones de obligatorios
     if (
@@ -459,6 +464,7 @@ export function ProductoFormModal({
       const data = await res.json();
 
       if (!res.ok) {
+        setProductoInactivoId(data.productoInactivoId ? String(data.productoInactivoId) : null);
         throw new Error(data.error || data.message || "Error al guardar el producto");
       }
 
@@ -471,6 +477,27 @@ export function ProductoFormModal({
       setLoading(false);
     }
   };
+
+  async function handleReactivar() {
+    if (!productoInactivoId) return;
+    setReactivando(true);
+    try {      const res = await fetch(`/api/productos/${productoInactivoId}/estado`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activo: true }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "No se pudo reactivar el producto");
+      }
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      setErrorMsg(err.message || "No se pudo reactivar el producto");
+    } finally {
+      setReactivando(false);
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/60 p-0 sm:p-4 backdrop-blur-sm overflow-y-auto">
@@ -489,8 +516,18 @@ export function ProductoFormModal({
         </div>
 
         {errorMsg && (
-          <div className="mt-4 rounded-lg bg-danger/10 p-3 text-xs text-danger">
-            {errorMsg}
+          <div className="mt-4 space-y-2 rounded-lg bg-danger/10 p-3 text-xs text-danger">
+            <p>{errorMsg}</p>
+            {productoInactivoId && (
+              <button
+                type="button"
+                onClick={handleReactivar}
+                disabled={reactivando}
+                className="rounded-md bg-danger px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {reactivando ? "Reactivando..." : "Reactivar producto existente"}
+              </button>
+            )}
           </div>
         )}
 

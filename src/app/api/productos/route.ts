@@ -177,15 +177,14 @@ export async function POST(request: NextRequest) {
     const productoExistente = await prisma.producto.findFirst({
       where: {
         nombre: { equals: nombreNormalizado, mode: "insensitive" },
-        activo: true,
       },
-      select: { id: true, nombre: true },
+      select: { id: true, nombre: true, activo: true },
     });
 
     if (productoExistente) {
       return NextResponse.json(
         {
-          error: `Ya existe un producto llamado "${productoExistente.nombre}". Modificá el producto existente en vez de crear uno nuevo.`,
+          error: `Ya existe un producto llamado "${productoExistente.nombre}", pero está inactivo. Podés reactivarlo en vez de crear uno nuevo.`, productoInactivoId: productoExistente.id,
         },
         { status: 409 }
       );
@@ -195,10 +194,19 @@ export async function POST(request: NextRequest) {
     if (codigoBarras) {
       const productoConMismoCodigo = await prisma.producto.findFirst({
         where: { codigoBarras },
-        select: { id: true, nombre: true, codigoBarras: true },
+        select: { id: true, nombre: true, codigoBarras: true, activo: true },
       });
 
       if (productoConMismoCodigo) {
+        if (!productoConMismoCodigo.activo) {
+          return NextResponse.json(
+            {
+              error: `El código de barras "${productoConMismoCodigo.codigoBarras}" ya está asignado al producto "${productoConMismoCodigo.nombre}", que está inactivo. Podés reactivarlo en vez de crear uno nuevo.`,
+              productoInactivoId: productoConMismoCodigo.id,
+            },
+            { status: 409 }
+          );
+        }
         return NextResponse.json(
           {
             error: `El código de barras "${productoConMismoCodigo.codigoBarras}" ya está asignado al producto "${productoConMismoCodigo.nombre}". Modificá el producto existente en vez de crear uno nuevo.`,

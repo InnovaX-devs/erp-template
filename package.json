@@ -10,7 +10,8 @@
     "lint": "eslint",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init_cliente",
-    "reset-password": "tsx prisma/scripts/reset-password.ts"
+    "reset-password": "tsx prisma/scripts/reset-password.ts",
+    "migrar-fotos": "tsx prisma/scripts/migrar-fotos-webp.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -28,6 +29,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "recharts": "^3.10.1",
+    "sharp": "^0.35.4",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0"
   },

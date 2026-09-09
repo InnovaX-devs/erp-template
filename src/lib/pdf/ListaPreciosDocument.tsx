@@ -1,9 +1,9 @@
 import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import { BusinessHeader } from "./BusinessHeader";
-import { pdfStyles } from "./styles";
+import { getPdfStyles } from "./styles";
 import { formatCurrency } from "@/lib/currency";
 import { calcularPrecioDecant } from "@/lib/calculos/decant-pricing"
-import { PDF_BRAND } from "./brand";
+import { getPdfBrand, type PdfBrand } from "./brand";
 import type { Configuracion } from "@prisma/client";
 
 type ProductoLista = {
@@ -19,15 +19,16 @@ type ProductoLista = {
   overrideDecant10ml: number | null;
 };
 
-const listStyles = StyleSheet.create({
+function getListStyles(brand: PdfBrand) {
+  return StyleSheet.create({
   sectionSeparator: {
     marginTop: 18,
     marginBottom: 12,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: PDF_BRAND.border,
+    borderTopColor: brand.border,
   },
-  sectionLabel: { fontSize: 9.5, fontStyle: "italic", color: PDF_BRAND.textDim },
+  sectionLabel: { fontSize: 9.5, fontStyle: "italic", color: brand.textDim },
   row: { flexDirection: "row", marginBottom: 8 },
   cell: { width: "50%", flexDirection: "row", justifyContent: "space-between", paddingRight: 16 },
   nombre: { fontSize: 10, flexShrink: 1, paddingRight: 8 },
@@ -39,7 +40,8 @@ const listStyles = StyleSheet.create({
     color: "#DC2626",
     textDecoration: "line-through",
   },
-});
+  });
+}
 
 function convertir(valor: number, monedaOrigen: "ARS" | "USD", monedaDestino: "ARS" | "USD", cotizacionUSD: number) {
   if (monedaOrigen === monedaDestino) return valor;
@@ -75,6 +77,10 @@ export function ListaPreciosDocument({
     ? "Lista de Precios Mayorista"
     : "Lista de Precios (Minorista y Mayorista)";
 
+  const brand = getPdfBrand(configuracion);
+  const pdfStyles = getPdfStyles(brand);
+  const listStyles = getListStyles(brand);
+
   function precioTexto(p: ProductoLista): string {
     if (modoDecant) {
       const { precio5ml, precio10ml } = calcularPrecioDecant(p, configuracion);
@@ -102,7 +108,7 @@ export function ListaPreciosDocument({
       <View key={i} style={listStyles.row}>
         <View style={listStyles.cell}>
           <Text style={sinStock ? listStyles.nombreSinStock : listStyles.nombre}>{a.nombre}</Text>
-          <Text style={sinStock ? listStyles.precioSinStock : [listStyles.precio, { color: PDF_BRAND.primary }]}>
+          <Text style={sinStock ? listStyles.precioSinStock : [listStyles.precio, { color: brand.primary }]}>
             {precioTexto(a)}
           </Text>
         </View>
@@ -110,7 +116,7 @@ export function ListaPreciosDocument({
           {b && (
             <>
               <Text style={sinStock ? listStyles.nombreSinStock : listStyles.nombre}>{b.nombre}</Text>
-              <Text style={sinStock ? listStyles.precioSinStock : [listStyles.precio, { color: PDF_BRAND.primary }]}>
+              <Text style={sinStock ? listStyles.precioSinStock : [listStyles.precio, { color: brand.primary }]}>
                 {precioTexto(b)}
               </Text>
             </>

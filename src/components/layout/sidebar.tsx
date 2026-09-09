@@ -25,7 +25,20 @@ function mejorMatchDeGrupo(grupo: NavGroup, pathname: string) {
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 }
 
-export function Sidebar({ logoUrl }: { logoUrl: string | null }) {
+function iniciales(nombre: string) {
+  const palabras = nombre.trim().split(/\s+/).filter(Boolean);
+  if (palabras.length === 0) return "";
+  if (palabras.length === 1) return palabras[0].slice(0, 2).toUpperCase();
+  return (palabras[0][0] + palabras[1][0]).toUpperCase();
+}
+
+export function Sidebar({
+  logoUrl,
+  nombreNegocio,
+}: {
+  logoUrl: string | null;
+  nombreNegocio: string;
+}) {
   const pathname = usePathname();
   const { isOpen, close } = useSidebar();
 
@@ -74,25 +87,21 @@ export function Sidebar({ logoUrl }: { logoUrl: string | null }) {
             {logoUrl ? (
               <Image
                 src={logoUrl}
-                alt="Logo KJ Importados"
+                alt={`Logo ${nombreNegocio}`}
                 width={64}
                 height={64}
                 className="h-full w-full object-cover"
               />
             ) : (
               <span className="font-display text-lg tracking-wide text-amber">
-                KJ
+                {iniciales(nombreNegocio)}
               </span>
             )}
           </div>
 
           <span className="font-display text-lg tracking-wide">
-            KJ Importados
+            {nombreNegocio}
           </span>
-
-          <p className="mt-1 text-xs uppercase tracking-[0.2em] text-ivory/50">
-            Perfumes Árabes
-          </p>
         </div>
 
         <nav

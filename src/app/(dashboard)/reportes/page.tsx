@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Droplets } from "lucide-react";
 import { rangoParaTab, esMismoDia, type TabReporte } from "@/lib/reportes";
 import { obtenerReporte } from "./queries";
+import { obtenerConfiguracion } from "@/lib/configuracion";
 import { TabsReportes } from "../../../components/reportes/TabsReportes";
 import { KpiCards } from "@/components/reportes/kpi-cards";
 import { DesgloseTipoPrecio } from "@/components/reportes/desglose-tipo-precio";
@@ -28,6 +29,8 @@ export default async function ReportesPage({
   const params = await searchParams;
   const tab: TabReporte = TABS_VALIDOS.includes(params.tab as TabReporte) ? (params.tab as TabReporte) : "diario";
 
+  const configuracion = await obtenerConfiguracion();
+
   const rango = rangoParaTab(tab, params.desde, params.hasta);
   const faltaPeriodo = tab === "periodo" && (!params.desde || !params.hasta);
 
@@ -45,12 +48,14 @@ export default async function ReportesPage({
           <p className="text-sm text-[#45464f]">{rangoTexto}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href="/reportes/decants"
-            className="flex items-center gap-1.5 rounded-lg border border-[#c5c6d0] bg-white px-3 py-2 text-sm font-medium text-[#45464f] hover:bg-[#eceef0]"
-          >
-            <Droplets size={14} /> Reporte de Decants
-          </Link>
+          {configuracion.ventaPorDecant && (
+            <Link
+              href="/reportes/decants"
+              className="flex items-center gap-1.5 rounded-lg border border-[#c5c6d0] bg-white px-3 py-2 text-sm font-medium text-[#45464f] hover:bg-[#eceef0]"
+            >
+              <Droplets size={14} /> Reporte de Decants
+            </Link>
+          )}
           <BotonExportarPdf tab={tab} desde={params.desde} hasta={params.hasta} />
         </div>
       </div>

@@ -3,6 +3,7 @@ import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { AuthProvider } from "@/components/providers/session-provider";
+import { obtenerConfiguracion } from "@/lib/configuracion";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -20,10 +21,14 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500"],
 });
 
-export const metadata: Metadata = {
-  title: "Kj importados · Panel administrativo",
-  description: "Panel de administración para Kj importados.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const configuracion = await obtenerConfiguracion();
+
+  return {
+    title: `${configuracion.nombreNegocio} · Panel administrativo`,
+    description: `Panel de administración para ${configuracion.nombreNegocio}.`,
+  };
+}
 
 export default function RootLayout({
   children,

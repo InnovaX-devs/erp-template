@@ -1,8 +1,7 @@
 import { View, Text, Image } from "@react-pdf/renderer";
-import { pdfStyles } from "./styles";
+import { getPdfStyles } from "./styles";
+import { getPdfBrand } from "./brand";
 import type { Configuracion } from "@prisma/client";
-
-const INSTAGRAM_HANDLE = "@importtados.kj";
 
 export function BusinessHeader({
   configuracion,
@@ -11,8 +10,10 @@ export function BusinessHeader({
   configuracion: Configuracion;
   titulo: string;
 }) {
+  const pdfStyles = getPdfStyles(getPdfBrand(configuracion));
+
   const detalle = [
-    INSTAGRAM_HANDLE,
+    configuracion.instagram || null,
     configuracion.telefono ? `Tel: ${configuracion.telefono}` : null,
   ]
     .filter(Boolean)

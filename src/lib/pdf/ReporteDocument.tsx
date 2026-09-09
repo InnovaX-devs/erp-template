@@ -1,7 +1,7 @@
 import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 import { BusinessHeader } from "./BusinessHeader";
-import { pdfStyles } from "./styles";
-import { PDF_BRAND } from "./brand";
+import { getPdfStyles } from "./styles";
+import { getPdfBrand, type PdfBrand } from "./brand";
 import { formatCurrency } from "@/lib/currency";
 import type { Configuracion, TipoCuenta } from "@prisma/client";
 import type { ReporteData } from "@/types/reporte";
@@ -19,13 +19,14 @@ const LABEL_TIPO_PRECIO: Record<"MINORISTA" | "MAYORISTA", string> = {
 };
 
 const LABEL_PRESENTACION: Record<"FRASCO" | "DECANT_5ML" | "DECANT_10ML", string> = {
-  FRASCO: "Frasco",
+  FRASCO: "Unidad",
   DECANT_5ML: "Decant 5ml",
   DECANT_10ML: "Decant 10ml",
 };
 
-const s = StyleSheet.create({
-  rangoTexto: { fontSize: 9, color: PDF_BRAND.textDim, marginBottom: 16 },
+function getStyles(brand: PdfBrand) {
+  return StyleSheet.create({
+  rangoTexto: { fontSize: 9, color: brand.textDim, marginBottom: 16 },
 
   kpiGrid: { flexDirection: "row", flexWrap: "wrap", marginBottom: 18 },
   kpiCard: {
@@ -33,7 +34,7 @@ const s = StyleSheet.create({
     marginRight: "2%",
     marginBottom: 10,
     borderWidth: 0.5,
-    borderColor: PDF_BRAND.border,
+    borderColor: brand.border,
     borderRadius: 4,
     padding: 8,
   },
@@ -42,60 +43,60 @@ const s = StyleSheet.create({
     marginRight: "2%",
     marginBottom: 10,
     borderWidth: 0.5,
-    borderColor: PDF_BRAND.primary,
+    borderColor: brand.primary,
     backgroundColor: "#EEF2FF",
     borderRadius: 4,
     padding: 8,
   },
-  kpiLabel: { fontSize: 7, color: PDF_BRAND.textDim, marginBottom: 4, letterSpacing: 0.3 },
-  kpiValor: { fontSize: 13, fontFamily: "Helvetica-Bold", color: PDF_BRAND.text },
-  kpiSub: { fontSize: 6.5, color: PDF_BRAND.textDim, marginTop: 3 },
+  kpiLabel: { fontSize: 7, color: brand.textDim, marginBottom: 4, letterSpacing: 0.3 },
+  kpiValor: { fontSize: 13, fontFamily: "Helvetica-Bold", color: brand.text },
+  kpiSub: { fontSize: 6.5, color: brand.textDim, marginTop: 3 },
 
   seccionTitulo: {
     fontSize: 10,
     fontFamily: "Helvetica-Bold",
-    color: PDF_BRAND.primary,
+    color: brand.primary,
     marginBottom: 6,
     marginTop: 12,
   },
   tablaHeader: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    borderBottomColor: PDF_BRAND.border,
+    borderBottomColor: brand.border,
     paddingBottom: 4,
     marginBottom: 4,
   },
-  tablaHeaderText: { fontSize: 7.5, color: PDF_BRAND.textDim },
+  tablaHeaderText: { fontSize: 7.5, color: brand.textDim },
   fila: {
     flexDirection: "row",
     paddingVertical: 5,
     borderBottomWidth: 1,
-    borderBottomColor: PDF_BRAND.surfaceHover,
+    borderBottomColor: brand.surfaceHover,
     alignItems: "center",
   },
   colPrincipal: { width: "40%", fontSize: 9 },
   colCant: { width: "25%", textAlign: "right", fontSize: 9 },
-  colPorc: { width: "15%", textAlign: "right", fontSize: 8, color: PDF_BRAND.textDim },
+  colPorc: { width: "15%", textAlign: "right", fontSize: 8, color: brand.textDim },
   colTotal: { width: "20%", textAlign: "right", fontSize: 9, fontFamily: "Helvetica-Bold" },
 
-  vacioTexto: { fontSize: 8.5, color: PDF_BRAND.textDim, fontStyle: "italic", paddingVertical: 6 },
+  vacioTexto: { fontSize: 8.5, color: brand.textDim, fontStyle: "italic", paddingVertical: 6 },
 
   // --- Ingresos por día ---
   barraFila: { flexDirection: "row", alignItems: "center", paddingVertical: 3 },
-  barraFecha: { width: "18%", fontSize: 7.5, color: PDF_BRAND.textDim },
-  barraTrack: { flex: 1, height: 6, backgroundColor: PDF_BRAND.surfaceHover, borderRadius: 3, marginRight: 6 },
-  barraFill: { height: 6, backgroundColor: PDF_BRAND.primary, borderRadius: 3 },
-  barraValor: { width: "22%", fontSize: 7.5, textAlign: "right", color: PDF_BRAND.text },
+  barraFecha: { width: "18%", fontSize: 7.5, color: brand.textDim },
+  barraTrack: { flex: 1, height: 6, backgroundColor: brand.surfaceHover, borderRadius: 3, marginRight: 6 },
+  barraFill: { height: 6, backgroundColor: brand.primary, borderRadius: 3 },
+  barraValor: { width: "22%", fontSize: 7.5, textAlign: "right", color: brand.text },
 
   // --- Top productos ---
   topFila: {
     flexDirection: "row",
     paddingVertical: 5,
     borderBottomWidth: 1,
-    borderBottomColor: PDF_BRAND.surfaceHover,
+    borderBottomColor: brand.surfaceHover,
     alignItems: "center",
   },
-  topRank: { width: "6%", fontSize: 8, color: PDF_BRAND.textDim },
+  topRank: { width: "6%", fontSize: 8, color: brand.textDim },
   topNombreWrap: { flexDirection: "row", alignItems: "center", width: "49%" },
   topImagenBox: {
     width: 26,
@@ -103,16 +104,17 @@ const s = StyleSheet.create({
     marginRight: 6,
     borderRadius: 3,
     overflow: "hidden",
-    backgroundColor: PDF_BRAND.surfaceHover,
+    backgroundColor: brand.surfaceHover,
     alignItems: "center",
     justifyContent: "center",
   },
   topImagen: { width: 26, height: 26, objectFit: "contain" },
-  topPlaceholderText: { fontSize: 5, color: PDF_BRAND.textDim, textAlign: "center" },
+  topPlaceholderText: { fontSize: 5, color: brand.textDim, textAlign: "center" },
   topNombreCol: { flex: 1 },
   topCant: { width: "20%", textAlign: "right", fontSize: 9 },
   topMonto: { width: "25%", textAlign: "right", fontSize: 9, fontFamily: "Helvetica-Bold" },
-});
+  });
+}
 
 export function ReporteDocument({
   reporte,
@@ -124,6 +126,10 @@ export function ReporteDocument({
   titulo?: string;
 }) {
   const { kpis, desgloseTipoPrecio, desgloseMetodoCobro, ingresosPorDia, topProductos } = reporte;
+
+  const brand = getPdfBrand(configuracion);
+  const pdfStyles = getPdfStyles(brand);
+  const s = getStyles(brand);
 
   // reporte.fechaFin es el límite exclusivo del rango (medianoche del día siguiente),
   // igual que rango.hasta en la página web, así que restamos 1ms para mostrar
@@ -168,7 +174,7 @@ export function ReporteDocument({
           {kpiItems.map((kpi, i) => (
             <View key={i} style={kpi.destacado ? s.kpiCardDestacado : s.kpiCard}>
               <Text style={s.kpiLabel}>{kpi.label.toUpperCase()}</Text>
-              <Text style={[s.kpiValor, kpi.destacado ? { color: PDF_BRAND.primary } : {}]}>{kpi.valor}</Text>
+              <Text style={[s.kpiValor, kpi.destacado ? { color: brand.primary } : {}]}>{kpi.valor}</Text>
               {kpi.sub && <Text style={s.kpiSub}>{kpi.sub}</Text>}
             </View>
           ))}
@@ -189,7 +195,7 @@ export function ReporteDocument({
               <Text style={s.colPrincipal}>{LABEL_TIPO_PRECIO[item.tipoPrecio]}</Text>
               <Text style={s.colCant}>{item.cantidadVentas}</Text>
               <Text style={s.colPorc}>{item.porcentaje.toFixed(1)}%</Text>
-              <Text style={[s.colTotal, { color: PDF_BRAND.primary }]}>{formatCurrency(item.montoARS, "ARS")}</Text>
+              <Text style={[s.colTotal, { color: brand.primary }]}>{formatCurrency(item.montoARS, "ARS")}</Text>
             </View>
           ))
         )}
@@ -209,13 +215,13 @@ export function ReporteDocument({
               <View key={item.cuentaId} style={s.fila}>
                 <View style={s.colPrincipal}>
                   <Text style={{ fontSize: 9 }}>{item.cuentaNombre}</Text>
-                  <Text style={{ fontSize: 6.5, color: PDF_BRAND.textDim, marginTop: 1 }}>
+                  <Text style={{ fontSize: 6.5, color: brand.textDim, marginTop: 1 }}>
                     {LABEL_TIPO_CUENTA[item.tipoCuenta]}
                   </Text>
                 </View>
                 <Text style={s.colCant}>{item.cantidadVentas}</Text>
                 <Text style={s.colPorc}>{item.porcentaje.toFixed(1)}%</Text>
-                <Text style={[s.colTotal, { color: PDF_BRAND.primary }]}>
+                <Text style={[s.colTotal, { color: brand.primary }]}>
                   {formatCurrency(item.montoARS, "ARS")}
                 </Text>
               </View>
@@ -264,13 +270,13 @@ export function ReporteDocument({
                   </View>
                   <View style={s.topNombreCol}>
                     <Text style={{ fontSize: 9 }}>{p.nombre}</Text>
-                    <Text style={{ fontSize: 6.5, color: PDF_BRAND.textDim, marginTop: 1 }}>
+                    <Text style={{ fontSize: 6.5, color: brand.textDim, marginTop: 1 }}>
                       {LABEL_PRESENTACION[p.presentacion]}
                     </Text>
                   </View>
                 </View>
                 <Text style={s.topCant}>{p.cantidad}</Text>
-                <Text style={[s.topMonto, { color: PDF_BRAND.primary }]}>{formatCurrency(p.montoARS, "ARS")}</Text>
+                <Text style={[s.topMonto, { color: brand.primary }]}>{formatCurrency(p.montoARS, "ARS")}</Text>
               </View>
             ))}
         </View>
@@ -287,13 +293,13 @@ export function ReporteDocument({
               </View>
               <View style={s.topNombreCol}>
                 <Text style={{ fontSize: 9 }}>{p.nombre}</Text>
-                <Text style={{ fontSize: 6.5, color: PDF_BRAND.textDim, marginTop: 1 }}>
+                <Text style={{ fontSize: 6.5, color: brand.textDim, marginTop: 1 }}>
                   {LABEL_PRESENTACION[p.presentacion]}
                 </Text>
               </View>
             </View>
             <Text style={s.topCant}>{p.cantidad}</Text>
-            <Text style={[s.topMonto, { color: PDF_BRAND.primary }]}>{formatCurrency(p.montoARS, "ARS")}</Text>
+            <Text style={[s.topMonto, { color: brand.primary }]}>{formatCurrency(p.montoARS, "ARS")}</Text>
           </View>
         ))}
 

@@ -1,5 +1,5 @@
 import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
-import { PDF_BRAND } from "./brand";
+import { getPdfBrand, type PdfBrand } from "./brand";
 import { formatCurrency } from "@/lib/currency";
 import type { Configuracion, EstadoPago, TipoCuenta } from "@prisma/client";
 
@@ -36,97 +36,99 @@ export type ComprobanteVentaData = {
   pagos: ComprobantePago[];
 };
 
-const s = StyleSheet.create({
-  page: {
-    paddingHorizontal: 32,
-    paddingVertical: 0,
-    fontSize: 9,
-    fontFamily: "Helvetica",
-    color: PDF_BRAND.text,
-  },
-  header: {
-    marginHorizontal: -32,
-    marginBottom: 20,
-    paddingHorizontal: 32,
-    paddingVertical: 20,
-    backgroundColor: PDF_BRAND.text,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  businessName: { fontSize: 18, fontFamily: "Helvetica-Bold", color: "#FFFFFF" },
-  businessDetail: { fontSize: 8, color: "#C6CAD3", marginTop: 3 },
-  docTitle: { fontSize: 9, color: PDF_BRAND.primarySoft, textAlign: "right", letterSpacing: 0.5 },
-  docNumero: { fontSize: 16, fontFamily: "Helvetica-Bold", color: "#FFFFFF", textAlign: "right", marginTop: 2 },
-  docAviso: { fontSize: 7, color: "#8B93A3", textAlign: "right", marginTop: 3 },
+function getStyles(brand: PdfBrand) {
+  return StyleSheet.create({
+    page: {
+      paddingHorizontal: 32,
+      paddingVertical: 0,
+      fontSize: 9,
+      fontFamily: "Helvetica",
+      color: brand.text,
+    },
+    header: {
+      marginHorizontal: -32,
+      marginBottom: 20,
+      paddingHorizontal: 32,
+      paddingVertical: 20,
+      backgroundColor: brand.text,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+    },
+    businessName: { fontSize: 18, fontFamily: "Helvetica-Bold", color: "#FFFFFF" },
+    businessDetail: { fontSize: 8, color: "#C6CAD3", marginTop: 3 },
+    docTitle: { fontSize: 9, color: brand.primarySoft, textAlign: "right", letterSpacing: 0.5 },
+    docNumero: { fontSize: 16, fontFamily: "Helvetica-Bold", color: "#FFFFFF", textAlign: "right", marginTop: 2 },
+    docAviso: { fontSize: 7, color: "#8B93A3", textAlign: "right", marginTop: 3 },
 
-  infoRow: { flexDirection: "row", marginBottom: 18 },
-  infoBlock: { flex: 1 },
-  infoLabel: { fontSize: 7.5, color: PDF_BRAND.textDim, letterSpacing: 0.5, marginBottom: 2 },
-  infoValue: { fontSize: 10, fontFamily: "Helvetica-Bold", color: PDF_BRAND.text },
+    infoRow: { flexDirection: "row", marginBottom: 18 },
+    infoBlock: { flex: 1 },
+    infoLabel: { fontSize: 7.5, color: brand.textDim, letterSpacing: 0.5, marginBottom: 2 },
+    infoValue: { fontSize: 10, fontFamily: "Helvetica-Bold", color: brand.text },
 
-  tablaHeader: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: PDF_BRAND.border,
-    paddingBottom: 6,
-    marginBottom: 4,
-  },
-  tablaHeaderText: { fontSize: 7.5, color: PDF_BRAND.textDim, letterSpacing: 0.3 },
-  fila: {
-    flexDirection: "row",
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: PDF_BRAND.surfaceHover,
-    alignItems: "center",
-  },
-  colProducto: { width: "46%" },
-  colCant: { width: "14%", textAlign: "center" },
-  colUnit: { width: "20%", textAlign: "right" },
-  colSubtotal: { width: "20%", textAlign: "right" },
-  nombreProducto: { fontSize: 9 },
-  pill: {
-    fontSize: 6.5,
-    fontFamily: "Helvetica-Bold",
-    color: PDF_BRAND.primary,
-    backgroundColor: PDF_BRAND.surfaceHover,
-    paddingHorizontal: 4,
-    paddingVertical: 1.5,
-    marginLeft: 5,
-  },
-  presentacionTexto: { fontSize: 7.5, color: PDF_BRAND.textDim, marginTop: 1 },
+    tablaHeader: {
+      flexDirection: "row",
+      borderBottomWidth: 1,
+      borderBottomColor: brand.border,
+      paddingBottom: 6,
+      marginBottom: 4,
+    },
+    tablaHeaderText: { fontSize: 7.5, color: brand.textDim, letterSpacing: 0.3 },
+    fila: {
+      flexDirection: "row",
+      paddingVertical: 6,
+      borderBottomWidth: 1,
+      borderBottomColor: brand.surfaceHover,
+      alignItems: "center",
+    },
+    colProducto: { width: "46%" },
+    colCant: { width: "14%", textAlign: "center" },
+    colUnit: { width: "20%", textAlign: "right" },
+    colSubtotal: { width: "20%", textAlign: "right" },
+    nombreProducto: { fontSize: 9 },
+    pill: {
+      fontSize: 6.5,
+      fontFamily: "Helvetica-Bold",
+      color: brand.primary,
+      backgroundColor: brand.surfaceHover,
+      paddingHorizontal: 4,
+      paddingVertical: 1.5,
+      marginLeft: 5,
+    },
+    presentacionTexto: { fontSize: 7.5, color: brand.textDim, marginTop: 1 },
 
-  totalBar: {
-    marginTop: 14,
-    backgroundColor: PDF_BRAND.text,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  totalLabel: { fontSize: 11, fontFamily: "Helvetica-Bold", color: "#FFFFFF" },
-  totalValor: { fontSize: 14, fontFamily: "Helvetica-Bold", color: "#FFFFFF" },
+    totalBar: {
+      marginTop: 14,
+      backgroundColor: brand.text,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    totalLabel: { fontSize: 11, fontFamily: "Helvetica-Bold", color: "#FFFFFF" },
+    totalValor: { fontSize: 14, fontFamily: "Helvetica-Bold", color: "#FFFFFF" },
 
-  pagoBox: {
-    marginTop: 14,
-    borderRadius: 4,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-  },
-  pagoBoxOk: { backgroundColor: "#DCFCE7" },
-  pagoBoxParcial: { backgroundColor: "#FEF3C7" },
-  pagoRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  pagoLabel: { fontSize: 8.5, color: PDF_BRAND.textDim },
-  pagoMetodo: { fontSize: 9, fontFamily: "Helvetica-Bold", color: PDF_BRAND.text },
-  pagoEstado: { fontSize: 10, fontFamily: "Helvetica-Bold", textAlign: "center", marginTop: 8 },
-  pagoEstadoOk: { color: "#15803D" },
-  pagoEstadoParcial: { color: "#B45309" },
+    pagoBox: {
+      marginTop: 14,
+      borderRadius: 4,
+      paddingVertical: 14,
+      paddingHorizontal: 14,
+    },
+    pagoBoxOk: { backgroundColor: "#DCFCE7" },
+    pagoBoxParcial: { backgroundColor: "#FEF3C7" },
+    pagoRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+    pagoLabel: { fontSize: 8.5, color: brand.textDim },
+    pagoMetodo: { fontSize: 9, fontFamily: "Helvetica-Bold", color: brand.text },
+    pagoEstado: { fontSize: 10, fontFamily: "Helvetica-Bold", textAlign: "center", marginTop: 8 },
+    pagoEstadoOk: { color: "#15803D" },
+    pagoEstadoParcial: { color: "#B45309" },
 
-  footer: { marginTop: 30, textAlign: "center" },
-  footerGracias: { fontSize: 9, fontFamily: "Helvetica-Bold", color: PDF_BRAND.text },
-  footerNota: { fontSize: 7, color: PDF_BRAND.textDim, marginTop: 3 },
-});
+    footer: { marginTop: 30, textAlign: "center" },
+    footerGracias: { fontSize: 9, fontFamily: "Helvetica-Bold", color: brand.text },
+    footerNota: { fontSize: 7, color: brand.textDim, marginTop: 3 },
+  });
+}
 
 const LABEL_TIPO_CUENTA: Record<TipoCuenta, string> = {
   EFECTIVO_ARS: "Efectivo",
@@ -149,9 +151,11 @@ export function ComprobanteVentaDocument({
   configuracion: Configuracion;
 }) {
   const numero = String(venta.id).padStart(6, "0");
-  const INSTAGRAM_HANDLE = "@importtados.kj";
+  const s = getStyles(getPdfBrand(configuracion));
 
-  const detalleNegocio = [INSTAGRAM_HANDLE, configuracion.telefono].filter(Boolean).join("  ·  ");
+  const detalleNegocio = [configuracion.instagram || null, configuracion.telefono]
+    .filter(Boolean)
+    .join("  ·  ");
 
   const metodosUnicos = Array.from(new Set(venta.pagos.map((p) => LABEL_TIPO_CUENTA[p.tipoCuenta])));
   const metodoTexto = metodosUnicos.length > 0 ? metodosUnicos.join(" + ") : "—";

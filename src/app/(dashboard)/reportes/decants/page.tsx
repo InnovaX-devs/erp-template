@@ -1,7 +1,9 @@
 import type { EstadoPago } from "@prisma/client";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { obtenerReporteDecants, type FiltrosReporteDecants } from "./queries";
+import { obtenerConfiguracion } from "@/lib/configuracion";
 import { KpiCardsDecants } from "../../../../components/reportes/decants/KpiCards";
 import { FiltrosDecants } from "@/components/reportes/decants/FiltrosDecants";
 import { TablaVentasDecants } from "@/components/reportes/decants/TablaVentasDecants";
@@ -19,6 +21,11 @@ export default async function ReporteDecantsPage({
   // Next.js 16: searchParams es una Promise, hay que await-earla.
   searchParams: Promise<SearchParams>;
 }) {
+  const configuracion = await obtenerConfiguracion();
+  if (!configuracion.ventaPorDecant) {
+    redirect("/reportes");
+  }
+
   const params = await searchParams;
 
   const filtros: FiltrosReporteDecants = {

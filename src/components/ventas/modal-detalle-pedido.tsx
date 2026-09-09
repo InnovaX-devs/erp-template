@@ -25,7 +25,7 @@ const ESTADO_LABEL: Record<EstadoPago, string> = {
 };
 
 const PRESENTACION_LABEL: Record<string, string> = {
-  FRASCO: "Frasco",
+  FRASCO: "Unidad",
   DECANT_5ML: "Decant 5ml",
   DECANT_10ML: "Decant 10ml",
 };

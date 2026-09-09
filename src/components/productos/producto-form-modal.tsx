@@ -56,6 +56,7 @@ interface ProductoFormModalProps {
   onSuccess: () => void;
   marcasIniciales?: Marca[];
   categoriasIniciales?: Categoria[];
+  ventaPorDecant?: boolean;
 }
 
 export function ProductoFormModal({
@@ -65,6 +66,7 @@ export function ProductoFormModal({
   onSuccess,
   marcasIniciales = [],
   categoriasIniciales = [],
+  ventaPorDecant = false,
 }: ProductoFormModalProps) {
   const [formData, setFormData] = useState<ProductoFormData>({
     nombre: "",
@@ -579,25 +581,27 @@ export function ProductoFormModal({
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-text-dim">
-                Contenido (ml)
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                placeholder="Ej: 100"
-                value={formData.contenidoMl ?? ""}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    contenidoMl: e.target.value === "" ? "" : Number(e.target.value),
-                  })
-                }
-                className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
-              />
-            </div>
+            {ventaPorDecant && (
+              <div>
+                <label className="block text-xs font-medium text-text-dim">
+                  Contenido (ml)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="Ej: 100"
+                  value={formData.contenidoMl ?? ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      contenidoMl: e.target.value === "" ? "" : Number(e.target.value),
+                    })
+                  }
+                  className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none"
+                />
+              </div>
+            )}
 
             {/* Marca */}
             <div>
@@ -822,21 +826,23 @@ export function ProductoFormModal({
               Producto Destacado
             </label>
 
-            <label className="flex items-center gap-2 text-sm text-text cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.esDecant}
-                onChange={(e) =>
-                  setFormData({ ...formData, esDecant: e.target.checked })
-                }
-                className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-              />
-              Se vende por decant
-            </label>
+            {ventaPorDecant && (
+              <label className="flex items-center gap-2 text-sm text-text cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.esDecant}
+                  onChange={(e) =>
+                    setFormData({ ...formData, esDecant: e.target.checked })
+                  }
+                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                />
+                Se vende por decant
+              </label>
+            )}
           </div>
 
           {/* Overrides de precio de decant — solo si "se vende por decant" está activo */}
-          {formData.esDecant && (
+          {ventaPorDecant && formData.esDecant && (
             <div className="rounded-xl border border-border bg-surface-hover/30 p-4 space-y-3">
               <div>
                 <span className="text-xs font-semibold uppercase tracking-wider text-text-dim">

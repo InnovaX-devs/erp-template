@@ -2,7 +2,7 @@ import { formatCurrency } from "@/lib/currency";
 import type { TopProductoItem } from "@/types/reporte";
 
 const LABELS_PRESENTACION: Record<TopProductoItem["presentacion"], string> = {
-  FRASCO: "Frasco",
+  FRASCO: "Unidad",
   DECANT_5ML: "Decant 5ml",
   DECANT_10ML: "Decant 10ml",
 };

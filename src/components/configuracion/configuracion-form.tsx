@@ -11,10 +11,14 @@ interface ConfiguracionFormProps {
     telefono: string | null;
     email: string | null;
     direccion: string | null;
+    instagram: string | null;
     cotizacionUSD: number;
     remitenteNombre: string | null;
     remitenteDni: string | null;
     costoPromedioPonderado: boolean;
+    colorPrimario: string | null;
+    colorSecundario: string | null;
+    ventaPorDecant: boolean;
   };
 }
 
@@ -174,7 +178,63 @@ export function ConfiguracionForm({ configuracion }: ConfiguracionFormProps) {
               className="w-full rounded-md border border-[#c5c6d0] bg-white px-3 py-2 text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
             />
           </div>
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-sm text-[#45464f]" htmlFor="instagram">
+              Instagram (opcional)
+            </label>
+            <input
+              id="instagram"
+              type="text"
+              name="instagram"
+              placeholder="@tunegocio"
+              defaultValue={configuracion.instagram ?? ""}
+              className="w-full rounded-md border border-[#c5c6d0] bg-white px-3 py-2 text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
+            />
+            <p className="mt-1 text-xs text-[#45464f]">
+              Se muestra en comprobantes y catálogos en PDF, junto al teléfono.
+            </p>
+          </div>
         </div>
+      </div>
+
+      {/* Marca en PDFs */}
+      <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6">
+        <h2 className="mb-4 text-base font-semibold text-[#191c1e]">Marca en PDFs</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm text-[#45464f]" htmlFor="colorPrimario">
+              Color primario
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                id="colorPrimario"
+                type="color"
+                name="colorPrimario"
+                defaultValue={configuracion.colorPrimario ?? "#2952CC"}
+                className="h-10 w-14 cursor-pointer rounded-md border border-[#c5c6d0] bg-white p-1"
+              />
+              <span className="text-xs text-[#45464f]">Títulos y totales destacados</span>
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm text-[#45464f]" htmlFor="colorSecundario">
+              Color secundario
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                id="colorSecundario"
+                type="color"
+                name="colorSecundario"
+                defaultValue={configuracion.colorSecundario ?? "#0891B2"}
+                className="h-10 w-14 cursor-pointer rounded-md border border-[#c5c6d0] bg-white p-1"
+              />
+              <span className="text-xs text-[#45464f]">Usado en catálogos de decants</span>
+            </div>
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-[#45464f]">
+          Se usan en catálogos, listas de precios, comprobantes y reportes generados en PDF.
+        </p>
       </div>
 
       {/* Cotización */}
@@ -250,6 +310,26 @@ export function ConfiguracionForm({ configuracion }: ConfiguracionFormProps) {
               Al confirmar una compra, el costo del producto se recalcula mezclando el stock
               anterior con el nuevo. Ejemplo: 10 unidades a $1000 + 5 nuevas a $1200 → el costo
               pasa a $1066.
+            </p>
+          </span>
+        </label>
+
+        <hr className="my-4 border-[#E2E8F0]" />
+
+        <label className="flex items-start gap-2">
+          <input
+            type="checkbox"
+            name="ventaPorDecant"
+            defaultChecked={configuracion.ventaPorDecant}
+            className="mt-0.5 h-4 w-4"
+          />
+          <span>
+            <span className="text-sm font-medium text-[#191c1e]">Venta por decant</span>
+            <p className="text-xs text-[#45464f]">
+              Activá esto solo si el negocio revende perfumes en decants (5ml/10ml) además de
+              frascos cerrados. Habilita la fórmula de precios de decant, las opciones de
+              presentación al vender y el reporte de decants. Si el negocio no vende por decant,
+              dejalo desactivado.
             </p>
           </span>
         </label>

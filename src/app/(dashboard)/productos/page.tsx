@@ -102,6 +102,7 @@ export default function ProductosPage() {
     divisorFrascoDecant: 9,
     offsetDecant5mlARS: 200,
     cotizacionUSD: 1200,
+    ventaPorDecant: false,
   });
   const cotizacion = configDecant.cotizacionUSD;
 
@@ -116,6 +117,7 @@ export default function ProductosPage() {
             divisorFrascoDecant: data.divisorFrascoDecant ?? 9,
             offsetDecant5mlARS: data.offsetDecant5mlARS ?? 200,
             cotizacionUSD: data.cotizacionUSD ?? 1200,
+            ventaPorDecant: data.ventaPorDecant ?? false,
           });
         }
       })
@@ -421,7 +423,10 @@ export default function ProductosPage() {
           <button
             type="button"
             onClick={() => setIsFormulaDecantOpen(true)}
-            className="inline-flex items-center justify-center rounded-lg bg-[#021541] px-4 py-2 text-sm font-medium text-white hover:opacity-90 cursor-pointer"
+            className={cn(
+              "inline-flex items-center justify-center rounded-lg bg-[#021541] px-4 py-2 text-sm font-medium text-white hover:opacity-90 cursor-pointer",
+              !configDecant.ventaPorDecant && "hidden"
+            )}
           >
             Fórmula Decant
           </button>
@@ -990,6 +995,7 @@ export default function ProductosPage() {
         onClose={() => setIsModalOpen(false)}
         productoEditar={productoEditar}
         onSuccess={cargarProductos}
+        ventaPorDecant={configDecant.ventaPorDecant}
       />
 
       <FormulaDecantModal

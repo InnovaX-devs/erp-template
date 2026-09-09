@@ -1,0 +1,16 @@
+import PresupuestoForm from "../../../../components/presupuestos/PresupuestoForm";
+import Link from "next/link";
+
+export default function NuevoPresupuestoPage() {
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex flex-col gap-2 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <h1 className="text-xl font-bold text-[#191c1e] sm:text-2xl">Nuevo Presupuesto</h1>
+        <Link href="/presupuestos" className="text-sm text-[#021541]">
+          ← Volver a la lista
+        </Link>
+      </div>
+      <PresupuestoForm />
+    </div>
+  );
+}

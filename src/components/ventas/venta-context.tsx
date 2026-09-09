@@ -1,0 +1,57 @@
+// venta-context.tsx
+"use client";
+
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import type { ClienteBusquedaResult } from "@/lib/clientes-busqueda";
+import type { ModoCobro, PagoLinea } from "@/types/pago";
+
+type TipoPrecio = "MINORISTA" | "MAYORISTA";
+
+type VentaContextValue = {
+  tipoPrecio: TipoPrecio;
+  setTipoPrecio: (tipo: TipoPrecio) => void;
+  cliente: ClienteBusquedaResult | null;
+  setCliente: (cliente: ClienteBusquedaResult | null) => void;
+  modoCobro: ModoCobro;
+  setModoCobro: (modo: ModoCobro) => void;
+  pagos: PagoLinea[];
+  setPagos: (pagos: PagoLinea[]) => void;
+  cotizacionUSD: number; // NUEVO
+};
+
+const VentaContext = createContext<VentaContextValue | null>(null);
+
+export function VentaProvider({ children }: { children: ReactNode }) {
+  const [tipoPrecio, setTipoPrecio] = useState<TipoPrecio>("MINORISTA");
+  const [cliente, setClienteState] = useState<ClienteBusquedaResult | null>(null);
+  const [modoCobro, setModoCobro] = useState<ModoCobro>("UNICA");
+  const [pagos, setPagos] = useState<PagoLinea[]>([{ id: "pago-unica", cuentaId: null, monto: 0 }]);
+  const [cotizacionUSD, setCotizacionUSD] = useState<number>(0); // NUEVO
+
+  // Traer la cotización real UNA vez al abrir la pantalla de venta
+  useEffect(() => {
+    fetch("/api/configuracion")
+      .then((r) => r.json())
+      .then((data) => setCotizacionUSD(data.cotizacionUSD ?? 0))
+      .catch(() => setCotizacionUSD(0));
+  }, []);
+
+  function setCliente(nuevoCliente: ClienteBusquedaResult | null) {
+    setClienteState(nuevoCliente);
+    setTipoPrecio(nuevoCliente?.esMayorista ? "MAYORISTA" : "MINORISTA");
+  }
+
+  return (
+    <VentaContext.Provider
+      value={{ tipoPrecio, setTipoPrecio, cliente, setCliente, modoCobro, setModoCobro, pagos, setPagos, cotizacionUSD }}
+    >
+      {children}
+    </VentaContext.Provider>
+  );
+}
+
+export function useVenta() {
+  const ctx = useContext(VentaContext);
+  if (!ctx) throw new Error("useVenta debe usarse dentro de VentaProvider");
+  return ctx;
+}

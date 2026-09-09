@@ -9,24 +9,24 @@ datasource db {
 }
 
 model Usuario {
-  id           String   @id @default(cuid())
-  nombre       String
-  email        String   @unique
-  passwordHash String
-  activo       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id               Int @id @default(autoincrement())
+  nombre           String
+  email            String            @unique
+  passwordHash     String
+  activo           Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
 model Marca {
-  id        String     @id @default(cuid())
+  id        Int @id @default(autoincrement())
   nombre    String     @unique
   activa    Boolean    @default(true)
   productos Producto[]
 }
 
 model Categoria {
-  id        String     @id @default(cuid())
+  id        Int @id @default(autoincrement())
   nombre    String     @unique
   activa    Boolean    @default(true)
   productos Producto[]
@@ -38,16 +38,17 @@ enum MonedaPrecio {
 }
 
 model Producto {
-  id                String  @id @default(cuid())
+  id                Int @id @default(autoincrement())
   nombre            String
   codigoBarras      String? @unique
   ubicacionDeposito String?
   fotoUrl           String?
+  contenidoMl       Int?
 
   marca       Marca?     @relation(fields: [marcaId], references: [id])
-  marcaId     String?
+  marcaId     Int?
   categoria   Categoria? @relation(fields: [categoriaId], references: [id])
-  categoriaId String?
+  categoriaId Int?
 
   stockActual Int     @default(0)
   stockMinimo Int     @default(0)
@@ -91,12 +92,13 @@ enum OrigenCambioPrecio {
   MANUAL
   RECALCULO_DECANT
   ACTUALIZACION_MASIVA
+  COMPRA_CONFIRMADA
 }
 
 model HistorialPrecio {
-  id            String             @id @default(cuid())
+  id            Int @id @default(autoincrement())
   producto      Producto           @relation(fields: [productoId], references: [id])
-  productoId    String
+  productoId    Int
   campo         CampoPrecio
   valorAnterior Float?
   valorNuevo    Float
@@ -106,10 +108,11 @@ model HistorialPrecio {
 
   @@index([productoId])
   @@index([fecha])
+  @@index([productoId, campo])
 }
 
 model Cliente {
-  id          String   @id @default(cuid())
+  id          Int @id @default(autoincrement())
   nombre      String
   apellido    String?
   telefono    String?
@@ -123,6 +126,7 @@ model Cliente {
   presupuestos Presupuesto[]
 
   @@index([nombre])
+  @@index([apellido])
 }
 
 enum EstadoPago {
@@ -144,9 +148,12 @@ enum TipoPrecioVenta {
 }
 
 model Venta {
-  id        String   @id @default(cuid())
+  id         Int @id @default(autoincrement())
   cliente   Cliente? @relation(fields: [clienteId], references: [id])
-  clienteId String?
+  clienteId Int?
+
+  presupuesto   Presupuesto? @relation(fields: [presupuestoId], references: [id])
+  presupuestoId Int?         @unique
 
   fecha           DateTime @default(now())
   cotizacionUsada Float
@@ -156,11 +163,10 @@ model Venta {
 
   totalUSD    Float
   totalARS    Float
-  montoPagado Float @default(0) // relevante cuando estadoPago = A_CUENTA
+  montoPagado Float @default(0)
 
   estadoPago EstadoPago @default(PAGADA)
 
-  // Logística (banderas independientes, no un estado lineal)
   armado   Boolean @default(false)
   enviado  Boolean @default(false)
   retirado Boolean @default(false)
@@ -172,16 +178,21 @@ model Venta {
 
   @@index([clienteId])
   @@index([fecha])
+  @@index([estadoPago])
+  @@index([estadoPago, fecha])   // cubre filtro por estado + orden por fecha juntos
+  @@index([retirado, estadoPago]) // la pantalla de Pedidos siempre filtra por estos dos
+  @@index([armado])
+  @@index([enviado])
 }
 
 model ItemVenta {
-  id      String @id @default(cuid())
+  id          Int @id @default(autoincrement())
   venta   Venta  @relation(fields: [ventaId], references: [id], onDelete: Cascade)
-  ventaId String
+  ventaId Int
 
   // Nullable: contempla el botón "Varios / Muestra" (ítem libre sin producto de catálogo)
   producto         Producto? @relation(fields: [productoId], references: [id])
-  productoId       String?
+  productoId       Int?
   descripcionLibre String?
 
   presentacion       Presentacion @default(FRASCO)
@@ -196,12 +207,13 @@ model ItemVenta {
 }
 
 model PagoVenta {
-  id       String @id @default(cuid())
+  id       Int @id @default(autoincrement())
   venta    Venta  @relation(fields: [ventaId], references: [id], onDelete: Cascade)
-  ventaId  String
+  ventaId  Int
   cuenta   Cuenta @relation(fields: [cuentaId], references: [id])
-  cuentaId String
+  cuentaId Int
   monto    Float
+  fecha    DateTime @default(now())
 
   @@index([ventaId])
 }
@@ -213,9 +225,9 @@ enum EstadoPresupuesto {
 }
 
 model Presupuesto {
-  id        String   @id @default(cuid())
+  id        Int @id @default(autoincrement())
   cliente   Cliente? @relation(fields: [clienteId], references: [id])
-  clienteId String?
+  clienteId Int?
 
   fecha            DateTime @default(now())
   vigenciaDias     Int      @default(15)
@@ -228,14 +240,15 @@ model Presupuesto {
 
   estado EstadoPresupuesto @default(BORRADOR)
 
-  items PresupuestoItem[]
+  items           PresupuestoItem[]
+  ventaConvertida Venta?
 }
 
 model PresupuestoItem {
-  id             String          @id @default(cuid())
+  id          Int @id @default(autoincrement())
   presupuesto    Presupuesto     @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
-  presupuestoId  String
-  productoId     String?
+  presupuestoId  Int
+  productoId     Int?
   descripcion    String
   presentacion   Presentacion    @default(FRASCO)
   tipoPrecio     TipoPrecioVenta @default(MINORISTA)
@@ -246,7 +259,7 @@ model PresupuestoItem {
 }
 
 model Proveedor {
-  id              String   @id @default(cuid())
+  id              Int @id @default(autoincrement())
   nombre          String
   personaContacto String?
   telefono        String?
@@ -261,40 +274,40 @@ model Proveedor {
   @@index([nombre])
 }
 
-enum TipoPagoCompra {
-  CUENTA
-  EFECTIVO
-  TRANSFERENCIA
-}
-
 model Compra {
-  id          String     @id @default(cuid())
+  id          Int @id @default(autoincrement())
   proveedor   Proveedor? @relation(fields: [proveedorId], references: [id])
-  proveedorId String?
+  proveedorId Int?
 
-  tipoPago   TipoPagoCompra @default(CUENTA)
-  total      Float
-  confirmada Boolean        @default(false)
-  pagada     Boolean        @default(false)
-  recibida   Boolean        @default(false)
-  cancelada  Boolean        @default(false)
-  fecha      DateTime       @default(now())
+  cuenta   Cuenta @relation(fields: [cuentaId], references: [id])
+  cuentaId Int
+
+  totalUSD        Float
+  totalARS        Float?
+  cotizacionUsada Float?
+
+  confirmada Boolean  @default(false)
+  pagada     Boolean  @default(false)
+  recibida   Boolean  @default(false)
+  cancelada  Boolean  @default(false)
+  fecha      DateTime @default(now())
 
   items           ItemCompra[]
   movimientosCaja MovimientoCaja[]
 
   @@index([proveedorId])
+  @@index([cuentaId])
   @@index([fecha])
 }
 
 model ItemCompra {
-  id            String   @id @default(cuid())
-  compra        Compra   @relation(fields: [compraId], references: [id], onDelete: Cascade)
-  compraId      String
-  producto      Producto @relation(fields: [productoId], references: [id])
-  productoId    String
-  cantidad      Int
-  costoUnitario Float
+  id               Int @id @default(autoincrement())
+  compra           Compra   @relation(fields: [compraId], references: [id], onDelete: Cascade)
+  compraId         Int
+  producto         Producto @relation(fields: [productoId], references: [id])
+  productoId       Int
+  cantidad         Int
+  costoUnitarioUSD Float
 
   @@index([compraId])
   @@index([productoId])
@@ -308,7 +321,7 @@ enum TipoCuenta {
 }
 
 model Cuenta {
-  id       String     @id @default(cuid())
+  id       Int @id @default(autoincrement())
   nombre   String
   tipo     TipoCuenta
   titular  String?
@@ -327,6 +340,7 @@ model Cuenta {
 
   movimientos MovimientoCaja[]
   pagosVenta  PagoVenta[]
+  compras Compra[]
 
   @@index([nombre])
 }
@@ -342,31 +356,34 @@ enum ConceptoMovimientoCaja {
   PAGO_A_PROVEEDOR
   GASTO
   OTRO
+  AJUSTE_SALDO      // ← nuevo
+  TRANSFERENCIA     // ← nuevo
 }
 
 model MovimientoCaja {
-  id              String                 @id @default(cuid())
+  id              Int @id @default(autoincrement())
   cuenta          Cuenta                 @relation(fields: [cuentaId], references: [id])
-  cuentaId        String
+  cuentaId        Int
   tipo            TipoMovimientoCaja
   concepto        ConceptoMovimientoCaja
   monto           Float
   saldoResultante Float
+  detalle         String?
   fecha           DateTime               @default(now())
 
   venta    Venta?  @relation(fields: [ventaId], references: [id])
-  ventaId  String?
+  ventaId  Int?
   gasto    Gasto?  @relation(fields: [gastoId], references: [id])
-  gastoId  String?
+  gastoId  Int?
   compra   Compra? @relation(fields: [compraId], references: [id])
-  compraId String?
+  compraId Int?
 
   @@index([cuentaId])
   @@index([fecha])
 }
 
 model CategoriaGasto {
-  id     String  @id @default(cuid())
+  id          Int @id @default(autoincrement())
   nombre String  @unique
   gastos Gasto[]
 }
@@ -377,13 +394,13 @@ enum EstadoPagoGasto {
 }
 
 model Gasto {
-  id            String          @id @default(cuid())
+  id            Int @id @default(autoincrement())
   monto         Float
   concepto      String
   categoria     CategoriaGasto? @relation(fields: [categoriaId], references: [id])
-  categoriaId   String?
+  categoriaId   Int?
   proveedor     Proveedor?      @relation(fields: [proveedorId], references: [id])
-  proveedorId   String?
+  proveedorId   Int?
   observaciones String?
   estadoPago    EstadoPagoGasto @default(PENDIENTE)
   fecha         DateTime        @default(now())
@@ -395,17 +412,16 @@ model Gasto {
 }
 
 model Configuracion {
-  id              String  @id @default(cuid())
+  id              String  @id @default("singleton")
   nombreNegocio   String
   logoUrl         String?
-  instagram       String?
   telefono        String?
   email           String?
   direccion       String?
   remitenteNombre String?
   remitenteDni    String?
 
-  cotizacionUSD Float
+  cotizacionUSD Float @default(1000)
 
   // Compras
   costoPromedioPonderado Boolean @default(true)
@@ -418,7 +434,8 @@ model Configuracion {
   // Fórmula de decants
   costoEnvaseDecantARS      Float?
   multiplicadorInsumoDecant Float?
-  sinGananciaEnDecants      Boolean @default(false)
+  divisorFrascoDecant       Float?  @default(9)
+  offsetDecant5mlARS        Float?  @default(200)
 
   updatedAt DateTime @updatedAt
 }

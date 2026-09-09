@@ -1,0 +1,38 @@
+import Link from "next/link";
+import { obtenerPresupuestos } from "./queries";
+import PresupuestosFiltros from "../../../components/presupuestos/PresupuestosFiltros";
+import PresupuestosTable from "../../../components/presupuestos/PresupuestosTable";
+import type { EstadoPresupuesto } from "@/lib/presupuestos";
+
+export default async function PresupuestosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ estado?: string; desde?: string; hasta?: string; clienteQuery?: string }>;
+}) {
+  const params = await searchParams;
+
+  const presupuestos = await obtenerPresupuestos({
+    estado: (params.estado as "TODOS" | EstadoPresupuesto) ?? "TODOS",
+    desde: params.desde,
+    hasta: params.hasta,
+    clienteQuery: params.clienteQuery,
+  });
+
+  return (
+    <div className="p-4 space-y-5 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl font-semibold text-[#191c1e] sm:text-2xl">Presupuestos</h1>
+        <Link
+          href="/presupuestos/nuevo"
+          className="px-4 py-2 text-sm rounded-lg bg-[#021541] text-white hover:opacity-90 self-start sm:self-auto"
+        >
+          + Nuevo Presupuesto
+        </Link>
+      </div>
+
+      <PresupuestosFiltros />
+
+      <PresupuestosTable presupuestos={presupuestos} />
+    </div>
+  );
+}

@@ -18,6 +18,58 @@ type TipoDocumentoPdf =
 
 const SIN_CATEGORIA = "SIN_CATEGORIA";
 
+async function fetchImageAsBase64(url: string): Promise<string | null> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      console.warn(`[pdf] fetch de imagen falló (${res.status}): ${url}`);
+      return null;
+    }
+
+    const contentType = res.headers.get("content-type") || "image/png";
+    const arrayBuffer = await res.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
+    return `data:${contentType};base64,${base64}`;
+  } catch (err) {
+    console.warn(`[pdf] error descargando imagen: ${url}`, err);
+    return null;
+  }
+}
+
+// Descarga imágenes con concurrencia limitada (evita golpear Vercel Blob
+// con muchos requests simultáneos, causa típica de fallos intermitentes)
+async function resolverImagenes<T extends { fotoUrl: string | null }>(
+  productos: T[],
+  concurrencia = 4
+): Promise<(T & { fotoDataUri: string | null })[]> {
+  const resultado: (T & { fotoDataUri: string | null })[] = productos.map((p) => ({
+    ...p,
+    fotoDataUri: null,
+  }));
+
+  let index = 0;
+  async function worker() {
+    while (index < productos.length) {
+      const i = index++;
+      const p = productos[i];
+      if (p.fotoUrl) {
+        resultado[i].fotoDataUri = await fetchImageAsBase64(p.fotoUrl);
+      }
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrencia, productos.length) }, () => worker())
+  );
+
+  return resultado;
+}
+
 export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
 
@@ -30,9 +82,6 @@ export async function GET(request: NextRequest) {
     ? "MAYORISTA"
     : "MINORISTA";
 
-  // Categorías a EXCLUIR. "SIN_CATEGORIA" es un valor especial (no es un id
-  // real de la tabla Categoria) que representa a los productos sin categoría
-  // asignada (categoriaId = NULL).
   const excluidosRaw = sp.get("categoriasExcluidas")
     ? sp.get("categoriasExcluidas")!.split(",")
     : [];
@@ -42,24 +91,16 @@ export async function GET(request: NextRequest) {
     .map((v) => Number(v))
     .filter((n) => !Number.isNaN(n));
 
-  // En SQL, "categoriaId NOT IN (...)" excluye por sí solo las filas con
-  // categoriaId = NULL. Por eso armamos el filtro a mano según los 4 casos
-  // posibles, en vez de confiar en ese comportamiento implícito.
   let filtroCategoria: Prisma.ProductoWhereInput = {};
   if (categoriasExcluidas.length > 0 && excluirSinCategoria) {
-    // Excluir categorías puntuales Y excluir sin-categoría:
-    // el NOT IN ya deja afuera los NULL, así que alcanza con esto.
     filtroCategoria = { categoriaId: { notIn: categoriasExcluidas } };
   } else if (categoriasExcluidas.length > 0 && !excluirSinCategoria) {
-    // Excluir categorías puntuales pero CONSERVAR los sin categoría.
     filtroCategoria = {
       OR: [{ categoriaId: { notIn: categoriasExcluidas } }, { categoriaId: null }],
     };
   } else if (categoriasExcluidas.length === 0 && excluirSinCategoria) {
-    // Solo excluir los que no tienen categoría.
     filtroCategoria = { categoriaId: { not: null } };
   }
-  // Si no hay nada excluido, filtroCategoria queda {} (no se filtra nada).
 
   const where: Prisma.ProductoWhereInput = {
     activo: true,
@@ -68,7 +109,7 @@ export async function GET(request: NextRequest) {
     ...(!modoDecant && tipoPrecio === "MAYORISTA" ? { precioMayorista: { not: null } } : {}),
   };
 
-  const [productos, configuracion] = await Promise.all([
+  const [productosRaw, configuracion] = await Promise.all([
     prisma.producto.findMany({
       where,
       orderBy: { nombre: "asc" },
@@ -89,12 +130,14 @@ export async function GET(request: NextRequest) {
     obtenerConfiguracion(),
   ]);
 
-  if (productos.length === 0) {
+  if (productosRaw.length === 0) {
     const mensaje = modoDecant
       ? "No hay productos que se vendan por decant con los filtros seleccionados."
       : "No hay productos que coincidan con los filtros seleccionados.";
     return NextResponse.json({ error: mensaje }, { status: 404 });
   }
+
+  const productos = await resolverImagenes(productosRaw);
 
   const documentoPdf =
     documento === "LISTA" ? (

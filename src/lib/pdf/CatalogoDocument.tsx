@@ -10,6 +10,7 @@ type ProductoCatalogo = {
   id: number;
   nombre: string;
   fotoUrl: string | null;
+  fotoDataUri: string | null;
   stockActual: number;
   precioVenta: number;
   precioMayorista: number | null;
@@ -20,8 +21,25 @@ type ProductoCatalogo = {
   overrideDecant10ml: number | null;
 };
 
+// Cantidad fija de cards por fila. Si en algún momento cambian el tamaño
+// de las cards en los estilos, ajustar esto junto con el ancho/margen
+// calculados en renderGrid.
+const CARDS_POR_FILA = 4;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const filas: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    filas.push(items.slice(i, i + size));
+  }
+  return filas;
+}
+
 const cardStyles = StyleSheet.create({
-  grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start" },
+  // Cada fila es un bloque explícito con wrap={false}: si no entra completa
+  // en lo que queda de la página, se mueve entera a la siguiente. Esto
+  // evita el bug de react-pdf donde flexWrap + wrap={false} por card deja
+  // huecos en blanco cuando una card individual salta de página.
+  row: { flexDirection: "row", justifyContent: "flex-start" },
   card: {
     marginBottom: 12,
     borderWidth: 0.5,
@@ -173,30 +191,35 @@ export function CatalogoDocument({
   }
 
   function renderGrid(items: ProductoCatalogo[], sinStockFlag: boolean) {
-    return items.map((p, index) => {
-      const esUltimaDeLaFila = index % 4 === 3;
-      const estiloPosicion = {
-        width: "23.5%" as const,
-        marginRight: esUltimaDeLaFila ? 0 : "2%",
-      };
-      return (
-        <View
-          key={p.id}
-          style={[sinStockFlag ? cardStyles.cardSinStock : cardStyles.card, estiloPosicion]}
-          wrap={false}
-        >
-          <View style={p.fotoUrl ? cardStyles.imageBox : cardStyles.imageBoxPlaceholder}>
-            {p.fotoUrl ? (
-              <Image src={p.fotoUrl} style={cardStyles.image} />
-            ) : (
-              <Text style={cardStyles.placeholderText}>Sin foto</Text>
-            )}
-          </View>
-          <Text style={sinStockFlag ? cardStyles.nombreSinStock : cardStyles.nombre}>{p.nombre}</Text>
-          {renderPrecios(p, sinStockFlag ? "#DC2626" : accent)}
-        </View>
-      );
-    });
+    const filas = chunk(items, CARDS_POR_FILA);
+
+    return filas.map((fila, filaIndex) => (
+      <View key={filaIndex} style={cardStyles.row} wrap={false}>
+        {fila.map((p, i) => {
+          const esUltimaDeLaFila = i === fila.length - 1;
+          const estiloPosicion = {
+            width: "23.5%" as const,
+            marginRight: esUltimaDeLaFila ? 0 : "2%",
+          };
+          return (
+            <View
+              key={p.id}
+              style={[sinStockFlag ? cardStyles.cardSinStock : cardStyles.card, estiloPosicion]}
+            >
+              <View style={p.fotoDataUri ? cardStyles.imageBox : cardStyles.imageBoxPlaceholder}>
+                {p.fotoDataUri ? (
+                  <Image src={p.fotoDataUri} style={cardStyles.image} />
+                ) : (
+                  <Text style={cardStyles.placeholderText}>Sin foto</Text>
+                )}
+              </View>
+              <Text style={sinStockFlag ? cardStyles.nombreSinStock : cardStyles.nombre}>{p.nombre}</Text>
+              {renderPrecios(p, sinStockFlag ? "#DC2626" : accent)}
+            </View>
+          );
+        })}
+      </View>
+    ));
   }
 
   return (
@@ -204,14 +227,14 @@ export function CatalogoDocument({
       <Page size="A4" style={pdfStyles.page}>
         <BusinessHeader configuracion={configuracion} titulo={titulo} />
 
-        <View style={cardStyles.grid}>{renderGrid(conStock, false)}</View>
+        {renderGrid(conStock, false)}
 
         {sinStock.length > 0 && (
           <>
             <View style={cardStyles.sectionSeparator}>
               <Text style={cardStyles.sectionLabel}>Sin stock actualmente — consultar disponibilidad</Text>
             </View>
-            <View style={cardStyles.grid}>{renderGrid(sinStock, true)}</View>
+            {renderGrid(sinStock, true)}
           </>
         )}
 

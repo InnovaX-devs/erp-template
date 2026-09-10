@@ -21,13 +21,25 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500"],
 });
 
-export async function generateMetadata(): Promise<Metadata> {
-  const configuracion = await obtenerConfiguracion();
+const TITULO_DEFAULT = "Panel administrativo";
 
-  return {
-    title: `${configuracion.nombreNegocio} · Panel administrativo`,
-    description: `Panel de administración para ${configuracion.nombreNegocio}.`,
-  };
+export async function generateMetadata(): Promise<Metadata> {
+  // Si la base no está disponible en el momento del build (ej: build sin
+  // DATABASE_URL configurada, o un problema transitorio de conexión), no
+  // queremos que se caiga todo el build por un título de pestaña. Usamos un
+  // título genérico como fallback.
+  try {
+    const configuracion = await obtenerConfiguracion();
+    return {
+      title: `${configuracion.nombreNegocio} · Panel administrativo`,
+      description: `Panel de administración para ${configuracion.nombreNegocio}.`,
+    };
+  } catch {
+    return {
+      title: TITULO_DEFAULT,
+      description: TITULO_DEFAULT,
+    };
+  }
 }
 
 export default function RootLayout({

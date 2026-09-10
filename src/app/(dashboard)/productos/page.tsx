@@ -102,7 +102,7 @@ export default function ProductosPage() {
     divisorFrascoDecant: 9,
     offsetDecant5mlARS: 200,
     cotizacionUSD: 1200,
-    ventaPorDecant: false,
+    moduloDecantHabilitado: false,
   });
   const cotizacion = configDecant.cotizacionUSD;
 
@@ -117,7 +117,7 @@ export default function ProductosPage() {
             divisorFrascoDecant: data.divisorFrascoDecant ?? 9,
             offsetDecant5mlARS: data.offsetDecant5mlARS ?? 200,
             cotizacionUSD: data.cotizacionUSD ?? 1200,
-            ventaPorDecant: data.ventaPorDecant ?? false,
+            moduloDecantHabilitado: data.moduloDecantHabilitado ?? false,
           });
         }
       })
@@ -425,7 +425,7 @@ export default function ProductosPage() {
             onClick={() => setIsFormulaDecantOpen(true)}
             className={cn(
               "inline-flex items-center justify-center rounded-lg bg-[#021541] px-4 py-2 text-sm font-medium text-white hover:opacity-90 cursor-pointer",
-              !configDecant.ventaPorDecant && "hidden"
+              !configDecant.moduloDecantHabilitado && "hidden"
             )}
           >
             Fórmula Decant
@@ -995,7 +995,7 @@ export default function ProductosPage() {
         onClose={() => setIsModalOpen(false)}
         productoEditar={productoEditar}
         onSuccess={cargarProductos}
-        ventaPorDecant={configDecant.ventaPorDecant}
+        moduloDecantHabilitado={configDecant.moduloDecantHabilitado}
       />
 
       <FormulaDecantModal
@@ -1008,7 +1008,11 @@ export default function ProductosPage() {
         cotizacionUSD={configDecant.cotizacionUSD}
       />
 
-      <PdfGeneratorModal isOpen={isPdfModalOpen} onClose={() => setIsPdfModalOpen(false)} />
+      <PdfGeneratorModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        moduloDecantHabilitado={configDecant.moduloDecantHabilitado}
+      />
 
       <ConfirmDialog
         isOpen={!!productoADesactivar}

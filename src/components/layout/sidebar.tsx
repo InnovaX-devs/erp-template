@@ -35,9 +35,11 @@ function iniciales(nombre: string) {
 export function Sidebar({
   logoUrl,
   nombreNegocio,
+  eslogan,
 }: {
   logoUrl: string | null;
   nombreNegocio: string;
+  eslogan?: string | null;
 }) {
   const pathname = usePathname();
   const { isOpen, close } = useSidebar();
@@ -102,6 +104,12 @@ export function Sidebar({
           <span className="font-display text-lg tracking-wide">
             {nombreNegocio}
           </span>
+
+          {eslogan && (
+            <p className="mt-1 text-xs uppercase tracking-[0.2em] text-ivory/50">
+              {eslogan}
+            </p>
+          )}
         </div>
 
         <nav
@@ -256,7 +264,7 @@ export function Sidebar({
           <AromaLine className="w-full text-amber/60" />
 
           <p className="mt-3 text-[11px] text-ivory/35">
-            KJ Importados · v0.1
+            {nombreNegocio} · v0.1
           </p>
         </div>
       </aside>

@@ -22,7 +22,7 @@ export default async function ReporteDecantsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const configuracion = await obtenerConfiguracion();
-  if (!configuracion.ventaPorDecant) {
+  if (!configuracion.moduloDecantHabilitado) {
     redirect("/reportes");
   }
 

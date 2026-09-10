@@ -14,15 +14,20 @@ interface Categoria { id: string; nombre: string; }
 interface PdfGeneratorModalProps {
   isOpen: boolean;
   onClose: () => void;
+  moduloDecantHabilitado?: boolean;
 }
 
-const DOCUMENTO_OPTIONS: { value: TipoDocumentoPdf; label: string }[] = [
+const DOCUMENTO_OPTIONS_BASE: { value: TipoDocumentoPdf; label: string }[] = [
   { value: "LISTA_GENERAL", label: "Lista de precios (Minorista)" },
   { value: "LISTA_MAYORISTA", label: "Lista de precios (Mayorista)" },
   { value: "CATALOGO", label: "Catálogo (Minorista)" },
   { value: "CATALOGO_MAYORISTA", label: "Catálogo (Mayorista)" },
-  { value: "CATALOGO_DECANTS", label: "Catálogo de decants" },
 ];
+
+const DOCUMENTO_OPTION_DECANTS: { value: TipoDocumentoPdf; label: string } = {
+  value: "CATALOGO_DECANTS",
+  label: "Catálogo de decants",
+};
 
 function ToggleGroup<T extends string>({
   value,
@@ -55,11 +60,19 @@ function ToggleGroup<T extends string>({
   );
 }
 
-export function PdfGeneratorModal({ isOpen, onClose }: PdfGeneratorModalProps) {
+export function PdfGeneratorModal({
+  isOpen,
+  onClose,
+  moduloDecantHabilitado = false,
+}: PdfGeneratorModalProps) {
   const [filtros, setFiltros] = useState<PdfFiltros>(FILTROS_INICIALES);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [generando, setGenerando] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const DOCUMENTO_OPTIONS = moduloDecantHabilitado
+    ? [...DOCUMENTO_OPTIONS_BASE, DOCUMENTO_OPTION_DECANTS]
+    : DOCUMENTO_OPTIONS_BASE;
 
   const fetchAuxiliares = useCallback(async () => {
     try {

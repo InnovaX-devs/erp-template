@@ -48,7 +48,7 @@ export default async function ReportesPage({
           <p className="text-sm text-[#45464f]">{rangoTexto}</p>
         </div>
         <div className="flex items-center gap-2">
-          {configuracion.ventaPorDecant && (
+          {configuracion.moduloDecantHabilitado && (
             <Link
               href="/reportes/decants"
               className="flex items-center gap-1.5 rounded-lg border border-[#c5c6d0] bg-white px-3 py-2 text-sm font-medium text-[#45464f] hover:bg-[#eceef0]"

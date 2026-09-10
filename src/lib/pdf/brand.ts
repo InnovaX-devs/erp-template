@@ -6,7 +6,7 @@ import type { Configuracion } from "@prisma/client";
  * cada cliente puede cambiar desde la pantalla de Configuración. Si no
  * cargó nada, se usan estos valores neutros por defecto.
  */
-const DEFAULT_PRIMARY = "#2952CC";
+const DEFAULT_PRIMARY = "#4F46E5";
 const DEFAULT_SECONDARY = "#0891B2";
 
 export type PdfBrand = {

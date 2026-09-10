@@ -296,11 +296,22 @@ const getConfiguracionCacheada = unstable_cache(
 export async function listarVentas(filtros: FiltrosVentas): Promise<ResultadoListadoVentas> {
   const { estado, clienteTexto, fechaDesde, fechaHasta, orden, page, pageSize } = filtros;
 
-  const where: Prisma.VentaWhereInput = {};
+  const condicionesBase: Prisma.VentaWhereInput[] = [
+    {
+      OR: [
+        { retirado: true },
+        { montoPagado: { gt: 0 } },
+        { estadoPago: "CANCELADA" },
+        { estadoPago: "ANULADA" },
+      ],
+    },
+  ];
 
   if (estado !== "TODOS") {
-    where.estadoPago = estado;
+    condicionesBase.push({ estadoPago: estado });
   }
+
+  const where: Prisma.VentaWhereInput = { AND: condicionesBase };
 
   const texto = clienteTexto.trim();
   if (texto) {

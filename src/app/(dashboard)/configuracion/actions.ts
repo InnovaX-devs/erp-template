@@ -22,15 +22,20 @@ export async function guardarConfiguracion(formData: FormData) {
   const logoFile = formData.get("logo") as File | null;
   const removerLogo = formData.get("removerLogo") === "true";
 
-  const cotizacionUSDRaw = formData.get("cotizacionUSD") as string;
-  const cotizacionUSD = Number(cotizacionUSDRaw);
+  const usaCotizacionUSD = formData.get("usaCotizacionUSD") === "on";
 
-  if (!cotizacionUSDRaw || Number.isNaN(cotizacionUSD) || cotizacionUSD <= 0) {
-    throw new Error("Cotización USD inválida");
+  let cotizacionUSD: number | undefined;
+
+  if (usaCotizacionUSD) {
+    const cotizacionUSDRaw = formData.get("cotizacionUSD") as string;
+    cotizacionUSD = Number(cotizacionUSDRaw);
+
+    if (!cotizacionUSDRaw || Number.isNaN(cotizacionUSD) || cotizacionUSD <= 0) {
+      throw new Error("Cotización USD inválida");
+    }
   }
 
   const costoPromedioPonderado = formData.get("costoPromedioPonderado") === "on";
-  const moduloDecantHabilitado = formData.get("moduloDecantHabilitado") === "on";
 
   let logoUrl: string | null | undefined;
 
@@ -54,9 +59,9 @@ export async function guardarConfiguracion(formData: FormData) {
     remitenteDni,
     colorPrimario,
     colorSecundario,
-    cotizacionUSD,
+    usaCotizacionUSD,
     costoPromedioPonderado,
-    moduloDecantHabilitado,
+    ...(cotizacionUSD !== undefined ? { cotizacionUSD } : {}),
     ...(logoUrl !== undefined ? { logoUrl } : {}),
   });
 

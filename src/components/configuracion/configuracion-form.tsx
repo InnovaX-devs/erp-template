@@ -13,13 +13,13 @@ interface ConfiguracionFormProps {
     direccion: string | null;
     instagram: string | null;
     eslogan: string | null;
+    usaCotizacionUSD: boolean;
     cotizacionUSD: number;
     remitenteNombre: string | null;
     remitenteDni: string | null;
     costoPromedioPonderado: boolean;
     colorPrimario: string | null;
     colorSecundario: string | null;
-    moduloDecantHabilitado: boolean;
   };
 }
 
@@ -34,6 +34,7 @@ export function ConfiguracionForm({ configuracion }: ConfiguracionFormProps) {
   const [guardadoOk, setGuardadoOk] = useState(false);
 
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [usaCotizacionUSD, setUsaCotizacionUSD] = useState(configuracion.usaCotizacionUSD);
 
   function handleSeleccionarArchivo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -69,7 +70,13 @@ export function ConfiguracionForm({ configuracion }: ConfiguracionFormProps) {
         <p className="text-sm text-[#45464f]">Datos generales del negocio</p>
       </div>
 
-      <form action={handleSubmit} className="mx-auto max-w-2xl space-y-6">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSubmit(new FormData(e.currentTarget));
+        }}
+        className="mx-auto max-w-2xl space-y-6"
+      >
       {/* Identidad del negocio */}
       <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6">
         <h2 className="mb-4 text-base font-semibold text-[#191c1e]">
@@ -259,25 +266,48 @@ export function ConfiguracionForm({ configuracion }: ConfiguracionFormProps) {
       {/* Cotización */}
       <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6">
         <h2 className="mb-4 text-base font-semibold text-[#191c1e]">Cotización</h2>
-        <label className="mb-1 block text-sm text-[#45464f]" htmlFor="cotizacionUSD">
-          Cotización USD
-        </label>
-        <div className="relative max-w-xs">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#45464f]">$</span>
+        <label className="flex items-start gap-2">
           <input
-            id="cotizacionUSD"
-            type="number"
-            name="cotizacionUSD"
-            defaultValue={configuracion.cotizacionUSD}
-            step="0.01"
-            min="0"
-            required
-            className="w-full rounded-md border border-[#c5c6d0] bg-white px-3 py-2 pl-7 text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
+            type="checkbox"
+            name="usaCotizacionUSD"
+            checked={usaCotizacionUSD}
+            onChange={(e) => setUsaCotizacionUSD(e.target.checked)}
+            className="mt-0.5 h-4 w-4"
           />
-        </div>
-        <p className="mt-1 text-xs text-[#45464f]">
-          Usada para convertir precios en USD a ARS en todo el sistema.
-        </p>
+          <span>
+            <span className="text-sm font-medium text-[#191c1e]">
+              Trabajo con precios en dólares
+            </span>
+            <p className="text-xs text-[#45464f]">
+              Activá esto si el negocio necesita convertir precios de USD a ARS. Vas a poder
+              cargar la cotización a continuación.
+            </p>
+          </span>
+        </label>
+
+        {usaCotizacionUSD && (
+          <div className="mt-4">
+            <label className="mb-1 block text-sm text-[#45464f]" htmlFor="cotizacionUSD">
+              Cotización USD
+            </label>
+            <div className="relative max-w-xs">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#45464f]">$</span>
+              <input
+                id="cotizacionUSD"
+                type="number"
+                name="cotizacionUSD"
+                defaultValue={configuracion.cotizacionUSD}
+                step="0.01"
+                min="0"
+                required
+                className="w-full rounded-md border border-[#c5c6d0] bg-white px-3 py-2 pl-7 text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
+              />
+            </div>
+            <p className="mt-1 text-xs text-[#45464f]">
+              Usada para convertir precios en USD a ARS en todo el sistema.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Datos del remitente */}
@@ -329,26 +359,6 @@ export function ConfiguracionForm({ configuracion }: ConfiguracionFormProps) {
               Al confirmar una compra, el costo del producto se recalcula mezclando el stock
               anterior con el nuevo. Ejemplo: 10 unidades a $1000 + 5 nuevas a $1200 → el costo
               pasa a $1066.
-            </p>
-          </span>
-        </label>
-
-        <hr className="my-4 border-[#E2E8F0]" />
-
-        <label className="flex items-start gap-2">
-          <input
-            type="checkbox"
-            name="moduloDecantHabilitado"
-            defaultChecked={configuracion.moduloDecantHabilitado}
-            className="mt-0.5 h-4 w-4"
-          />
-          <span>
-            <span className="text-sm font-medium text-[#191c1e]">Venta por decant</span>
-            <p className="text-xs text-[#45464f]">
-              Activá esto solo si el negocio revende perfumes en decants (5ml/10ml) además de
-              frascos cerrados. Habilita la fórmula de precios de decant, las opciones de
-              presentación al vender y el reporte de decants. Si el negocio no vende por decant,
-              dejalo desactivado.
             </p>
           </span>
         </label>

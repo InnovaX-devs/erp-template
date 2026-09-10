@@ -41,7 +41,13 @@ function useSectionTitle() {
   return mejorLabel ?? "Panel";
 }
 
-export function Topbar({ cotizacionUSD }: { cotizacionUSD: number }) {
+export function Topbar({
+  cotizacionUSD,
+  usaCotizacionUSD,
+}: {
+  cotizacionUSD: number;
+  usaCotizacionUSD: boolean;
+}) {
   const title = useSectionTitle();
   const pathname = usePathname();
   const { toggle } = useSidebar();
@@ -105,7 +111,7 @@ export function Topbar({ cotizacionUSD }: { cotizacionUSD: number }) {
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
-        {editando ? (
+        {usaCotizacionUSD && (editando ? (
           <div className="hidden items-center gap-1 rounded-full border border-primary bg-surface px-2 py-1 sm:flex">
             <span className="text-xs text-text/60">USD</span>
             <span className="font-mono text-sm text-text">$</span>
@@ -155,7 +161,7 @@ export function Topbar({ cotizacionUSD }: { cotizacionUSD: number }) {
             <span className="text-xs text-text/60">USD</span>
             <span className="font-mono text-sm font-medium text-text">${cotizacionFormateada}</span>
           </button>
-        )}
+        ))}
 
         <Link
           href="/configuracion"

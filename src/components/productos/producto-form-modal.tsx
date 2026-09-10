@@ -78,7 +78,7 @@ export function ProductoFormModal({
     stockActual: "",
     stockMinimo: "",
     destacado: false,
-    monedaPrecio: "USD",
+    monedaPrecio: "ARS",
     precioCosto: "",
     precioVenta: "",
     precioMayorista: "",
@@ -185,7 +185,7 @@ export function ProductoFormModal({
           stockActual: 0,
           stockMinimo: 0,
           destacado: false,
-          monedaPrecio: "USD",
+          monedaPrecio: "ARS",
           precioCosto: "",
           precioVenta: "",
           precioMayorista: "",
@@ -709,8 +709,8 @@ export function ProductoFormModal({
                     setFormData({ ...formData, monedaPrecio: v as "ARS" | "USD" })
                   }
                   options={[
-                    { value: "USD", label: "USD ($)" },
                     { value: "ARS", label: "ARS ($)" },
+                    { value: "USD", label: "USD ($)" },
                   ]}
                   className="w-36 shrink-0"
                 />

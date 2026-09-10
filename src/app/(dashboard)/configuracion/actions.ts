@@ -14,6 +14,7 @@ export async function guardarConfiguracion(formData: FormData) {
   const email = formData.get("email") as string;
   const direccion = formData.get("direccion") as string;
   const instagram = formData.get("instagram") as string;
+  const eslogan = formData.get("eslogan") as string;
   const remitenteNombre = formData.get("remitenteNombre") as string;
   const remitenteDni = formData.get("remitenteDni") as string;
   const colorPrimario = formData.get("colorPrimario") as string;
@@ -29,7 +30,7 @@ export async function guardarConfiguracion(formData: FormData) {
   }
 
   const costoPromedioPonderado = formData.get("costoPromedioPonderado") === "on";
-  const ventaPorDecant = formData.get("ventaPorDecant") === "on";
+  const moduloDecantHabilitado = formData.get("moduloDecantHabilitado") === "on";
 
   let logoUrl: string | null | undefined;
 
@@ -48,13 +49,14 @@ export async function guardarConfiguracion(formData: FormData) {
     email,
     direccion,
     instagram,
+    eslogan,
     remitenteNombre,
     remitenteDni,
     colorPrimario,
     colorSecundario,
     cotizacionUSD,
     costoPromedioPonderado,
-    ventaPorDecant,
+    moduloDecantHabilitado,
     ...(logoUrl !== undefined ? { logoUrl } : {}),
   });
 

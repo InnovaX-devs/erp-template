@@ -3,6 +3,7 @@
 import { Pencil, Ban, X, CheckCircle, ImageIcon } from "lucide-react";
 import { toArs, toUsd, formatCurrency } from "@/lib/currency";
 import { calcularPreciosDecant } from "@/lib/calculos/decants";
+import { cn } from "@/lib/cn";
 
 
 function resolverPrecioDecant(
@@ -88,6 +89,7 @@ interface ConfigDecant {
   multiplicadorInsumoDecant: number;
   divisorFrascoDecant: number;
   offsetDecant5mlARS: number;
+  moduloDecantHabilitado?: boolean;
 }
 
 interface ProductoDetalleModalProps {
@@ -199,7 +201,7 @@ export function ProductoDetalleModal({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-5">
-          <div className="grid grid-cols-3 gap-2">
+          <div className={cn("grid gap-2", configDecant.moduloDecantHabilitado ? "grid-cols-3" : "grid-cols-2")}>
             <div className="rounded-xl bg-[#F0FDF4] p-3 text-center">
               <p className="text-[10px] uppercase tracking-wide text-[#45464f]">
                 Stock actual
@@ -216,14 +218,16 @@ export function ProductoDetalleModal({
                 {producto.stockMinimo ?? 0}
               </p>
             </div>
-            <div className="rounded-xl bg-[#F8FAFC] p-3 text-center">
-              <p className="text-[10px] uppercase tracking-wide text-[#45464f]">
-                Volumen
-              </p>
-              <p className="mt-1 text-lg font-bold text-[#191c1e]">
-                {producto.contenidoMl ? `${producto.contenidoMl}ml` : "-"}
-              </p>
-            </div>
+            {configDecant.moduloDecantHabilitado && (
+              <div className="rounded-xl bg-[#F8FAFC] p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wide text-[#45464f]">
+                  Volumen
+                </p>
+                <p className="mt-1 text-lg font-bold text-[#191c1e]">
+                  {producto.contenidoMl ? `${producto.contenidoMl}ml` : "-"}
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="mt-4 overflow-hidden rounded-xl border border-[#E2E8F0]">

@@ -12,13 +12,14 @@ interface ConfiguracionFormProps {
     email: string | null;
     direccion: string | null;
     instagram: string | null;
+    eslogan: string | null;
     cotizacionUSD: number;
     remitenteNombre: string | null;
     remitenteDni: string | null;
     costoPromedioPonderado: boolean;
     colorPrimario: string | null;
     colorSecundario: string | null;
-    ventaPorDecant: boolean;
+    moduloDecantHabilitado: boolean;
   };
 }
 
@@ -87,6 +88,24 @@ export function ConfiguracionForm({ configuracion }: ConfiguracionFormProps) {
             required
             className="w-full rounded-md border border-[#c5c6d0] bg-white px-3 py-2 text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
           />
+        </div>
+
+        <div className="mb-5">
+          <label className="mb-1 block text-sm text-[#45464f]" htmlFor="eslogan">
+            Eslogan / subtítulo (opcional)
+          </label>
+          <input
+            id="eslogan"
+            type="text"
+            name="eslogan"
+            placeholder="Ej: Perfumería de Lujo"
+            defaultValue={configuracion.eslogan ?? ""}
+            className="w-full rounded-md border border-[#c5c6d0] bg-white px-3 py-2 text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
+          />
+          <p className="mt-1 text-xs text-[#45464f]">
+            Se muestra debajo del nombre del negocio en el menú lateral. Si lo dejás vacío, no se
+            muestra nada.
+          </p>
         </div>
 
         <div>
@@ -319,8 +338,8 @@ export function ConfiguracionForm({ configuracion }: ConfiguracionFormProps) {
         <label className="flex items-start gap-2">
           <input
             type="checkbox"
-            name="ventaPorDecant"
-            defaultChecked={configuracion.ventaPorDecant}
+            name="moduloDecantHabilitado"
+            defaultChecked={configuracion.moduloDecantHabilitado}
             className="mt-0.5 h-4 w-4"
           />
           <span>

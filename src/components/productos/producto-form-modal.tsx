@@ -56,7 +56,7 @@ interface ProductoFormModalProps {
   onSuccess: () => void;
   marcasIniciales?: Marca[];
   categoriasIniciales?: Categoria[];
-  ventaPorDecant?: boolean;
+  moduloDecantHabilitado?: boolean;
 }
 
 export function ProductoFormModal({
@@ -66,7 +66,7 @@ export function ProductoFormModal({
   onSuccess,
   marcasIniciales = [],
   categoriasIniciales = [],
-  ventaPorDecant = false,
+  moduloDecantHabilitado = false,
 }: ProductoFormModalProps) {
   const [formData, setFormData] = useState<ProductoFormData>({
     nombre: "",
@@ -581,7 +581,7 @@ export function ProductoFormModal({
               />
             </div>
 
-            {ventaPorDecant && (
+            {moduloDecantHabilitado && (
               <div>
                 <label className="block text-xs font-medium text-text-dim">
                   Contenido (ml)
@@ -826,7 +826,7 @@ export function ProductoFormModal({
               Producto Destacado
             </label>
 
-            {ventaPorDecant && (
+            {moduloDecantHabilitado && (
               <label className="flex items-center gap-2 text-sm text-text cursor-pointer">
                 <input
                   type="checkbox"
@@ -842,7 +842,7 @@ export function ProductoFormModal({
           </div>
 
           {/* Overrides de precio de decant — solo si "se vende por decant" está activo */}
-          {ventaPorDecant && formData.esDecant && (
+          {moduloDecantHabilitado && formData.esDecant && (
             <div className="rounded-xl border border-border bg-surface-hover/30 p-4 space-y-3">
               <div>
                 <span className="text-xs font-semibold uppercase tracking-wider text-text-dim">

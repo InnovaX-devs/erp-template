@@ -419,12 +419,13 @@ model Configuracion {
   email           String?
   direccion       String?
   instagram       String?
+  eslogan         String?
   remitenteNombre String?
   remitenteDni    String?
 
   // Colores de marca usados en los PDFs (catálogo, comprobantes, reportes).
   // Si no se cargan, se usa un valor neutro por defecto.
-  colorPrimario   String? @default("#2952CC")
+  colorPrimario   String? @default("#4F46E5")
   colorSecundario String? @default("#0891B2")
 
   cotizacionUSD Float @default(1000)
@@ -438,7 +439,7 @@ model Configuracion {
   margenMayoristaDefault Float?
 
   // Fórmula de decants
-  ventaPorDecant            Boolean @default(false) // activa/desactiva todo el módulo de decants
+  moduloDecantHabilitado            Boolean @default(false) // activa/desactiva todo el módulo de decants
   costoEnvaseDecantARS      Float?
   multiplicadorInsumoDecant Float?
   divisorFrascoDecant       Float?  @default(9)

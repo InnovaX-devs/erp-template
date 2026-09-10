@@ -28,13 +28,14 @@ export async function actualizarConfiguracion(
     email: string;
     direccion: string;
     instagram: string;
+    eslogan: string;
     remitenteNombre: string;
     remitenteDni: string;
     colorPrimario: string;
     colorSecundario: string;
     cotizacionUSD: number;
     costoPromedioPonderado: boolean;
-    ventaPorDecant: boolean;
+    moduloDecantHabilitado: boolean;
     costoEnvaseDecantARS: number;
     multiplicadorInsumoDecant: number;
     divisorFrascoDecant: number;

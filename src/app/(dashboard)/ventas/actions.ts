@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import type { EstadoPago, TipoPrecioVenta } from "@prisma/client";
+import { redondearARS } from "@/lib/currency";
 import { Prisma } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 import { inicioDiaAR } from "@/lib/timezone";
@@ -115,11 +116,17 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
     return { success: false, error: "El carrito está vacío." };
   }
 
+  // Blindaje: sin importar qué pantalla llame a esta función, el total
+  // siempre se redondea acá, en el backend. Así "lo que se ve" y "lo que se
+  // compara" son siempre el mismo número, sin decimales invisibles de la
+  // conversión USD -> ARS.
+  const totalARS = redondearARS(input.totalARS);
+
   const pagosValidos = input.pagos.filter((p) => p.cuentaId != null && p.monto > 0);
   const montoPagado = pagosValidos.reduce((acc, p) => acc + p.monto, 0);
 
   let estadoPago: EstadoPago;
-  if (montoPagado >= input.totalARS - 0.01) {
+  if (montoPagado >= totalARS - 0.01) {
     estadoPago = "PAGADA";
   } else {
     // Pago parcial: necesitamos cliente para poder trackear la deuda.
@@ -133,7 +140,7 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
   }
 
   const cotizacionUsada = input.cotizacionUSD > 0 ? input.cotizacionUSD : 1;
-  const totalUSD = input.totalARS / cotizacionUsada;
+  const totalUSD = totalARS / cotizacionUsada;
 
   try {
     const ventaId = await prisma.$transaction(async (tx) => {
@@ -157,15 +164,6 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
         }
       }
 
-      // 1. Validar y descontar stock
-      // FRASCO: descuenta `cantidad` unidades. DECANT con "abrioFrascoCerrado": descuenta 1 unidad fija
-      // (se abrió un solo frasco físico, sin importar cuántos decants salgan de ahí).
-      //
-      // Solo se descuenta acá si "armado" es true (venta confirmada directa,
-      // sin pasar por el Kanban). Si es un pedido (armado=false), el stock
-      // se reserva recién en la issue #52 cuando el pedido se marca "Armado"
-      // desde el tablero — así dos vendedores no pueden vender el mismo
-      // stock mientras el pedido está "por armar".
       if (armado) {
         for (const item of input.items) {
           const unidadesADescontar = item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
@@ -194,14 +192,14 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
       }
 
       // 2. Crear la venta + ítems
-      const venta = await tx.venta.create({
+            const venta = await tx.venta.create({
         data: {
           clienteId: input.clienteId,
           presupuestoId: input.presupuestoId ?? null,
           cotizacionUsada,
           descuentoMonto: input.descuentoMonto,
           descuentoPorcentaje: input.descuentoPorcentaje,
-          totalARS: input.totalARS,
+          totalARS, // ya redondeado
           totalUSD,
           montoPagado,
           estadoPago,
@@ -749,14 +747,18 @@ export async function registrarCobroPedido(
       if (!venta) throw new Error("El pedido no existe");
       if (venta.estadoPago === "PAGADA") throw new Error("El pedido ya está pagado");
 
+      // Blindaje: si el registro quedó guardado con decimales (pedidos
+      // viejos, u otra pantalla que en el futuro no redondee), lo
+      // normalizamos acá antes de comparar.
+      const totalARS = redondearARS(venta.totalARS);
+
       const configuracion = await tx.configuracion.findUnique({ where: { id: "singleton" } });
       const cotizacion = configuracion?.cotizacionUSD && configuracion.cotizacionUSD > 0
         ? configuracion.cotizacionUSD
         : 1;
 
-      // montoNuevo y restante siguen en ARS: así es como está expresado totalARS/montoPagado del pedido.
       const montoNuevo = pagosValidos.reduce((acc, p) => acc + p.monto, 0);
-      const restante = venta.totalARS - venta.montoPagado;
+      const restante = totalARS - venta.montoPagado;
 
       if (montoNuevo > restante + 0.01) {
         throw new Error(
@@ -796,7 +798,7 @@ export async function registrarCobroPedido(
       }
 
       const nuevoMontoPagado = venta.montoPagado + montoNuevo;
-      const nuevoEstado: EstadoPago = nuevoMontoPagado >= venta.totalARS - 0.01 ? "PAGADA" : "A_CUENTA";
+      const nuevoEstado: EstadoPago = nuevoMontoPagado >= totalARS - 0.01 ? "PAGADA" : "A_CUENTA";
 
       if (nuevoEstado === "A_CUENTA" && !venta.clienteId) {
         throw new Error("Para dejar un saldo pendiente el pedido necesita un cliente asociado.");
@@ -816,27 +818,31 @@ export async function registrarCobroPedido(
   }
 }
 
-export async function cancelarPedido(ventaId: number): Promise<ResultadoAccionPedido> {
+export async function anularVenta(ventaId: number): Promise<ResultadoAccionPedido> {
   try {
     const venta = await prisma.venta.findUnique({
       where: { id: ventaId },
-      include: { items: true },
+      include: { items: true, pagos: true },
     });
-    if (!venta) return { success: false, error: "El pedido no existe" };
+    if (!venta) return { success: false, error: "La venta no existe" };
 
     if (venta.estadoPago === "CANCELADA" || venta.estadoPago === "ANULADA") {
-      return { success: false, error: "El pedido ya está cancelado" };
-    }
-
-    if (venta.montoPagado > 0) {
-      return {
-        success: false,
-        error: "Este pedido tiene pagos registrados. Devolvé el dinero al cliente antes de cancelarlo.",
-      };
+      return { success: false, error: "La venta ya está anulada" };
     }
 
     await prisma.$transaction(async (tx) => {
-      // Si estaba armado, el stock real ya se había descontado en marcarArmado. Se repone.
+      // Guard atómico: si el estado cambió entre el findUnique de arriba y
+      // este punto (doble click, dos pestañas, otro usuario), este update
+      // afecta 0 filas y abortamos sin tocar stock ni caja.
+      const marcada = await tx.venta.updateMany({
+        where: { id: ventaId, estadoPago: venta.estadoPago },
+        data: { estadoPago: "ANULADA" },
+      });
+      if (marcada.count === 0) {
+        throw new Error("La venta ya fue anulada o modificada por otra acción.");
+      }
+
+      // 1. Devolver stock si ya se había descontado (armado=true)
       if (venta.armado) {
         for (const item of venta.items) {
           const unidadesADevolver =
@@ -850,10 +856,90 @@ export async function cancelarPedido(ventaId: number): Promise<ResultadoAccionPe
         }
       }
 
-      await tx.venta.update({
-        where: { id: ventaId },
+      // 2. Revertir cada pago: restar de la cuenta y dejar registro en movimientos de caja
+      for (const pago of venta.pagos) {
+        const cuenta = await tx.cuenta.update({
+          where: { id: pago.cuentaId },
+          data: { saldoActual: { decrement: pago.monto } },
+        });
+
+        await tx.movimientoCaja.create({
+          data: {
+            cuentaId: pago.cuentaId,
+            tipo: "EGRESO",
+            concepto: "AJUSTE_SALDO",
+            monto: pago.monto,
+            saldoResultante: cuenta.saldoActual,
+            detalle: `Reversión por anulación de venta #${venta.id}`,
+            ventaId: venta.id,
+          },
+        });
+      }
+    });
+
+    revalidatePath("/ventas/historial");
+    revalidatePath("/", "layout");
+    return { success: true };
+  } catch (e) {
+    const mensaje = e instanceof Error ? e.message : "Error al anular la venta";
+    return { success: false, error: mensaje };
+  }
+}
+
+export async function cancelarPedido(ventaId: number): Promise<ResultadoAccionPedido> {
+  try {
+    const venta = await prisma.venta.findUnique({
+      where: { id: ventaId },
+      include: { items: true, pagos: true },
+    });
+    if (!venta) return { success: false, error: "El pedido no existe" };
+
+    if (venta.estadoPago === "CANCELADA" || venta.estadoPago === "ANULADA") {
+      return { success: false, error: "El pedido ya está cancelado" };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Guard atómico, mismo motivo que en anularVenta.
+      const marcado = await tx.venta.updateMany({
+        where: { id: ventaId, estadoPago: venta.estadoPago },
         data: { estadoPago: "CANCELADA" },
       });
+      if (marcado.count === 0) {
+        throw new Error("El pedido ya fue cancelado o modificado por otra acción.");
+      }
+
+      if (venta.armado) {
+        for (const item of venta.items) {
+          const unidadesADevolver =
+            item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
+          if (unidadesADevolver === 0) continue;
+
+          await tx.producto.update({
+            where: { id: item.productoId! },
+            data: { stockActual: { increment: unidadesADevolver } },
+          });
+        }
+      }
+
+      // Antes esto bloqueaba la cancelación si había pagos; ahora se revierten solos.
+      for (const pago of venta.pagos) {
+        const cuenta = await tx.cuenta.update({
+          where: { id: pago.cuentaId },
+          data: { saldoActual: { decrement: pago.monto } },
+        });
+
+        await tx.movimientoCaja.create({
+          data: {
+            cuentaId: pago.cuentaId,
+            tipo: "EGRESO",
+            concepto: "AJUSTE_SALDO",
+            monto: pago.monto,
+            saldoResultante: cuenta.saldoActual,
+            detalle: `Reversión por cancelación de pedido #${venta.id}`,
+            ventaId: venta.id,
+          },
+        });
+      }
     });
 
     revalidatePath("/ventas/pedidos");

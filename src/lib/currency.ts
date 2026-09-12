@@ -9,6 +9,10 @@ export function toUsd(value: number, moneda: Moneda, cotizacionUSD: number): num
   return moneda === "USD" ? value : value / cotizacionUSD;
 }
 
+export function redondearARS(value: number): number {
+  return Math.round(value);
+}
+
 export function formatCurrency(value: number, currency: Moneda) {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",

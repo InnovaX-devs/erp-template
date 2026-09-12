@@ -428,7 +428,11 @@ model Configuracion {
   colorPrimario   String? @default("#4F46E5")
   colorSecundario String? @default("#0891B2")
 
-  cotizacionUSD Float @default(1000)
+  // Si el negocio no maneja precios en USD, este flag queda apagado y
+  // el campo de cotización no se pide en Configuración (queda en su
+  // valor por defecto, sin usarse para conversiones).
+  usaCotizacionUSD Boolean @default(false)
+  cotizacionUSD    Float   @default(1000)
 
   // Compras
   costoPromedioPonderado Boolean @default(true)
@@ -439,6 +443,9 @@ model Configuracion {
   margenMayoristaDefault Float?
 
   // Fórmula de decants
+  // Ya no se expone un toggle para esto en la pantalla de Configuración
+  // (es un caso de uso específico, no genérico); el módulo sigue activo
+  // en el código y se controla cargando este valor directo en la base.
   moduloDecantHabilitado            Boolean @default(false) // activa/desactiva todo el módulo de decants
   costoEnvaseDecantARS      Float?
   multiplicadorInsumoDecant Float?

@@ -33,6 +33,7 @@ export async function actualizarConfiguracion(
     remitenteDni: string;
     colorPrimario: string;
     colorSecundario: string;
+    usaCotizacionUSD: boolean;
     cotizacionUSD: number;
     costoPromedioPonderado: boolean;
     moduloDecantHabilitado: boolean;

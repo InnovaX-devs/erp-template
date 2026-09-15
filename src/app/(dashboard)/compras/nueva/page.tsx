@@ -65,6 +65,7 @@ export default function NuevaCompraPage() {
 
   // Cotización
   const [cotizacion, setCotizacion] = useState<number>(1000);
+  const [usaCotizacionUSD, setUsaCotizacionUSD] = useState(false);
 
   // Buscador de producto
   const [busqueda, setBusqueda] = useState("");
@@ -98,6 +99,7 @@ export default function NuevaCompraPage() {
       .then((r) => r.json())
       .then((data) => {
         if (data?.cotizacionUSD) setCotizacion(Number(data.cotizacionUSD));
+        setUsaCotizacionUSD(data?.usaCotizacionUSD ?? false);
       })
       .catch(() => {});
   }, []);
@@ -126,8 +128,9 @@ export default function NuevaCompraPage() {
 
   const agregarAlCarrito = useCallback(
     (producto: ProductoBusqueda) => {
-      const costoUnitarioUSD =
-        producto.monedaPrecio === "ARS"
+      const costoUnitarioUSD = !usaCotizacionUSD
+        ? producto.precioCosto
+          : producto.monedaPrecio === "ARS"
           ? Number((producto.precioCosto / cotizacion).toFixed(2))
           : producto.precioCosto;
 
@@ -152,7 +155,7 @@ export default function NuevaCompraPage() {
       setResultados([]);
       inputBusquedaRef.current?.focus();
     },
-    [cotizacion]
+    [cotizacion, usaCotizacionUSD]
   );
 
   const handleKeyDownBusqueda = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -478,8 +481,8 @@ export default function NuevaCompraPage() {
                   <tr className="text-left text-[11px] font-bold uppercase tracking-wider text-[#45464f]">
                     <th className="px-4 py-3">Producto</th>
                     <th className="px-4 py-3">Cantidad</th>
-                    <th className="px-4 py-3">Costo unit. (USD)</th>
-                    <th className="px-4 py-3">Subtotal USD</th>
+                    <th className="px-4 py-3">{usaCotizacionUSD ? "Costo unit. (USD)" : "Costo unitario"}</th>
+                    <th className="px-4 py-3">{usaCotizacionUSD ? "Subtotal USD" : "Subtotal"}</th>
                     <th className="px-4 py-3" />
                   </tr>
                 </thead>
@@ -529,7 +532,7 @@ export default function NuevaCompraPage() {
                         />
                       </td>
                       <td className="px-4 py-3 font-mono font-medium text-[#191c1e]">
-                        {(it.cantidad * it.costoUnitarioUSD).toFixed(2)}
+                        {usaCotizacionUSD ? "" : "$"}{(it.cantidad * it.costoUnitarioUSD).toFixed(2)}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button
@@ -585,7 +588,9 @@ export default function NuevaCompraPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] text-[#45464f]">Costo unit. (USD)</label>
+                      <label className="block text-[11px] text-[#45464f]">
+                        {usaCotizacionUSD ? "Costo unit. (USD)" : "Costo unitario"}
+                      </label>
                       <input
                         type="number"
                         min={COSTO_MIN}
@@ -610,7 +615,9 @@ export default function NuevaCompraPage() {
 
                   <p className="mt-2 text-right text-sm">
                     <span className="text-[#45464f]">Subtotal: </span>
-                    <span className="font-medium text-[#191c1e]">USD {(it.cantidad * it.costoUnitarioUSD).toFixed(2)}</span>
+                    <span className="font-medium text-[#191c1e]">
+                      {usaCotizacionUSD ? `USD ${(it.cantidad * it.costoUnitarioUSD).toFixed(2)}` : `$${(it.cantidad * it.costoUnitarioUSD).toFixed(2)}`}
+                    </span>
                   </p>
                 </div>
               ))}
@@ -624,13 +631,28 @@ export default function NuevaCompraPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs uppercase tracking-wide text-[#45464f]">Total</p>
-            <p className="text-2xl font-semibold text-[#191c1e]">USD {totalUSD.toFixed(2)}</p>
-            <p className="text-sm text-[#45464f]">
-              ≈ ARS {totalARS.toLocaleString("es-AR", { maximumFractionDigits: 2 })}
-              {cuentaSeleccionada && (
-                <span> · se debitará en {TIPO_CUENTA_LABEL[cuentaSeleccionada.tipo]} al confirmar</span>
-              )}
-            </p>
+            {usaCotizacionUSD ? (
+              <>
+                <p className="text-2xl font-semibold text-[#191c1e]">USD {totalUSD.toFixed(2)}</p>
+                <p className="text-sm text-[#45464f]">
+                  ≈ ARS {totalARS.toLocaleString("es-AR", { maximumFractionDigits: 2 })}
+                  {cuentaSeleccionada && (
+                    <span> · se debitará en {TIPO_CUENTA_LABEL[cuentaSeleccionada.tipo]} al confirmar</span>
+                  )}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-2xl font-semibold text-[#191c1e]">
+                  {totalUSD.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 2 })}
+                </p>
+                {cuentaSeleccionada && (
+                  <p className="text-sm text-[#45464f]">
+                    Se debitará en {TIPO_CUENTA_LABEL[cuentaSeleccionada.tipo]} al confirmar
+                  </p>
+                )}
+              </>
+            )}
           </div>
           <button
             type="button"

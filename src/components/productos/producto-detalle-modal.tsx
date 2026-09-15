@@ -90,6 +90,7 @@ interface ConfigDecant {
   divisorFrascoDecant: number;
   offsetDecant5mlARS: number;
   moduloDecantHabilitado?: boolean;
+  usaCotizacionUSD?: boolean;
 }
 
 interface ProductoDetalleModalProps {
@@ -191,9 +192,11 @@ export function ProductoDetalleModal({
                     {producto.categoria.nombre}
                   </span>
                 )}
-                <span className="rounded-full bg-[#1e7d38] px-2 py-0.5 text-[11px] font-semibold">
-                  {producto.monedaPrecio}
-                </span>
+                {configDecant.usaCotizacionUSD && (
+                  <span className="rounded-full bg-[#1e7d38] px-2 py-0.5 text-[11px] font-semibold">
+                    {producto.monedaPrecio}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -232,24 +235,30 @@ export function ProductoDetalleModal({
 
           <div className="mt-4 overflow-hidden rounded-xl border border-[#E2E8F0]">
             <div className="bg-[#021541] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white">
-              Precios · {producto.monedaPrecio}
+              {configDecant.usaCotizacionUSD ? `Precios · ${producto.monedaPrecio}` : "Precios"}
             </div>
 
             <div className="flex items-center justify-between border-t border-[#E2E8F0] px-4 py-3">
               <span className="text-sm text-[#45464f]">Costo</span>
               <div className="text-right">
                 <p className="font-semibold text-[#191c1e]">
-                  {formatCurrency(costo.usd, "USD")}
+                  {formatCurrency(configDecant.usaCotizacionUSD ? costo.usd : costo.ars, configDecant.usaCotizacionUSD ? "USD" : "ARS")}
                 </p>
-                <p className="text-xs text-[#a3aab5]">{formatCurrency(costo.ars, "ARS")}</p>
+                {configDecant.usaCotizacionUSD && (
+                  <p className="text-xs text-[#a3aab5]">{formatCurrency(costo.ars, "ARS")}</p>
+                )}
               </div>
             </div>
 
             <div className="flex items-center justify-between border-t border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3">
               <span className="text-sm font-medium text-[#021541]">Venta</span>
               <div className="text-right">
-                <p className="font-bold text-[#021541]">{formatCurrency(venta.usd, "USD")}</p>
-                <p className="text-xs text-[#5b6472]">{formatCurrency(venta.ars, "ARS")}</p>
+                <p className="font-bold text-[#021541]">
+                  {formatCurrency(configDecant.usaCotizacionUSD ? venta.usd : venta.ars, configDecant.usaCotizacionUSD ? "USD" : "ARS")}
+                </p>
+                {configDecant.usaCotizacionUSD && (
+                  <p className="text-xs text-[#5b6472]">{formatCurrency(venta.ars, "ARS")}</p>
+                )}
               </div>
             </div>
 
@@ -263,9 +272,11 @@ export function ProductoDetalleModal({
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-[#1D4ED8]">
-                    {formatCurrency(mayorista.usd, "USD")}
+                    {formatCurrency(configDecant.usaCotizacionUSD ? mayorista.usd : mayorista.ars, configDecant.usaCotizacionUSD ? "USD" : "ARS")}
                   </p>
-                  <p className="text-xs text-[#93B4F5]">{formatCurrency(mayorista.ars, "ARS")}</p>
+                  {configDecant.usaCotizacionUSD && (
+                    <p className="text-xs text-[#93B4F5]">{formatCurrency(mayorista.ars, "ARS")}</p>
+                  )}
                   {margenMayorista !== null && (
                     <p className="text-[11px] font-medium text-[#a15c00]">
                       Margen {margenMayorista.toFixed(2)}%

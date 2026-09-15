@@ -13,8 +13,6 @@ import { toArs, toUsd, formatCurrency } from "@/lib/currency";
 import Select from "@/components/ui/select";
 import { ProductoDetalleModal } from "@/components/productos/producto-detalle-modal";
 
-
-
 interface Producto {
   id: string;
   nombre: string;
@@ -85,7 +83,7 @@ export default function ProductosPage() {
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>("activos");
   const [ordenarPor, setOrdenarPor] = useState<OrdenarPor>("");
 
-  const [monedaVista, setMonedaVista] = useState<"USD" | "ARS">("USD");
+  const [monedaVista, setMonedaVista] = useState<"USD" | "ARS">("ARS");
 
   // junto a los demás useState:
   const [productoDetalle, setProductoDetalle] = useState<Producto | null>(null);
@@ -103,6 +101,7 @@ export default function ProductosPage() {
     offsetDecant5mlARS: 200,
     cotizacionUSD: 1200,
     moduloDecantHabilitado: false,
+    usaCotizacionUSD: false,
   });
   const cotizacion = configDecant.cotizacionUSD;
 
@@ -118,7 +117,9 @@ export default function ProductosPage() {
             offsetDecant5mlARS: data.offsetDecant5mlARS ?? 200,
             cotizacionUSD: data.cotizacionUSD ?? 1200,
             moduloDecantHabilitado: data.moduloDecantHabilitado ?? false,
+            usaCotizacionUSD: data.usaCotizacionUSD ?? false,
           });
+          setMonedaVista(data.usaCotizacionUSD ? "USD" : "ARS");
         }
       })
       .catch((error) => console.error("Error al cargar configuración:", error));
@@ -449,9 +450,11 @@ export default function ProductosPage() {
           <p className="mt-1 truncate text-xl font-semibold text-[#191c1e] sm:text-2xl">
             {formatMoney(resumen.costoARS, "ARS")}
           </p>
-          <p className="mt-1 truncate text-xs font-medium text-[#45464f]">
-            {formatMoney(resumen.costoUSD, "USD")}
-          </p>
+          {configDecant.usaCotizacionUSD && (
+            <p className="mt-1 truncate text-xs font-medium text-[#45464f]">
+              {formatMoney(resumen.costoUSD, "USD")}
+            </p>
+          )}
         </div>
 
         <div className="min-w-0 rounded-2xl border border-[#E2E8F0] bg-white p-4">
@@ -461,9 +464,11 @@ export default function ProductosPage() {
           <p className="mt-1 truncate text-xl font-semibold text-[#191c1e] sm:text-2xl">
             {formatMoney(resumen.ventaARS, "ARS")}
           </p>
-          <p className="mt-1 text-xs font-medium text-[#45464f]">
-            {formatMoney(resumen.ventaUSD, "USD")}
-          </p>
+          {configDecant.usaCotizacionUSD && (
+            <p className="mt-1 text-xs font-medium text-[#45464f]">
+              {formatMoney(resumen.ventaUSD, "USD")}
+            </p>
+          )}
         </div>
 
         <div className="min-w-0 rounded-2xl border border-[#E2E8F0] bg-white p-4">
@@ -473,9 +478,11 @@ export default function ProductosPage() {
           <p className="mt-1 truncate text-xl font-semibold text-[#1e7d38] sm:text-2xl">
             {formatMoney(resumen.gananciaARS, "ARS")}
           </p>
-          <p className="mt-1 truncate text-xs font-medium text-[#1e7d38] opacity-80">
-            {formatMoney(resumen.gananciaUSD, "USD")}
-          </p>
+          {configDecant.usaCotizacionUSD && (
+            <p className="mt-1 truncate text-xs font-medium text-[#1e7d38] opacity-80">
+              {formatMoney(resumen.gananciaUSD, "USD")}
+            </p>
+          )}
         </div>
       </div>
 
@@ -517,7 +524,8 @@ export default function ProductosPage() {
                 </span>
               )}
             </button>
-
+            
+            {configDecant.usaCotizacionUSD && (
             <div className="flex overflow-hidden rounded-lg border border-[#c5c6d0] md:hidden">
               <button
                 type="button"
@@ -544,6 +552,7 @@ export default function ProductosPage() {
                 ARS
               </button>
             </div>
+            )}
 
           </div>
 
@@ -757,18 +766,30 @@ export default function ProductosPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="font-semibold text-[#191c1e]">
-                            {formatCurrency(costo.usd, "USD")}{" "}
-                            <span className="text-[10px] font-medium text-[#8a93a6]">USD</span>
-                          </div>
-                          <div className="text-xs text-[#a3aab5]">{formatCurrency(costo.ars, "ARS")}</div>
+                          {configDecant.usaCotizacionUSD ? (
+                            <>
+                              <div className="font-semibold text-[#191c1e]">
+                                {formatCurrency(costo.usd, "USD")}{" "}
+                                <span className="text-[10px] font-medium text-[#8a93a6]">USD</span>
+                              </div>
+                              <div className="text-xs text-[#a3aab5]">{formatCurrency(costo.ars, "ARS")}</div>
+                            </>
+                          ) : (
+                            <div className="font-semibold text-[#191c1e]">{formatCurrency(costo.ars, "ARS")}</div>
+                          )}
                         </td>
                         <td className="bg-[#F0FDF4] px-4 py-3">
-                          <div className="font-bold text-[#15803D]">
-                            {formatCurrency(venta.usd, "USD")}{" "}
-                            <span className="text-[10px] font-medium text-[#4ADE80]">USD</span>
-                          </div>
-                          <div className="text-xs text-[#86D89C]">{formatCurrency(venta.ars, "ARS")}</div>
+                          {configDecant.usaCotizacionUSD ? (
+                            <>
+                              <div className="font-bold text-[#15803D]">
+                                {formatCurrency(venta.usd, "USD")}{" "}
+                                <span className="text-[10px] font-medium text-[#4ADE80]">USD</span>
+                              </div>
+                              <div className="text-xs text-[#86D89C]">{formatCurrency(venta.ars, "ARS")}</div>
+                            </>
+                          ) : (
+                            <div className="font-bold text-[#15803D]">{formatCurrency(venta.ars, "ARS")}</div>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <span className={cn("font-bold", gananciaPct >= 0 ? "text-[#15803D]" : "text-[#ba1a1a]")}>
@@ -778,13 +799,17 @@ export default function ProductosPage() {
                         </td>
                         <td className="px-4 py-3">
                           {mayorista ? (
-                            <>
-                              <div className="font-bold text-[#1D4ED8]">
-                                {formatCurrency(mayorista.usd, "USD")}{" "}
-                                <span className="text-[10px] font-medium text-[#93B4F5]">USD</span>
-                              </div>
-                              <div className="text-xs text-[#93B4F5]">{formatCurrency(mayorista.ars, "ARS")}</div>
-                            </>
+                            configDecant.usaCotizacionUSD ? (
+                              <>
+                                <div className="font-bold text-[#1D4ED8]">
+                                  {formatCurrency(mayorista.usd, "USD")}{" "}
+                                  <span className="text-[10px] font-medium text-[#93B4F5]">USD</span>
+                                </div>
+                                <div className="text-xs text-[#93B4F5]">{formatCurrency(mayorista.ars, "ARS")}</div>
+                              </>
+                            ) : (
+                              <div className="font-bold text-[#1D4ED8]">{formatCurrency(mayorista.ars, "ARS")}</div>
+                            )
                           ) : (
                             <span className="text-[#a3aab5]">-</span>
                           )}
@@ -996,6 +1021,7 @@ export default function ProductosPage() {
         productoEditar={productoEditar}
         onSuccess={cargarProductos}
         moduloDecantHabilitado={configDecant.moduloDecantHabilitado}
+        usaCotizacionUSD={configDecant.usaCotizacionUSD}
       />
 
       <FormulaDecantModal
@@ -1012,6 +1038,7 @@ export default function ProductosPage() {
         isOpen={isPdfModalOpen}
         onClose={() => setIsPdfModalOpen(false)}
         moduloDecantHabilitado={configDecant.moduloDecantHabilitado}
+        usaCotizacionUSD={configDecant.usaCotizacionUSD}
       />
 
       <ConfirmDialog

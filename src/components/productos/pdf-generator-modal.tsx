@@ -15,6 +15,7 @@ interface PdfGeneratorModalProps {
   isOpen: boolean;
   onClose: () => void;
   moduloDecantHabilitado?: boolean;
+  usaCotizacionUSD?: boolean;
 }
 
 const DOCUMENTO_OPTIONS_BASE: { value: TipoDocumentoPdf; label: string }[] = [
@@ -64,6 +65,7 @@ export function PdfGeneratorModal({
   isOpen,
   onClose,
   moduloDecantHabilitado = false,
+  usaCotizacionUSD = false,
 }: PdfGeneratorModalProps) {
   const [filtros, setFiltros] = useState<PdfFiltros>(FILTROS_INICIALES);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -200,17 +202,19 @@ export function PdfGeneratorModal({
             )}
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-text-dim">Moneda</label>
-            <ToggleGroup
-              value={filtros.moneda}
-              onChange={(v) => set("moneda", v)}
-              options={[
-                { value: "ARS", label: "Pesos (ARS)" },
-                { value: "USD", label: "Dólares (USD)" },
-              ]}
-            />
-          </div>
+          {usaCotizacionUSD && (
+            <div>
+              <label className="block text-xs font-medium text-text-dim">Moneda</label>
+              <ToggleGroup
+                value={filtros.moneda}
+                onChange={(v) => set("moneda", v)}
+                options={[
+                  { value: "ARS", label: "Pesos (ARS)" },
+                  { value: "USD", label: "Dólares (USD)" },
+                ]}
+              />
+            </div>
+          )}
 
                     {categorias.length > 0 && (
             <div>

@@ -54,6 +54,15 @@ export function ComprasListado() {
   const [accionandoId, setAccionandoId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
 
+  const [usaCotizacionUSD, setUsaCotizacionUSD] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/configuracion")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setUsaCotizacionUSD(data?.usaCotizacionUSD ?? false))
+      .catch(() => {});
+  }, []);
+
   // Debounce del texto de búsqueda antes de mandarlo al servidor
   useEffect(() => {
     const timeout = setTimeout(() => setBusquedaDebounced(busqueda.trim()), DEBOUNCE_MS);
@@ -215,11 +224,23 @@ export function ComprasListado() {
                         </td>
                         <td className="px-4 py-4 text-[#45464f]">{compra.cuenta?.nombre ?? "—"}</td>
                         <td className="px-4 py-4 font-mono font-medium text-[#191c1e]">
-                          USD {compra.totalUSD.toFixed(2)}
-                          {compra.totalARS != null && (
-                            <span className="ml-1 text-xs font-normal text-[#45464f]">
-                              (ARS {compra.totalARS.toLocaleString("es-AR", { maximumFractionDigits: 0 })})
-                            </span>
+                          {usaCotizacionUSD ? (
+                            <>
+                              USD {compra.totalUSD.toFixed(2)}
+                              {compra.totalARS != null && (
+                                <span className="ml-1 text-xs font-normal text-[#45464f]">
+                                  (ARS {compra.totalARS.toLocaleString("es-AR", { maximumFractionDigits: 0 })})
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              {(compra.totalARS ?? compra.totalUSD).toLocaleString("es-AR", {
+                                style: "currency",
+                                currency: "ARS",
+                                maximumFractionDigits: 0,
+                              })}
+                            </>
                           )}
                         </td>
                         <td className="px-4 py-4">
@@ -307,11 +328,23 @@ export function ComprasListado() {
 
                     <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                       <p className="font-mono font-semibold text-[#191c1e]">
-                        USD {compra.totalUSD.toFixed(2)}
-                        {compra.totalARS != null && (
-                          <span className="ml-1 text-xs font-normal text-[#45464f]">
-                            (ARS {compra.totalARS.toLocaleString("es-AR", { maximumFractionDigits: 0 })})
-                          </span>
+                        {usaCotizacionUSD ? (
+                          <>
+                            USD {compra.totalUSD.toFixed(2)}
+                            {compra.totalARS != null && (
+                              <span className="ml-1 text-xs font-normal text-[#45464f]">
+                                (ARS {compra.totalARS.toLocaleString("es-AR", { maximumFractionDigits: 0 })})
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {(compra.totalARS ?? compra.totalUSD).toLocaleString("es-AR", {
+                              style: "currency",
+                              currency: "ARS",
+                              maximumFractionDigits: 0,
+                            })}
+                          </>
                         )}
                       </p>
                       <p className="text-xs text-[#45464f]">

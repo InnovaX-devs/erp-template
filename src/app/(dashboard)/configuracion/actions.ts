@@ -1,7 +1,7 @@
 "use server";
 
 import { put } from "@vercel/blob";
-import { actualizarConfiguracion } from "@/lib/configuracion";
+import { actualizarConfiguracion, obtenerConfiguracion } from "@/lib/configuracion";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { auth } from "@/auth"; // ⚠️ ajustar si tu ruta real es otra
@@ -22,11 +22,11 @@ export async function guardarConfiguracion(formData: FormData) {
   const logoFile = formData.get("logo") as File | null;
   const removerLogo = formData.get("removerLogo") === "true";
 
-  const usaCotizacionUSD = formData.get("usaCotizacionUSD") === "on";
+  const configuracionActual = await obtenerConfiguracion();
 
   let cotizacionUSD: number | undefined;
 
-  if (usaCotizacionUSD) {
+  if (configuracionActual.usaCotizacionUSD) {
     const cotizacionUSDRaw = formData.get("cotizacionUSD") as string;
     cotizacionUSD = Number(cotizacionUSDRaw);
 
@@ -59,7 +59,6 @@ export async function guardarConfiguracion(formData: FormData) {
     remitenteDni,
     colorPrimario,
     colorSecundario,
-    usaCotizacionUSD,
     costoPromedioPonderado,
     ...(cotizacionUSD !== undefined ? { cotizacionUSD } : {}),
     ...(logoUrl !== undefined ? { logoUrl } : {}),
@@ -69,6 +68,11 @@ export async function guardarConfiguracion(formData: FormData) {
 }
 
 export async function actualizarCotizacionRapida(cotizacionUSD: number) {
+  const configuracionActual = await obtenerConfiguracion();
+  if (!configuracionActual.usaCotizacionUSD) {
+    throw new Error("Este negocio no opera con cotización en dólares");
+  }
+
   if (!cotizacionUSD || Number.isNaN(cotizacionUSD) || cotizacionUSD <= 0) {
     throw new Error("Cotización USD inválida");
   }

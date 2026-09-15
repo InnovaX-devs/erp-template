@@ -34,7 +34,7 @@ export function ConfiguracionForm({ configuracion }: ConfiguracionFormProps) {
   const [guardadoOk, setGuardadoOk] = useState(false);
 
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
-  const [usaCotizacionUSD, setUsaCotizacionUSD] = useState(configuracion.usaCotizacionUSD);
+
 
   function handleSeleccionarArchivo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -262,31 +262,10 @@ export function ConfiguracionForm({ configuracion }: ConfiguracionFormProps) {
           Se usan en catálogos, listas de precios, comprobantes y reportes generados en PDF.
         </p>
       </div>
-
-      {/* Cotización */}
-      <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6">
-        <h2 className="mb-4 text-base font-semibold text-[#191c1e]">Cotización</h2>
-        <label className="flex items-start gap-2">
-          <input
-            type="checkbox"
-            name="usaCotizacionUSD"
-            checked={usaCotizacionUSD}
-            onChange={(e) => setUsaCotizacionUSD(e.target.checked)}
-            className="mt-0.5 h-4 w-4"
-          />
-          <span>
-            <span className="text-sm font-medium text-[#191c1e]">
-              Trabajo con precios en dólares
-            </span>
-            <p className="text-xs text-[#45464f]">
-              Activá esto si el negocio necesita convertir precios de USD a ARS. Vas a poder
-              cargar la cotización a continuación.
-            </p>
-          </span>
-        </label>
-
-        {usaCotizacionUSD && (
-          <div className="mt-4">
+      {configuracion.usaCotizacionUSD && (
+          <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6">
+            <h2 className="mb-4 text-base font-semibold text-[#191c1e]">Cotización</h2>
+              <div>
             <label className="mb-1 block text-sm text-[#45464f]" htmlFor="cotizacionUSD">
               Cotización USD
             </label>
@@ -307,8 +286,8 @@ export function ConfiguracionForm({ configuracion }: ConfiguracionFormProps) {
               Usada para convertir precios en USD a ARS en todo el sistema.
             </p>
           </div>
+        </div>
         )}
-      </div>
 
       {/* Datos del remitente */}
       <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6">

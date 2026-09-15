@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Search, X, Loader2, PackageX } from "lucide-react";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import type { ProductoBusquedaDTO } from "@/types/producto";
-import { formatCurrency, toUsd } from "@/lib/currency";
+import { formatCurrency, toUsd, toArs } from "@/lib/currency";
 
 interface Props {
   onClose: () => void;
@@ -24,13 +24,17 @@ export function ModalConsultarPrecio({ onClose }: Props) {
   const [resultados, setResultados] = useState<ProductoBusquedaDTO[]>([]);
   const [cargando, setCargando] = useState(false);
   const [cotizacionUSD, setCotizacionUSD] = useState(0);
+  const [usaCotizacionUSD, setUsaCotizacionUSD] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const debouncedQuery = useDebounce(query, 250);
 
   useEffect(() => {
     fetch("/api/configuracion")
       .then((res) => res.json())
-      .then((data) => setCotizacionUSD(data.cotizacionUSD ?? 0))
+      .then((data) => {
+        setCotizacionUSD(data.cotizacionUSD ?? 0);
+        setUsaCotizacionUSD(data.usaCotizacionUSD ?? false);
+      })
       .catch(() => {});
   }, []);
 
@@ -98,7 +102,9 @@ export function ModalConsultarPrecio({ onClose }: Props) {
           <div className="divide-y divide-border">
             {resultados.map((p, i) => {
               const minoristaUsd = toUsd(p.precioVenta, p.monedaPrecio, cotizacionUSD);
+              const minoristaArs = toArs(p.precioVenta, p.monedaPrecio, cotizacionUSD);
               const mayoristaUsd = p.precioMayorista != null ? toUsd(p.precioMayorista, p.monedaPrecio, cotizacionUSD) : null;
+              const mayoristaArs = p.precioMayorista != null ? toArs(p.precioMayorista, p.monedaPrecio, cotizacionUSD) : null;
               const conStock = p.stockActual > 0;
 
               return (
@@ -131,10 +137,14 @@ export function ModalConsultarPrecio({ onClose }: Props) {
                         <span className="text-[10px] font-semibold uppercase tracking-wider text-text-dim">
                           Minorista
                         </span>
-                        <p className="text-sm font-semibold text-text">{formatCurrency(minoristaUsd, "USD")}</p>
-                        <p className="text-xs text-text-dim">
-                          {cotizacionUSD > 0 ? formatCurrency(minoristaUsd * cotizacionUSD, "ARS") : "Sin cotización"}
+                        <p className="text-sm font-semibold text-text">
+                          {formatCurrency(usaCotizacionUSD ? minoristaUsd : minoristaArs, usaCotizacionUSD ? "USD" : "ARS")}
                         </p>
+                        {usaCotizacionUSD && (
+                          <p className="text-xs text-text-dim">
+                            {cotizacionUSD > 0 ? formatCurrency(minoristaUsd * cotizacionUSD, "ARS") : "Sin cotización"}
+                          </p>
+                        )}
                       </div>
                       <div
                         className={`rounded-lg p-2 ${
@@ -146,12 +156,17 @@ export function ModalConsultarPrecio({ onClose }: Props) {
                         </span>
                         {mayoristaUsd != null ? (
                           <>
-                            <p className="text-sm font-semibold text-primary">{formatCurrency(mayoristaUsd, "USD")}</p>
-                            <p className="text-xs text-text-dim">
-                              {cotizacionUSD > 0
-                                ? formatCurrency(mayoristaUsd * cotizacionUSD, "ARS")
-                                : "Sin cotización"}
-                            </p>
+                            <p className="text-sm font-semibold text-primary">{formatCurrency(mayoristaUsd, "USD")}</p> 
+                            <p className="text-sm font-semibold text-primary">
+                              {formatCurrency(usaCotizacionUSD ? mayoristaUsd : mayoristaArs!, usaCotizacionUSD ? "USD" : "ARS")}
+                             </p>
+                            {usaCotizacionUSD && (
+                              <p className="text-xs text-text-dim">
+                                {cotizacionUSD > 0
+                                  ? formatCurrency(mayoristaUsd * cotizacionUSD, "ARS")
+                                  : "Sin cotización"}
+                              </p>
+                            )}
                           </>
                         ) : (
                           <p className="text-xs text-text-dim">No configurado</p>

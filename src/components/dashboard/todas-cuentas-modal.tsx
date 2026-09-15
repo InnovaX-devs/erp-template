@@ -28,6 +28,7 @@ export function TodasCuentasModal({ isOpen, onClose, saldoTotal }: Props) {
   const [categoria, setCategoria] = useState<FiltroCategoria>("TODAS");
   const [moneda, setMoneda] = useState<FiltroMoneda>("ARS_USD");
   const [busqueda, setBusqueda] = useState("");
+  const [usaCotizacionUSD, setUsaCotizacionUSD] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -37,6 +38,10 @@ export function TodasCuentasModal({ isOpen, onClose, saldoTotal }: Props) {
       .then((data) => setCuentas((data.items ?? []).filter((c: CuentaDTO) => c.activa)))
       .catch(() => toast.error("No se pudieron cargar las cuentas"))
       .finally(() => setCargando(false));
+      fetch("/api/configuracion")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setUsaCotizacionUSD(data?.usaCotizacionUSD ?? false))
+      .catch(() => {});
   }, [isOpen]);
 
   const filtradas = useMemo(() => {
@@ -86,6 +91,7 @@ export function TodasCuentasModal({ isOpen, onClose, saldoTotal }: Props) {
             onMonedaChange={setMoneda}
             busqueda={busqueda}
             onBusquedaChange={setBusqueda}
+            usaCotizacionUSD={usaCotizacionUSD}
           />
           <p className="mt-2 text-xs text-text-dim">{filtradas.length} cuentas</p>
         </div>

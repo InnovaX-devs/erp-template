@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
           throw new Error("Cada ítem necesita un producto y una cantidad mayor a 0");
         }
         if (!Number.isFinite(costoUnitarioUSD) || costoUnitarioUSD < 0) {
-          throw new Error("El costo unitario en USD debe ser un número válido");
+          throw new Error("El costo unitario debe ser un número válido");
         }
 
         return { productoId, cantidad, costoUnitarioUSD };

@@ -23,6 +23,7 @@ const ETIQUETAS_TIPO: Record<string, string> = {
 export default function FinanzasPage() {
   const [cuentas, setCuentas] = useState<CuentaDTO[]>([]);
   const [cotizacionUSD, setCotizacionUSD] = useState(0);
+  const [usaCotizacionUSD, setUsaCotizacionUSD] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [cuentaEditar, setCuentaEditar] = useState<CuentaDTO | null>(null);
@@ -50,6 +51,8 @@ export default function FinanzasPage() {
       const dataConfig = await resConfig.json();
       setCuentas(dataCuentas.items ?? []);
       setCotizacionUSD(dataConfig.cotizacionUSD ?? 0);
+      setUsaCotizacionUSD(dataConfig.usaCotizacionUSD ?? false);
+      
     } catch {
       toast.error("No se pudieron cargar las cuentas");
     } finally {
@@ -142,7 +145,7 @@ export default function FinanzasPage() {
         </div>
       </div>
 
-      <TotalesCuentas cuentas={cuentas} cotizacionUSD={cotizacionUSD} />
+      <TotalesCuentas cuentas={cuentas} cotizacionUSD={cotizacionUSD} usaCotizacionUSD={usaCotizacionUSD} />
 
       <FiltrosCuentas
         categoria={filtroCategoria}
@@ -151,6 +154,7 @@ export default function FinanzasPage() {
         onMonedaChange={setFiltroMoneda}
         busqueda={busqueda}
         onBusquedaChange={setBusqueda}
+        usaCotizacionUSD={usaCotizacionUSD}
       />
 
       <div className="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white">
@@ -343,6 +347,8 @@ export default function FinanzasPage() {
         onClose={() => setModalAbierto(false)}
         cuentaEditar={cuentaEditar}
         onSuccess={cargarDatos}
+        usaCotizacionUSD={usaCotizacionUSD}
+        
       />
       <TransferenciaModal
         isOpen={modalTransferenciaAbierto}

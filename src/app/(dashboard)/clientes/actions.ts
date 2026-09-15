@@ -195,9 +195,11 @@ export async function ajustarDeudaManual(input: AjusteDeudaInput) {
     try {
       const config = await prisma.configuracion.findUnique({
         where: { id: "singleton" },
-        select: { cotizacionUSD: true },
+        select: { cotizacionUSD: true, usaCotizacionUSD: true },
       });
-      const cotizacion = config?.cotizacionUSD ?? 1;
+
+      const cotizacionRaw = config?.usaCotizacionUSD ? config.cotizacionUSD : 1;
+      const cotizacion = cotizacionRaw > 0 ? cotizacionRaw : 1;
 
       await prisma.venta.create({
         data: {

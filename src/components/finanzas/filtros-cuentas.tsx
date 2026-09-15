@@ -10,6 +10,7 @@ interface Props {
   onMonedaChange: (m: FiltroMoneda) => void;
   busqueda: string;
   onBusquedaChange: (q: string) => void;
+  usaCotizacionUSD?: boolean;
 }
 
 export function FiltrosCuentas({
@@ -19,6 +20,7 @@ export function FiltrosCuentas({
   onMonedaChange,
   busqueda,
   onBusquedaChange,
+  usaCotizacionUSD = false,
 }: Props) {
   return (
     <div className="space-y-2">
@@ -47,22 +49,24 @@ export function FiltrosCuentas({
           ))}
         </div>
 
-        <div className="flex rounded-lg border border-[#c5c6d0] bg-white p-0.5">
-          {(["ARS_USD", "ARS", "USD"] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => onMonedaChange(m)}
-              className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                moneda === m
-                  ? "bg-[#021541] text-white cursor-default"
-                  : "text-[#45464f] hover:text-[#191c1e] cursor-pointer"
-              }`}
-            >
-              {m === "ARS_USD" ? "ARS+USD" : m}
-            </button>
-          ))}
-        </div>
+        {usaCotizacionUSD && (
+          <div className="flex rounded-lg border border-[#c5c6d0] bg-white p-0.5">
+            {(["ARS_USD", "ARS", "USD"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => onMonedaChange(m)}
+                className={`whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  moneda === m
+                    ? "bg-[#021541] text-white cursor-default"
+                    : "text-[#45464f] hover:text-[#191c1e] cursor-pointer"
+                }`}
+              >
+                {m === "ARS_USD" ? "ARS+USD" : m}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

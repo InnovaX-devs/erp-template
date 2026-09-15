@@ -6,7 +6,12 @@ import { ES_TIPO_BANCO } from "@/types/cuenta";
 
 const COLORES = ["#10B981", "#4F46E5", "#8B5CF6", "#F59E0B", "#EF4444", "#059669", "#EC4899", "#6366F1"];
 
-const TIPOS: { value: TipoCuenta; label: string }[] = [
+const TIPOS_ARS: { value: TipoCuenta; label: string }[] = [
+  { value: "EFECTIVO_ARS", label: "Efectivo ARS" },
+  { value: "BANCO_ARS", label: "Banco ARS" },
+];
+
+const TIPOS_ARS_USD: { value: TipoCuenta; label: string }[] = [
   { value: "EFECTIVO_ARS", label: "Efectivo ARS" },
   { value: "EFECTIVO_USD", label: "Efectivo USD" },
   { value: "BANCO_ARS", label: "Banco ARS" },
@@ -45,12 +50,15 @@ interface Props {
   onClose: () => void;
   cuentaEditar?: CuentaDTO | null;
   onSuccess: () => void;
+  usaCotizacionUSD?: boolean;
 }
 
-export function CuentaFormModal({ isOpen, onClose, cuentaEditar, onSuccess }: Props) {
+export function CuentaFormModal({ isOpen, onClose, cuentaEditar, onSuccess, usaCotizacionUSD = false }: Props) {
   const [formData, setFormData] = useState<CuentaFormData>(FORM_VACIO);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  const TIPOS = usaCotizacionUSD ? TIPOS_ARS_USD : TIPOS_ARS;
 
   useEffect(() => {
     if (cuentaEditar) {

@@ -5,6 +5,7 @@ export async function GET() {
   try {
     const config = await obtenerConfiguracion();
     return NextResponse.json({
+      usaCotizacionUSD: config.usaCotizacionUSD,
       cotizacionUSD: config.cotizacionUSD,
       moduloDecantHabilitado: config.moduloDecantHabilitado,
       costoEnvaseDecantARS: config.costoEnvaseDecantARS ?? 0,

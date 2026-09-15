@@ -6,9 +6,10 @@ import { formatCurrency } from "@/lib/currency";
 interface Props {
   cuentas: CuentaDTO[];
   cotizacionUSD: number;
+  usaCotizacionUSD?: boolean;
 }
 
-export function TotalesCuentas({ cuentas, cotizacionUSD }: Props) {
+export function TotalesCuentas({ cuentas, cotizacionUSD, usaCotizacionUSD = false }: Props) {
   const activas = cuentas.filter((c) => c.activa);
 
   const totalARS = activas
@@ -21,6 +22,17 @@ export function TotalesCuentas({ cuentas, cotizacionUSD }: Props) {
 
   const arsEnUsd = cotizacionUSD > 0 ? totalARS / cotizacionUSD : 0;
   const usdEnArs = totalUSD * cotizacionUSD;
+
+  if (!usaCotizacionUSD) {
+    return (
+      <div className="grid grid-cols-1 gap-4">
+        <div className="rounded-xl bg-primary p-4 text-white">
+          <span className="text-xs font-medium uppercase tracking-wider text-white/70">Total</span>
+          <p className="mt-1 text-2xl font-bold">{formatCurrency(totalARS, "ARS")}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

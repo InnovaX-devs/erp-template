@@ -16,7 +16,8 @@ type VentaContextValue = {
   setModoCobro: (modo: ModoCobro) => void;
   pagos: PagoLinea[];
   setPagos: (pagos: PagoLinea[]) => void;
-  cotizacionUSD: number; // NUEVO
+  cotizacionUSD: number; 
+  usaCotizacionUSD: boolean;
 };
 
 const VentaContext = createContext<VentaContextValue | null>(null);
@@ -26,14 +27,21 @@ export function VentaProvider({ children }: { children: ReactNode }) {
   const [cliente, setClienteState] = useState<ClienteBusquedaResult | null>(null);
   const [modoCobro, setModoCobro] = useState<ModoCobro>("UNICA");
   const [pagos, setPagos] = useState<PagoLinea[]>([{ id: "pago-unica", cuentaId: null, monto: 0 }]);
-  const [cotizacionUSD, setCotizacionUSD] = useState<number>(0); // NUEVO
+  const [cotizacionUSD, setCotizacionUSD] = useState<number>(0);
+  const [usaCotizacionUSD, setUsaCotizacionUSD] = useState<boolean>(false);
 
   // Traer la cotización real UNA vez al abrir la pantalla de venta
   useEffect(() => {
     fetch("/api/configuracion")
       .then((r) => r.json())
-      .then((data) => setCotizacionUSD(data.cotizacionUSD ?? 0))
-      .catch(() => setCotizacionUSD(0));
+      .then((data) => {
+        setCotizacionUSD(data.cotizacionUSD ?? 0);
+        setUsaCotizacionUSD(data.usaCotizacionUSD ?? false);
+      })
+      .catch(() => {
+        setCotizacionUSD(0);
+        setUsaCotizacionUSD(false);
+      });
   }, []);
 
   function setCliente(nuevoCliente: ClienteBusquedaResult | null) {
@@ -43,7 +51,18 @@ export function VentaProvider({ children }: { children: ReactNode }) {
 
   return (
     <VentaContext.Provider
-      value={{ tipoPrecio, setTipoPrecio, cliente, setCliente, modoCobro, setModoCobro, pagos, setPagos, cotizacionUSD }}
+      value={{
+        tipoPrecio,
+        setTipoPrecio,
+        cliente,
+        setCliente,
+        modoCobro,
+        setModoCobro,
+        pagos,
+        setPagos,
+        cotizacionUSD,
+        usaCotizacionUSD,
+      }}
     >
       {children}
     </VentaContext.Provider>

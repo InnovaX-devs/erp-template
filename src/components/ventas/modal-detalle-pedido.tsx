@@ -59,6 +59,14 @@ export function ModalDetallePedido({ pedidoId, onClose, onCambio }: Props) {
   const [modalCobroAbierto, setModalCobroAbierto] = useState(false);
   const [confirmandoCancelar, setConfirmandoCancelar] = useState(false);
   const [cancelando, setCancelando] = useState(false);
+  const [usaCotizacionUSD, setUsaCotizacionUSD] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/configuracion")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setUsaCotizacionUSD(data?.usaCotizacionUSD ?? false))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     let activo = true;
@@ -215,7 +223,9 @@ export function ModalDetallePedido({ pedidoId, onClose, onCambio }: Props) {
                         </td>
                         <td className="px-3 py-2.5 text-right text-[#191c1e]">{item.cantidad}</td>
                         <td className="px-3 py-2.5 text-right">
-                          <p className="text-xs text-[#45464f]">US${item.precioUnitarioUSD.toFixed(2)}</p>
+                          {usaCotizacionUSD && (
+                            <p className="text-xs text-[#45464f]">US${item.precioUnitarioUSD.toFixed(2)}</p>
+                          )}
                           <p className="text-[#191c1e]">{formatCurrency(item.precioUnitarioARS, "ARS")}</p>
                         </td>
                         <td className="px-3 py-2.5 text-right font-semibold text-[#191c1e]">

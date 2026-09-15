@@ -57,6 +57,7 @@ interface ProductoFormModalProps {
   marcasIniciales?: Marca[];
   categoriasIniciales?: Categoria[];
   moduloDecantHabilitado?: boolean;
+  usaCotizacionUSD?: boolean;
 }
 
 export function ProductoFormModal({
@@ -67,6 +68,7 @@ export function ProductoFormModal({
   marcasIniciales = [],
   categoriasIniciales = [],
   moduloDecantHabilitado = false,
+  usaCotizacionUSD = false,
 }: ProductoFormModalProps) {
   const [formData, setFormData] = useState<ProductoFormData>({
     nombre: "",
@@ -150,7 +152,7 @@ export function ProductoFormModal({
           stockActual: productoEditar.stockActual ?? "",
           stockMinimo: productoEditar.stockMinimo ?? "",
           destacado: productoEditar.destacado ?? false,
-          monedaPrecio: productoEditar.monedaPrecio ?? "USD",
+          monedaPrecio: usaCotizacionUSD ? productoEditar.monedaPrecio ?? "USD" : "ARS",
           precioCosto: productoEditar.precioCosto ?? "",
           precioVenta: productoEditar.precioVenta ?? "",
           precioMayorista: productoEditar.precioMayorista ?? "",
@@ -701,20 +703,22 @@ export function ProductoFormModal({
               <span className="text-xs font-semibold uppercase tracking-wider text-text-dim">
                 Precios
               </span>
-              <div className="flex items-center gap-2">
-                <label className="whitespace-nowrap text-xs text-text-dim">Moneda:</label>
-                <Select
-                  value={formData.monedaPrecio}
-                  onChange={(v) =>
-                    setFormData({ ...formData, monedaPrecio: v as "ARS" | "USD" })
-                  }
-                  options={[
-                    { value: "ARS", label: "ARS ($)" },
-                    { value: "USD", label: "USD ($)" },
-                  ]}
-                  className="w-36 shrink-0"
-                />
-              </div>
+              {usaCotizacionUSD && (
+                <div className="flex items-center gap-2">
+                  <label className="whitespace-nowrap text-xs text-text-dim">Moneda:</label>
+                  <Select
+                    value={formData.monedaPrecio}
+                    onChange={(v) =>
+                      setFormData({ ...formData, monedaPrecio: v as "ARS" | "USD" })
+                    }
+                    options={[
+                      { value: "ARS", label: "ARS ($)" },
+                      { value: "USD", label: "USD ($)" },
+                    ]}
+                    className="w-36 shrink-0"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2">

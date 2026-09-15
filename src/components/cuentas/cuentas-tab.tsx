@@ -10,6 +10,7 @@ import { TotalesCuentas } from "@/components/finanzas/totales-cuentas";
 export function CuentasTab() {
   const [cuentas, setCuentas] = useState<CuentaDTO[]>([]);
   const [cotizacionUSD, setCotizacionUSD] = useState(0);
+  const [usaCotizacionUSD, setUsaCotizacionUSD] = useState(false);
   const [cargando, setCargando] = useState(true);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -30,6 +31,7 @@ export function CuentasTab() {
       if (resConfig.ok) {
         const data = await resConfig.json();
         setCotizacionUSD(data.cotizacionUSD ?? 0);
+        setUsaCotizacionUSD(data.usaCotizacionUSD ?? false);
       }
     } catch (error) {
       console.error("Error al cargar cuentas:", error);
@@ -89,7 +91,7 @@ export function CuentasTab() {
         </button>
       </div>
 
-      <TotalesCuentas cuentas={cuentas} cotizacionUSD={cotizacionUSD} />
+      <TotalesCuentas cuentas={cuentas} cotizacionUSD={cotizacionUSD} usaCotizacionUSD={usaCotizacionUSD} />
 
       <div className="rounded-xl border border-border bg-surface p-4">
         <label className="mb-4 flex items-center gap-2 text-sm text-text-dim">
@@ -177,6 +179,7 @@ export function CuentasTab() {
         onClose={() => setIsFormOpen(false)}
         cuentaEditar={cuentaEditar}
         onSuccess={cargar}
+        usaCotizacionUSD={usaCotizacionUSD}
       />
     </div>
   );

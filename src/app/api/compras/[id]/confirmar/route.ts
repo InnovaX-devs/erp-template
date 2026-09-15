@@ -43,10 +43,11 @@ export async function POST(
 
     const config = await prisma.configuracion.findUnique({
       where: { id: "singleton" },
-      select: { costoPromedioPonderado: true, cotizacionUSD: true },
+      select: { costoPromedioPonderado: true, cotizacionUSD: true, usaCotizacionUSD: true },
     });
     const usarPonderado = config?.costoPromedioPonderado ?? true;
-    const cotizacion = config?.cotizacionUSD ?? 1000;
+
+    const cotizacion = config?.usaCotizacionUSD && config.cotizacionUSD > 0 ? config.cotizacionUSD : 1;
 
     const totalARS = compra.totalUSD * cotizacion;
     const cuentaEsUSD = TIPOS_CUENTA_USD.includes(compra.cuenta.tipo);

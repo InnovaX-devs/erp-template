@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { obtenerConfiguracion } from "@/lib/configuracion";
 import type { EstadoPago, TipoPrecioVenta } from "@prisma/client";
 import { redondearARS } from "@/lib/currency";
 import { Prisma } from "@prisma/client";
@@ -116,10 +117,6 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
     return { success: false, error: "El carrito está vacío." };
   }
 
-  // Blindaje: sin importar qué pantalla llame a esta función, el total
-  // siempre se redondea acá, en el backend. Así "lo que se ve" y "lo que se
-  // compara" son siempre el mismo número, sin decimales invisibles de la
-  // conversión USD -> ARS.
   const totalARS = redondearARS(input.totalARS);
 
   const pagosValidos = input.pagos.filter((p) => p.cuentaId != null && p.monto > 0);
@@ -139,7 +136,9 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
     estadoPago = "A_CUENTA";
   }
 
-  const cotizacionUsada = input.cotizacionUSD > 0 ? input.cotizacionUSD : 1;
+  const configuracionActual = await obtenerConfiguracion();
+  const cotizacionUSDInput = configuracionActual.usaCotizacionUSD ? input.cotizacionUSD : 1;
+  const cotizacionUsada = cotizacionUSDInput > 0 ? cotizacionUSDInput : 1;
   const totalUSD = totalARS / cotizacionUsada;
 
   try {

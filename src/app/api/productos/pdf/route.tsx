@@ -139,13 +139,16 @@ export async function GET(request: NextRequest) {
 
   const productos = await resolverImagenes(productosRaw);
 
-  const documentoPdf =
-    documento === "LISTA" ? (
-      <ListaPreciosDocument
-        productos={productos}
-        configuracion={configuracion}
-        tipoPrecio={tipoPrecio}
-        moneda={moneda}
+
+  const monedaFinal: "ARS" | "USD" = configuracion.usaCotizacionUSD ? moneda : "ARS";
+
+   const documentoPdf =
+     documento === "LISTA" ? (
+       <ListaPreciosDocument
+         productos={productos}
+         configuracion={configuracion}
+         tipoPrecio={tipoPrecio}
+         moneda={monedaFinal}
         modoDecant={modoDecant}
       />
     ) : (
@@ -153,7 +156,7 @@ export async function GET(request: NextRequest) {
         productos={productos}
         configuracion={configuracion}
         tipoPrecio={tipoPrecio}
-        moneda={moneda}
+        moneda={monedaFinal}
         modoDecant={modoDecant}
       />
     );
@@ -161,7 +164,7 @@ export async function GET(request: NextRequest) {
   const buffer = await renderToBuffer(documentoPdf);
 
   const sufijo = tipoDocumento.toLowerCase().replace(/_/g, "-");
-  const filename = `${sufijo}-${moneda.toLowerCase()}.pdf`;
+  const filename = `${sufijo}-${monedaFinal.toLowerCase()}.pdf`;
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {

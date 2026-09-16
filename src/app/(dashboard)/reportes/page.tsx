@@ -1,8 +1,5 @@
-import Link from "next/link";
-import { Droplets } from "lucide-react";
 import { rangoParaTab, esMismoDia, type TabReporte } from "@/lib/reportes";
 import { obtenerReporte } from "./queries";
-import { obtenerConfiguracion } from "@/lib/configuracion";
 import { TabsReportes } from "../../../components/reportes/TabsReportes";
 import { KpiCards } from "@/components/reportes/kpi-cards";
 import { DesgloseTipoPrecio } from "@/components/reportes/desglose-tipo-precio";
@@ -11,6 +8,8 @@ import { BotonExportarPdf } from "../../../components/reportes/BotonExportarPdf"
 import { IngresosPorDia } from "@/components/reportes/ingresos-por-dia";
 import { TopProductos } from "@/components/reportes/top-productos";
 import { formatFechaAR } from "@/lib/timezone";
+import { notFound } from "next/navigation";
+import { obtenerConfiguracion } from "@/lib/configuracion";
 
 type SearchParams = {
   tab?: string;
@@ -26,10 +25,11 @@ export default async function ReportesPage({
   // Next.js 16: searchParams es una Promise, hay que await-earla.
   searchParams: Promise<SearchParams>;
 }) {
+  const configuracion = await obtenerConfiguracion();
+  if (!configuracion.habilitarReportesAvanzados) notFound();
+
   const params = await searchParams;
   const tab: TabReporte = TABS_VALIDOS.includes(params.tab as TabReporte) ? (params.tab as TabReporte) : "diario";
-
-  const configuracion = await obtenerConfiguracion();
 
   const rango = rangoParaTab(tab, params.desde, params.hasta);
   const faltaPeriodo = tab === "periodo" && (!params.desde || !params.hasta);
@@ -48,14 +48,6 @@ export default async function ReportesPage({
           <p className="text-sm text-[#45464f]">{rangoTexto}</p>
         </div>
         <div className="flex items-center gap-2">
-          {configuracion.moduloDecantHabilitado && (
-            <Link
-              href="/reportes/decants"
-              className="flex items-center gap-1.5 rounded-lg border border-[#c5c6d0] bg-white px-3 py-2 text-sm font-medium text-[#45464f] hover:bg-[#eceef0]"
-            >
-              <Droplets size={14} /> Reporte de Decants
-            </Link>
-          )}
           <BotonExportarPdf tab={tab} desde={params.desde} hasta={params.hasta} />
         </div>
       </div>

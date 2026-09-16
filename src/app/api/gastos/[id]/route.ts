@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
+import { obtenerConfiguracion } from "@/lib/configuracion";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    const configuracion = await obtenerConfiguracion();
+    if (!configuracion.habilitarGastosFlujoCaja) {
+      return NextResponse.json({ error: "Los gastos no están disponibles en tu plan actual." }, { status: 403 });
+    }
+
+    const empresaId = await obtenerEmpresaIdActual();
     const { id } = await params;
     const gastoId = Number(id);
     if (!Number.isInteger(gastoId)) {
       return NextResponse.json({ error: "ID de gasto inválido" }, { status: 400 });
     }
 
-    const gastoExistente = await prisma.gasto.findUnique({ where: { id: gastoId } });
+    const gastoExistente = await prisma.gasto.findFirst({ where: { id: gastoId, empresaId } });
     if (!gastoExistente) {
       return NextResponse.json({ error: "Gasto no encontrado" }, { status: 404 });
     }
@@ -36,6 +44,23 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    if (body.categoriaId) {
+      const categoria = await prisma.categoriaGasto.findFirst({
+        where: { id: Number(body.categoriaId), empresaId },
+      });
+      if (!categoria) {
+        return NextResponse.json({ error: "La categoría seleccionada no existe" }, { status: 400 });
+      }
+    }
+    if (body.proveedorId) {
+      const proveedor = await prisma.proveedor.findFirst({
+        where: { id: Number(body.proveedorId), empresaId },
+      });
+      if (!proveedor) {
+        return NextResponse.json({ error: "El proveedor seleccionado no existe" }, { status: 400 });
+      }
+    }
+
     const gastoActualizado = await prisma.gasto.update({
       where: { id: gastoId },
       data: {
@@ -56,10 +81,21 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
+    const configuracion = await obtenerConfiguracion();
+    if (!configuracion.habilitarGastosFlujoCaja) {
+      return NextResponse.json({ error: "Los gastos no están disponibles en tu plan actual." }, { status: 403 });
+    }
+
+    const empresaId = await obtenerEmpresaIdActual();
     const { id } = await params;
     const gastoId = Number(id);
     if (!Number.isInteger(gastoId)) {
       return NextResponse.json({ error: "ID de gasto inválido" }, { status: 400 });
+    }
+
+    const gastoExistente = await prisma.gasto.findFirst({ where: { id: gastoId, empresaId } });
+    if (!gastoExistente) {
+      return NextResponse.json({ error: "Gasto no encontrado" }, { status: 404 });
     }
 
     const movimientos = await prisma.movimientoCaja.count({ where: { gastoId } });

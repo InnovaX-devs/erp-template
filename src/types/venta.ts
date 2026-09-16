@@ -58,7 +58,6 @@ export type PedidoDetalleItem = {
   id: number;
   productoNombre: string;
   cantidad: number;
-  presentacion: "FRASCO" | "DECANT_5ML" | "DECANT_10ML";
   precioUnitarioUSD: number;
   precioUnitarioARS: number;
   subtotalARS: number;

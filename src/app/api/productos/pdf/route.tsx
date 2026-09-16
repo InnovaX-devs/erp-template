@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { prisma } from "@/lib/prisma";
 import { obtenerConfiguracion } from "@/lib/configuracion";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 import { ListaPreciosDocument } from "@/lib/pdf/ListaPreciosDocument";
 import { CatalogoDocument } from "@/lib/pdf/CatalogoDocument";
 import type { Prisma } from "@prisma/client";
@@ -13,8 +14,7 @@ type TipoDocumentoPdf =
   | "LISTA_GENERAL"
   | "LISTA_MAYORISTA"
   | "CATALOGO"
-  | "CATALOGO_MAYORISTA"
-  | "CATALOGO_DECANTS";
+  | "CATALOGO_MAYORISTA";
 
 const SIN_CATEGORIA = "SIN_CATEGORIA";
 
@@ -77,7 +77,6 @@ export async function GET(request: NextRequest) {
   const tipoDocumento = (sp.get("tipoDocumento") as TipoDocumentoPdf) ?? "LISTA_GENERAL";
 
   const documento = tipoDocumento.startsWith("CATALOGO") ? "CATALOGO" : "LISTA";
-  const modoDecant = tipoDocumento === "CATALOGO_DECANTS";
   const tipoPrecio: "MINORISTA" | "MAYORISTA" = tipoDocumento.endsWith("MAYORISTA")
     ? "MAYORISTA"
     : "MINORISTA";
@@ -102,11 +101,13 @@ export async function GET(request: NextRequest) {
     filtroCategoria = { categoriaId: { not: null } };
   }
 
+  const empresaId = await obtenerEmpresaIdActual();
+
   const where: Prisma.ProductoWhereInput = {
+    empresaId,
     activo: true,
     ...filtroCategoria,
-    ...(modoDecant ? { seVendePorDecant: true } : {}),
-    ...(!modoDecant && tipoPrecio === "MAYORISTA" ? { precioMayorista: { not: null } } : {}),
+    ...(tipoPrecio === "MAYORISTA" ? { precioMayorista: { not: null } } : {}),
   };
 
   const [productosRaw, configuracion] = await Promise.all([
@@ -123,33 +124,32 @@ export async function GET(request: NextRequest) {
         precioCosto: true,
         monedaPrecio: true,
         contenidoMl: true,
-        overrideDecant5ml: true,
-        overrideDecant10ml: true,
       },
     }),
     obtenerConfiguracion(),
   ]);
 
   if (productosRaw.length === 0) {
-    const mensaje = modoDecant
-      ? "No hay productos que se vendan por decant con los filtros seleccionados."
-      : "No hay productos que coincidan con los filtros seleccionados.";
-    return NextResponse.json({ error: mensaje }, { status: 404 });
+    return NextResponse.json(
+      { error: "No hay productos que coincidan con los filtros seleccionados." },
+      { status: 404 }
+    );
   }
 
   const productos = await resolverImagenes(productosRaw);
 
-
+  // Blindaje: el query param "moneda" lo arma el cliente, pero la decisión
+  // final es del servidor. Si el negocio no opera con dólares, el PDF
+  // siempre sale en ARS, sin importar qué se haya pedido por URL.
   const monedaFinal: "ARS" | "USD" = configuracion.usaCotizacionUSD ? moneda : "ARS";
 
-   const documentoPdf =
-     documento === "LISTA" ? (
-       <ListaPreciosDocument
-         productos={productos}
-         configuracion={configuracion}
-         tipoPrecio={tipoPrecio}
-         moneda={monedaFinal}
-        modoDecant={modoDecant}
+  const documentoPdf =
+    documento === "LISTA" ? (
+      <ListaPreciosDocument
+        productos={productos}
+        configuracion={configuracion}
+        tipoPrecio={tipoPrecio}
+        moneda={monedaFinal}
       />
     ) : (
       <CatalogoDocument
@@ -157,7 +157,6 @@ export async function GET(request: NextRequest) {
         configuracion={configuracion}
         tipoPrecio={tipoPrecio}
         moneda={monedaFinal}
-        modoDecant={modoDecant}
       />
     );
 

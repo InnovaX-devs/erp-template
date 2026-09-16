@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ interface ActualizarPreciosPayload {
 
 export async function POST(request: NextRequest) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const body: ActualizarPreciosPayload = await request.json();
     const { productoIds, tipoAjuste, valor, tiposPrecio } = body;
 
@@ -37,9 +39,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Obtener los productos actuales a actualizar
+    // Obtener los productos actuales a actualizar (solo de esta empresa —
+    // si algún id de productoIds pertenece a otra empresa, queda afuera).
     const productos = await prisma.producto.findMany({
-      where: { id: { in: productoIds } },
+      where: { id: { in: productoIds }, empresaId },
     });
 
     if (productos.length === 0) {
@@ -88,6 +91,7 @@ export async function POST(request: NextRequest) {
             // Historial de Precio por cada cambio
             historialRegistros.push({
               productoId: prod.id,
+              empresaId,
               campo: t.toUpperCase(),
               valorAnterior: precioAnterior,
               valorNuevo: nuevoPrecio,

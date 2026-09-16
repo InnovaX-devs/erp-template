@@ -20,6 +20,7 @@ export type NavLeaf = {
   label: string;
   href: string;
   icon: LucideIcon;
+  premium?: boolean;
 };
 
 export type NavGroup = {
@@ -63,17 +64,17 @@ export const NAV_ITEMS: NavItem[] = [
       { label: "Pedidos", href: "/ventas/pedidos", icon: Package },
     ],
   },
-  { label: "Presupuestos", href: "/presupuestos", icon: FileText },
+  { label: "Presupuestos", href: "/presupuestos", icon: FileText, premium: true },
   {
     label: "Finanzas",
     icon: Calculator,
     children: [
       { label: "Cuentas Financieras", href: "/finanzas", icon: Calculator },
-      { label: "Flujo de Caja", href: "/finanzas/flujo-caja", icon: ArrowLeftRight },
-      { label: "Gastos", href: "/finanzas/gastos", icon: Wallet },
+      { label: "Flujo de Caja", href: "/finanzas/flujo-caja", icon: ArrowLeftRight, premium: true },
+      { label: "Gastos", href: "/finanzas/gastos", icon: Wallet, premium: true },
     ],
   },
-  { label: "Reportes", href: "/reportes", icon: BarChart3 },
+  { label: "Reportes", href: "/reportes", icon: BarChart3, premium: true },
 ];
 
 export const EXTRA_TITLES: Record<string, string> = {

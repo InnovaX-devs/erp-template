@@ -2,12 +2,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { obtenerPresupuestoPorId } from "../queries";
 import { calcularEstadoEfectivo } from "@/lib/presupuestos";
+import { obtenerConfiguracion } from "@/lib/configuracion";
 
 export default async function DetallePresupuestoPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const configuracion = await obtenerConfiguracion();
+  if (!configuracion.habilitarPresupuestos) notFound();
+
   const { id } = await params;
   const presupuestoId = Number(id);
   if (Number.isNaN(presupuestoId)) notFound();

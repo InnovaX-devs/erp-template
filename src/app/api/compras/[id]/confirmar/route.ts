@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { calcularCostoPromedioPonderado } from "@/lib/calculos/costoPromedioPonderado";
 import type { Prisma } from "@prisma/client";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
+import { obtenerConfiguracion } from "@/lib/configuracion";
 
 const TIPOS_CUENTA_USD = ["EFECTIVO_USD", "BANCO_USD"];
 
@@ -10,6 +12,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const { id } = await params;
     const compraId = Number(id);
 
@@ -20,8 +23,8 @@ export async function POST(
       );
     }
 
-    const compra = await prisma.compra.findUnique({
-      where: { id: compraId },
+    const compra = await prisma.compra.findFirst({
+      where: { id: compraId, empresaId },
       include: { items: true, cuenta: true },
     });
 
@@ -41,13 +44,13 @@ export async function POST(
       return NextResponse.json({ error: "La compra no tiene ítems" }, { status: 400 });
     }
 
-    const config = await prisma.configuracion.findUnique({
-      where: { id: "singleton" },
-      select: { costoPromedioPonderado: true, cotizacionUSD: true, usaCotizacionUSD: true },
-    });
-    const usarPonderado = config?.costoPromedioPonderado ?? true;
-
-    const cotizacion = config?.usaCotizacionUSD && config.cotizacionUSD > 0 ? config.cotizacionUSD : 1;
+    const config = await obtenerConfiguracion();
+    const usarPonderado = config.costoPromedioPonderado ?? true;
+    // Si el negocio no opera con dólares, la cotización siempre es 1: lo que
+    // se cargó como "costoUnitarioUSD" es en realidad el costo directo en
+    // ARS, y no hay que multiplicarlo por ningún valor viejo que haya
+    // quedado en Configuración.
+    const cotizacion = config.usaCotizacionUSD && config.cotizacionUSD > 0 ? config.cotizacionUSD : 1;
 
     const totalARS = compra.totalUSD * cotizacion;
     const cuentaEsUSD = TIPOS_CUENTA_USD.includes(compra.cuenta.tipo);
@@ -63,8 +66,8 @@ export async function POST(
 
     const compraActualizada = await prisma.$transaction(async (tx) => {
       for (const item of compra.items) {
-        const producto = await tx.producto.findUnique({
-          where: { id: item.productoId },
+        const producto = await tx.producto.findFirst({
+          where: { id: item.productoId, empresaId },
           select: { id: true, stockActual: true, precioCosto: true, monedaPrecio: true },
         });
 
@@ -97,6 +100,7 @@ export async function POST(
             await tx.historialPrecio.create({
               data: {
                 productoId: producto.id,
+                empresaId,
                 campo: "COSTO",
                 valorAnterior: producto.precioCosto,
                 valorNuevo: nuevoCosto,
@@ -118,6 +122,7 @@ export async function POST(
 
       await tx.movimientoCaja.create({
         data: {
+          empresaId,
           cuentaId: compra.cuentaId,
           tipo: "EGRESO",
           concepto: "PAGO_A_PROVEEDOR",

@@ -8,28 +8,72 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// Cada Empresa es un negocio/cliente independiente dentro del mismo deploy.
+// Todo dato de negocio (productos, ventas, clientes, etc.) cuelga de una
+// Empresa. El aislamiento entre negocios se logra filtrando SIEMPRE por
+// empresaId en cada query — no hay separación física de datos.
+model Empresa {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  activa    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  usuarios         Usuario[]
+  configuracion    Configuracion?
+  marcas           Marca[]
+  categorias       Categoria[]
+  productos        Producto[]
+  historialPrecios HistorialPrecio[]
+  clientes         Cliente[]
+  ventas           Venta[]
+  presupuestos     Presupuesto[]
+  proveedores      Proveedor[]
+  compras          Compra[]
+  cuentas          Cuenta[]
+  movimientosCaja  MovimientoCaja[]
+  categoriasGasto  CategoriaGasto[]
+  gastos           Gasto[]
+}
+
 model Usuario {
-  id               Int @id @default(autoincrement())
-  nombre           String
-  email            String            @unique
-  passwordHash     String
-  activo           Boolean           @default(true)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  id           Int @id @default(autoincrement())
+  nombre       String
+  email        String            @unique
+  passwordHash String
+  activo       Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+  empresaId Int
+
+  @@index([empresaId])
 }
 
 model Marca {
   id        Int @id @default(autoincrement())
-  nombre    String     @unique
+  nombre    String
   activa    Boolean    @default(true)
   productos Producto[]
+
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+  empresaId Int
+
+  @@unique([empresaId, nombre])
+  @@index([empresaId])
 }
 
 model Categoria {
   id        Int @id @default(autoincrement())
-  nombre    String     @unique
+  nombre    String
   activa    Boolean    @default(true)
   productos Producto[]
+
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+  empresaId Int
+
+  @@unique([empresaId, nombre])
+  @@index([empresaId])
 }
 
 enum MonedaPrecio {
@@ -40,7 +84,7 @@ enum MonedaPrecio {
 model Producto {
   id                Int @id @default(autoincrement())
   nombre            String
-  codigoBarras      String? @unique
+  codigoBarras      String?
   ubicacionDeposito String?
   fotoUrl           String?
   contenidoMl       Int?
@@ -63,34 +107,30 @@ model Producto {
   margenMayorista Float?
   precioOferta    Float?
 
-  // Decants
-  seVendePorDecant   Boolean @default(false)
-  overrideDecant5ml  Float? // si está cargado, pisa el cálculo de la fórmula global
-  overrideDecant10ml Float?
-
   activo    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+  empresaId Int
 
   itemsVenta       ItemVenta[]
   itemsCompra      ItemCompra[]
   historialPrecios HistorialPrecio[]
 
+  @@unique([empresaId, codigoBarras])
   @@index([nombre])
-  @@index([codigoBarras])
+  @@index([empresaId])
 }
 
 enum CampoPrecio {
   COSTO
   MINORISTA
   MAYORISTA
-  OVERRIDE_5ML
-  OVERRIDE_10ML
 }
 
 enum OrigenCambioPrecio {
   MANUAL
-  RECALCULO_DECANT
   ACTUALIZACION_MASIVA
   COMPRA_CONFIRMADA
 }
@@ -106,9 +146,13 @@ model HistorialPrecio {
   detalle       String?
   fecha         DateTime           @default(now())
 
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+  empresaId Int
+
   @@index([productoId])
   @@index([fecha])
   @@index([productoId, campo])
+  @@index([empresaId])
 }
 
 model Cliente {
@@ -122,11 +166,15 @@ model Cliente {
   esMayorista Boolean  @default(false)
   createdAt   DateTime @default(now())
 
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+  empresaId Int
+
   ventas       Venta[]
   presupuestos Presupuesto[]
 
   @@index([nombre])
   @@index([apellido])
+  @@index([empresaId])
 }
 
 enum EstadoPago {
@@ -134,12 +182,6 @@ enum EstadoPago {
   A_CUENTA
   ANULADA
   CANCELADA
-}
-
-enum Presentacion {
-  FRASCO
-  DECANT_5ML
-  DECANT_10ML
 }
 
 enum TipoPrecioVenta {
@@ -172,6 +214,9 @@ model Venta {
   retirado Boolean @default(false)
   impreso  Boolean @default(false)
 
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+  empresaId Int
+
   items           ItemVenta[]
   pagos           PagoVenta[]
   movimientosCaja MovimientoCaja[]
@@ -183,6 +228,7 @@ model Venta {
   @@index([retirado, estadoPago]) // la pantalla de Pedidos siempre filtra por estos dos
   @@index([armado])
   @@index([enviado])
+  @@index([empresaId])
 }
 
 model ItemVenta {
@@ -194,9 +240,6 @@ model ItemVenta {
   producto         Producto? @relation(fields: [productoId], references: [id])
   productoId       Int?
   descripcionLibre String?
-
-  presentacion       Presentacion @default(FRASCO)
-  abrioFrascoCerrado Boolean      @default(false) // true si un decant se vendió abriendo stock de frasco
 
   tipoPrecio        TipoPrecioVenta @default(MINORISTA)
   cantidad          Int
@@ -240,8 +283,13 @@ model Presupuesto {
 
   estado EstadoPresupuesto @default(BORRADOR)
 
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+  empresaId Int
+
   items           PresupuestoItem[]
   ventaConvertida Venta?
+
+  @@index([empresaId])
 }
 
 model PresupuestoItem {
@@ -250,7 +298,6 @@ model PresupuestoItem {
   presupuestoId  Int
   productoId     Int?
   descripcion    String
-  presentacion   Presentacion    @default(FRASCO)
   tipoPrecio     TipoPrecioVenta @default(MINORISTA)
   cantidad       Int
   precioUnitario Float
@@ -268,10 +315,14 @@ model Proveedor {
   notas           String?
   createdAt       DateTime @default(now())
 
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+  empresaId Int
+
   compras Compra[]
   gastos  Gasto[]
 
   @@index([nombre])
+  @@index([empresaId])
 }
 
 model Compra {
@@ -292,12 +343,16 @@ model Compra {
   cancelada  Boolean  @default(false)
   fecha      DateTime @default(now())
 
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+  empresaId Int
+
   items           ItemCompra[]
   movimientosCaja MovimientoCaja[]
 
   @@index([proveedorId])
   @@index([cuentaId])
   @@index([fecha])
+  @@index([empresaId])
 }
 
 model ItemCompra {
@@ -338,11 +393,15 @@ model Cuenta {
   activa    Boolean  @default(true)
   createdAt DateTime @default(now())
 
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+  empresaId Int
+
   movimientos MovimientoCaja[]
   pagosVenta  PagoVenta[]
   compras Compra[]
 
   @@index([nombre])
+  @@index([empresaId])
 }
 
 enum TipoMovimientoCaja {
@@ -378,14 +437,24 @@ model MovimientoCaja {
   compra   Compra? @relation(fields: [compraId], references: [id])
   compraId Int?
 
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+  empresaId Int
+
   @@index([cuentaId])
   @@index([fecha])
+  @@index([empresaId])
 }
 
 model CategoriaGasto {
-  id          Int @id @default(autoincrement())
-  nombre String  @unique
+  id     Int @id @default(autoincrement())
+  nombre String
   gastos Gasto[]
+
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+  empresaId Int
+
+  @@unique([empresaId, nombre])
+  @@index([empresaId])
 }
 
 enum EstadoPagoGasto {
@@ -407,12 +476,21 @@ model Gasto {
 
   movimientosCaja MovimientoCaja[]
 
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+  empresaId Int
+
   @@index([fecha])
   @@index([categoriaId])
+  @@index([empresaId])
+}
+
+enum Licencia {
+  BASICO
+  PREMIUM
 }
 
 model Configuracion {
-  id              String  @id @default("singleton")
+  id              Int     @id @default(autoincrement())
   nombreNegocio   String
   logoUrl         String?
   telefono        String?
@@ -428,9 +506,19 @@ model Configuracion {
   colorPrimario   String? @default("#4F46E5")
   colorSecundario String? @default("#0891B2")
 
+  // Licencia del template: define el paquete de módulos habilitados
+  // (ver lib/configuracion.ts, obtenerConfiguracion() deriva los flags
+  // usaCotizacionUSD/habilitarPresupuestos/habilitarReportesAvanzados/
+  // habilitarGastosFlujoCaja a partir de este campo). Se carga a mano al
+  // dar de alta cada empresa (scripts/crear-empresa.ts), no hay UI para
+  // que el cliente final la cambie.
+  licencia Licencia @default(BASICO)
+
   // Si el negocio no maneja precios en USD, este flag queda apagado y
   // el campo de cotización no se pide en Configuración (queda en su
-  // valor por defecto, sin usarse para conversiones).
+  // valor por defecto, sin usarse para conversiones). Solo tiene efecto
+  // si la licencia es PREMIUM — con licencia BASICO, usaCotizacionUSD
+  // queda forzado a false sin importar este valor (ver lib/configuracion.ts).
   usaCotizacionUSD Boolean @default(false)
   cotizacionUSD    Float   @default(1000)
 
@@ -442,15 +530,10 @@ model Configuracion {
   margenMinoristaDefault Float?
   margenMayoristaDefault Float?
 
-  // Fórmula de decants
-  // Ya no se expone un toggle para esto en la pantalla de Configuración
-  // (es un caso de uso específico, no genérico); el módulo sigue activo
-  // en el código y se controla cargando este valor directo en la base.
-  moduloDecantHabilitado            Boolean @default(false) // activa/desactiva todo el módulo de decants
-  costoEnvaseDecantARS      Float?
-  multiplicadorInsumoDecant Float?
-  divisorFrascoDecant       Float?  @default(9)
-  offsetDecant5mlARS        Float?  @default(200)
+  // Una Configuracion por Empresa (antes era una fila "singleton" global
+  // para todo el sistema).
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+  empresaId Int     @unique
 
   updatedAt DateTime @updatedAt
 }

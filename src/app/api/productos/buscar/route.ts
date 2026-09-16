@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 export async function GET(request: NextRequest) {
+  const empresaId = await obtenerEmpresaIdActual();
   const q = request.nextUrl.searchParams.get("q")?.trim() ?? "";
 
   if (!q) {
@@ -10,6 +12,7 @@ export async function GET(request: NextRequest) {
   }
 
   const where: Prisma.ProductoWhereInput = {
+    empresaId,
     activo: true,
     OR: [
       { nombre: { contains: q, mode: "insensitive" } },
@@ -30,10 +33,7 @@ export async function GET(request: NextRequest) {
       precioCosto: true,
       precioVenta: true,
       precioMayorista: true,
-      seVendePorDecant: true,
       contenidoMl: true,
-      overrideDecant5ml: true,
-      overrideDecant10ml: true,
       marca: { select: { nombre: true } },
     },
   });

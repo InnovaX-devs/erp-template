@@ -8,7 +8,6 @@ export type ProductoBusqueda = {
   precioMayorista: number | null;
   monedaPrecio: Moneda;
   stockActual: number;
-  seVendePorDecant: boolean;
   marca: { nombre: string } | null;
 };
 
@@ -23,7 +22,6 @@ export type ItemPresupuestoLocal = {
   key: string;
   productoId: number | null;
   descripcion: string;
-  presentacion: "FRASCO" | "DECANT_5ML" | "DECANT_10ML";
   tipoPrecio: "MINORISTA" | "MAYORISTA";
   cantidad: number;
   precioUnitario: number; // siempre en ARS, ya convertido con toArs()

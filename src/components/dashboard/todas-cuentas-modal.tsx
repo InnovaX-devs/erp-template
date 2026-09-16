@@ -38,7 +38,8 @@ export function TodasCuentasModal({ isOpen, onClose, saldoTotal }: Props) {
       .then((data) => setCuentas((data.items ?? []).filter((c: CuentaDTO) => c.activa)))
       .catch(() => toast.error("No se pudieron cargar las cuentas"))
       .finally(() => setCargando(false));
-      fetch("/api/configuracion")
+
+    fetch("/api/configuracion")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => setUsaCotizacionUSD(data?.usaCotizacionUSD ?? false))
       .catch(() => {});

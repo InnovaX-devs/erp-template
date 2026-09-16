@@ -2,7 +2,6 @@ import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import { BusinessHeader } from "./BusinessHeader";
 import { getPdfStyles } from "./styles";
 import { formatCurrency } from "@/lib/currency";
-import { calcularPrecioDecant } from "@/lib/calculos/decant-pricing"
 import { getPdfBrand, type PdfBrand } from "./brand";
 import type { Configuracion } from "@prisma/client";
 
@@ -15,8 +14,6 @@ type ProductoLista = {
   precioCosto: number;
   monedaPrecio: "ARS" | "USD";
   contenidoMl: number | null;
-  overrideDecant5ml: number | null;
-  overrideDecant10ml: number | null;
 };
 
 function getListStyles(brand: PdfBrand) {
@@ -61,17 +58,14 @@ export function ListaPreciosDocument({
   configuracion,
   tipoPrecio,
   moneda,
-  modoDecant,
 }: {
   productos: ProductoLista[];
   configuracion: Configuracion;
   tipoPrecio: "MINORISTA" | "MAYORISTA" | "AMBOS";
   moneda: "ARS" | "USD";
-  modoDecant: boolean;
 }) {
-  const titulo = modoDecant
-    ? "Lista de Precios — Decants"
-    : tipoPrecio === "MINORISTA"
+  const titulo =
+    tipoPrecio === "MINORISTA"
     ? "Lista de Precios"
     : tipoPrecio === "MAYORISTA"
     ? "Lista de Precios Mayorista"
@@ -82,12 +76,6 @@ export function ListaPreciosDocument({
   const listStyles = getListStyles(brand);
 
   function precioTexto(p: ProductoLista): string {
-    if (modoDecant) {
-      const { precio5ml, precio10ml } = calcularPrecioDecant(p, configuracion);
-      const p5 = precio5ml !== null ? convertir(precio5ml, "ARS", moneda, configuracion.cotizacionUSD) : null;
-      const p10 = precio10ml !== null ? convertir(precio10ml, "ARS", moneda, configuracion.cotizacionUSD) : null;
-      return `5ml ${p5 !== null ? formatCurrency(p5, moneda) : "N/D"} · 10ml ${p10 !== null ? formatCurrency(p10, moneda) : "N/D"}`;
-    }
     if (tipoPrecio === "AMBOS") {
       const min = formatCurrency(convertir(p.precioVenta, p.monedaPrecio, moneda, configuracion.cotizacionUSD), moneda);
       const may =

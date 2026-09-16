@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { prisma } from "@/lib/prisma";
 import { obtenerConfiguracion } from "@/lib/configuracion";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 import { ComprobanteVentaDocument, type ComprobanteVentaData } from "@/lib/pdf/ComprobanteVentaDocument";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const empresaId = await obtenerEmpresaIdActual();
   const { id } = await params;
   const ventaId = Number(id);
 
@@ -16,8 +18,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   const [venta, configuracion] = await Promise.all([
-    prisma.venta.findUnique({
-      where: { id: ventaId },
+    prisma.venta.findFirst({
+      where: { id: ventaId, empresaId },
       include: {
         cliente: { select: { nombre: true, apellido: true } },
         items: {
@@ -47,7 +49,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       : null,
     items: venta.items.map((item) => ({
       nombre: item.producto?.nombre ?? item.descripcionLibre ?? "Producto",
-      presentacion: item.presentacion,
       tipoPrecio: item.tipoPrecio,
       cantidad: item.cantidad,
       precioUnitarioARS: item.precioUnitarioUSD * venta.cotizacionUsada,

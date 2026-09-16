@@ -22,6 +22,9 @@ export async function guardarConfiguracion(formData: FormData) {
   const logoFile = formData.get("logo") as File | null;
   const removerLogo = formData.get("removerLogo") === "true";
 
+  // usaCotizacionUSD ya no se setea desde este formulario: es un flag de
+  // instalación que se carga directo en
+  // la base antes de poner el sistema en marcha para ese cliente.
   const configuracionActual = await obtenerConfiguracion();
 
   let cotizacionUSD: number | undefined;

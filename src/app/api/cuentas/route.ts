@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 export async function GET(request: NextRequest) {
+  const empresaId = await obtenerEmpresaIdActual();
   const searchParams = request.nextUrl.searchParams;
   const q = searchParams.get("q")?.trim() ?? "";
   const incluirInactivas = searchParams.get("incluirInactivas") === "true";
 
   const where: Prisma.CuentaWhereInput = {
+    empresaId,
     ...(incluirInactivas ? {} : { activa: true }),
     ...(q
       ? {
@@ -30,6 +33,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const body = await request.json();
 
     if (!body.nombre?.trim() || !body.tipo) {
@@ -49,6 +53,7 @@ export async function POST(request: NextRequest) {
 
     const nuevaCuenta = await prisma.cuenta.create({
       data: {
+        empresaId,
         nombre: body.nombre.trim(),
         tipo: body.tipo,
         titular: esBanco ? body.titular?.trim() || null : null,

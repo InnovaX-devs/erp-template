@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma, CampoPrecio, OrigenCambioPrecio } from "@prisma/client";
 import { inicioDiaAR } from "@/lib/timezone";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 export const dynamic = "force-dynamic";
 
@@ -9,18 +10,16 @@ const CAMPOS_VALIDOS: CampoPrecio[] = [
   "COSTO",
   "MINORISTA",
   "MAYORISTA",
-  "OVERRIDE_5ML",
-  "OVERRIDE_10ML",
 ];
 
 const ORIGENES_VALIDOS: OrigenCambioPrecio[] = [
   "MANUAL",
-  "RECALCULO_DECANT",
   "ACTUALIZACION_MASIVA",
 ];
 
 export async function GET(request: NextRequest) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const sp = request.nextUrl.searchParams;
 
     const productoQuery = sp.get("producto")?.trim() ?? "";
@@ -42,6 +41,7 @@ export async function GET(request: NextRequest) {
         : undefined;
 
     const where: Prisma.HistorialPrecioWhereInput = {
+      empresaId,
       ...(productoQuery
         ? { producto: { nombre: { contains: productoQuery, mode: "insensitive" } } }
         : {}),

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 const WHERE_COMPRA_REAL = {
   confirmada: true,
@@ -33,7 +34,10 @@ export type Paginacion = {
 const PAGE_SIZE = 25;
 
 export async function getProveedoresData(filtros: ProveedoresFiltros = {}) {
+  const empresaId = await obtenerEmpresaIdActual();
+
   const proveedores = await prisma.proveedor.findMany({
+    where: { empresaId },
     orderBy: { nombre: "asc" },
     select: {
       id: true,
@@ -50,7 +54,7 @@ export async function getProveedoresData(filtros: ProveedoresFiltros = {}) {
   });
 
   const comprasSinProveedor = await prisma.compra.findMany({
-    where: { ...WHERE_COMPRA_REAL, proveedorId: null },
+    where: { ...WHERE_COMPRA_REAL, proveedorId: null, empresaId },
     select: { totalARS: true },
   });
 

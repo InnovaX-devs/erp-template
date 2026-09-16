@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { calcularCostoPromedioPonderado } from "@/lib/calculos/costoPromedioPonderado"; // ajustá el path si está en otro lado
 import type { Prisma } from "@prisma/client";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const { id } = await params;
     const compraId = Number(id);
 
@@ -18,8 +20,8 @@ export async function POST(
       );
     }
 
-    const compra = await prisma.compra.findUnique({
-      where: { id: compraId },
+    const compra = await prisma.compra.findFirst({
+      where: { id: compraId, empresaId },
       include: { items: true },
     });
 
@@ -49,15 +51,15 @@ export async function POST(
     }
 
     const config = await prisma.configuracion.findUnique({
-      where: { id: "singleton" },
+      where: { empresaId },
       select: { costoPromedioPonderado: true },
     });
     const usarPonderado = config?.costoPromedioPonderado ?? true;
 
     const compraActualizada = await prisma.$transaction(async (tx) => {
       for (const item of compra.items) {
-        const producto = await tx.producto.findUnique({
-          where: { id: item.productoId },
+        const producto = await tx.producto.findFirst({
+          where: { id: item.productoId, empresaId },
           select: { id: true, stockActual: true, precioCosto: true },
         });
 
@@ -87,6 +89,7 @@ export async function POST(
             await tx.historialPrecio.create({
               data: {
                 productoId: producto.id,
+                empresaId,
                 campo: "COSTO",
                 valorAnterior: producto.precioCosto,
                 valorNuevo: nuevoCosto,

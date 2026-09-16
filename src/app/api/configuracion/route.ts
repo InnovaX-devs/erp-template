@@ -5,13 +5,12 @@ export async function GET() {
   try {
     const config = await obtenerConfiguracion();
     return NextResponse.json({
+      licencia: config.licencia,
       usaCotizacionUSD: config.usaCotizacionUSD,
       cotizacionUSD: config.cotizacionUSD,
-      moduloDecantHabilitado: config.moduloDecantHabilitado,
-      costoEnvaseDecantARS: config.costoEnvaseDecantARS ?? 0,
-      multiplicadorInsumoDecant: config.multiplicadorInsumoDecant ?? 0,
-      divisorFrascoDecant: config.divisorFrascoDecant ?? 9,
-      offsetDecant5mlARS: config.offsetDecant5mlARS ?? 200,
+      habilitarPresupuestos: config.habilitarPresupuestos,
+      habilitarReportesAvanzados: config.habilitarReportesAvanzados,
+      habilitarGastosFlujoCaja: config.habilitarGastosFlujoCaja,
     });
   } catch (error) {
     console.error("Error al obtener configuración:", error);

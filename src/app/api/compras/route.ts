@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 const FILTROS_VALIDOS = ["pendientes", "confirmadas", "canceladas"] as const;
 type Filtro = (typeof FILTROS_VALIDOS)[number];
@@ -8,8 +9,8 @@ type Filtro = (typeof FILTROS_VALIDOS)[number];
 const PAGE_SIZE_DEFAULT = 15;
 const PAGE_SIZE_MAX = 100;
 
-function armarWhere(filtro: string | null, busqueda: string | null): Prisma.CompraWhereInput {
-  const where: Prisma.CompraWhereInput = {};
+function armarWhere(empresaId: number, filtro: string | null, busqueda: string | null): Prisma.CompraWhereInput {
+  const where: Prisma.CompraWhereInput = { empresaId };
 
   switch (filtro as Filtro | null) {
     case "pendientes":
@@ -35,6 +36,7 @@ function armarWhere(filtro: string | null, busqueda: string | null): Prisma.Comp
 
 export async function GET(request: NextRequest) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const filtro = request.nextUrl.searchParams.get("filtro");
     const busqueda = request.nextUrl.searchParams.get("q");
 
@@ -47,7 +49,7 @@ export async function GET(request: NextRequest) {
         ? Math.min(Math.floor(pageSizeParam), PAGE_SIZE_MAX)
         : PAGE_SIZE_DEFAULT;
 
-    const where = armarWhere(filtro, busqueda);
+    const where = armarWhere(empresaId, filtro, busqueda);
 
     const [compras, totalCount] = await Promise.all([
       prisma.compra.findMany({
@@ -81,12 +83,20 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const body = await request.json();
 
     const proveedorId =
       body.proveedorId && String(body.proveedorId).trim() !== ""
         ? Number(body.proveedorId)
         : null;
+
+    if (proveedorId != null) {
+      const proveedor = await prisma.proveedor.findFirst({ where: { id: proveedorId, empresaId } });
+      if (!proveedor) {
+        return NextResponse.json({ error: "El proveedor seleccionado no existe" }, { status: 400 });
+      }
+    }
 
     const cuentaId = Number(body.cuentaId);
     if (!Number.isFinite(cuentaId)) {
@@ -96,7 +106,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const cuenta = await prisma.cuenta.findUnique({ where: { id: cuentaId } });
+    const cuenta = await prisma.cuenta.findFirst({ where: { id: cuentaId, empresaId } });
     if (!cuenta) {
       return NextResponse.json({ error: "La cuenta seleccionada no existe" }, { status: 400 });
     }
@@ -135,10 +145,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validationError.message }, { status: 400 });
     }
 
+    const productoIds = [...new Set(items.map((it) => it.productoId))];
+    const productosValidos = await prisma.producto.count({
+      where: { id: { in: productoIds }, empresaId },
+    });
+    if (productosValidos !== productoIds.length) {
+      return NextResponse.json({ error: "Uno o más productos no son válidos" }, { status: 400 });
+    }
+
     const totalUSD = items.reduce((acc, it) => acc + it.cantidad * it.costoUnitarioUSD, 0);
 
     const compra = await prisma.compra.create({
       data: {
+        empresaId,
         proveedorId,
         cuentaId,
         totalUSD,

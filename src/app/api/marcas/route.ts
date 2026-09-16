@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 // FIX: evita que Next.js cachee este GET como estático.
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const marcas = await prisma.marca.findMany({
+      where: { empresaId },
       include: {
         _count: {
           select: { productos: true },
@@ -33,6 +36,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const { nombre } = await request.json();
     if (!nombre?.trim()) {
       return NextResponse.json(
@@ -43,6 +47,7 @@ export async function POST(request: NextRequest) {
 
     const nuevaMarca = await prisma.marca.create({
       data: {
+        empresaId,
         nombre: nombre.trim(),
         activa: true,
       },

@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
+import { obtenerConfiguracion } from "@/lib/configuracion";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const configuracion = await obtenerConfiguracion();
+    if (!configuracion.habilitarGastosFlujoCaja) {
+      return NextResponse.json({ error: "Los gastos no están disponibles en tu plan actual." }, { status: 403 });
+    }
+
+    const empresaId = await obtenerEmpresaIdActual();
     const { id } = await params;
     const gastoId = Number(id);
     if (!Number.isInteger(gastoId)) {
@@ -19,18 +27,18 @@ export async function POST(
     }
 
     const resultado = await prisma.$transaction(async (tx) => {
-      const gasto = await tx.gasto.findUnique({ where: { id: gastoId } });
+      const gasto = await tx.gasto.findFirst({ where: { id: gastoId, empresaId } });
       if (!gasto) throw new Error("GASTO_NO_ENCONTRADO");
       if (gasto.estadoPago === "PAGADO") throw new Error("YA_PAGADO");
 
-      const cuenta = await tx.cuenta.findUnique({ where: { id: cuentaId } });
+      const cuenta = await tx.cuenta.findFirst({ where: { id: cuentaId, empresaId } });
       if (!cuenta) throw new Error("CUENTA_NO_ENCONTRADA");
 
       const esCuentaUSD = cuenta.tipo === "EFECTIVO_USD" || cuenta.tipo === "BANCO_USD";
 
       let montoADescontar = gasto.monto; // el gasto se guarda en ARS
       if (esCuentaUSD) {
-        const config = await tx.configuracion.findUnique({ where: { id: "singleton" } });
+        const config = await tx.configuracion.findUnique({ where: { empresaId } });
         const cotizacion = config?.cotizacionUSD ?? 0;
         if (!cotizacion) throw new Error("SIN_COTIZACION");
         montoADescontar = gasto.monto / cotizacion; // convierte ARS -> USD
@@ -44,6 +52,7 @@ export async function POST(
 
       await tx.movimientoCaja.create({
         data: {
+          empresaId,
           cuentaId,
           tipo: "EGRESO",
           concepto: "GASTO",

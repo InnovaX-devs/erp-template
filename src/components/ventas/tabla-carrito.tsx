@@ -126,11 +126,6 @@ function FilaCarrito({ item, onCambiarCantidad, onCambiarPrecio, onCambiarTipoPr
           <TogglePrecioLinea item={item} onCambiarTipoPrecio={onCambiarTipoPrecio} />
           <span className="font-medium text-text">
             {item.producto.nombre}
-            {item.presentacion !== "FRASCO" && (
-              <span className="ml-1.5 rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent">
-                {item.presentacion === "DECANT_5ML" ? "5ml" : "10ml"}
-              </span>
-            )}
           </span>
         </div>
       </td>
@@ -210,11 +205,6 @@ function TarjetaCarrito({ item, onCambiarCantidad, onCambiarPrecio, onCambiarTip
       <div className="flex items-start justify-between gap-2">
         <span className="font-medium text-text">
           {item.producto.nombre}
-          {item.presentacion !== "FRASCO" && (
-            <span className="ml-1.5 rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent">
-              {item.presentacion === "DECANT_5ML" ? "5ml" : "10ml"}
-            </span>
-          )}
         </span>
         <button
           type="button"

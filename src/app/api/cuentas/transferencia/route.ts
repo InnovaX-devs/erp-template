@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 export async function POST(request: NextRequest) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const body = await request.json();
     const cuentaOrigenId = Number(body.cuentaOrigenId);
     const cuentaDestinoId = Number(body.cuentaDestinoId);
@@ -23,8 +25,8 @@ export async function POST(request: NextRequest) {
     }
 
     const [origen, destino] = await Promise.all([
-      prisma.cuenta.findUnique({ where: { id: cuentaOrigenId } }),
-      prisma.cuenta.findUnique({ where: { id: cuentaDestinoId } }),
+      prisma.cuenta.findFirst({ where: { id: cuentaOrigenId, empresaId } }),
+      prisma.cuenta.findFirst({ where: { id: cuentaDestinoId, empresaId } }),
     ]);
 
     if (!origen || !destino) {
@@ -60,6 +62,7 @@ export async function POST(request: NextRequest) {
       }),
       prisma.movimientoCaja.create({
         data: {
+          empresaId,
           cuentaId: cuentaOrigenId,
           tipo: "EGRESO",
           concepto: "TRANSFERENCIA",
@@ -70,6 +73,7 @@ export async function POST(request: NextRequest) {
       }),
       prisma.movimientoCaja.create({
         data: {
+          empresaId,
           cuentaId: cuentaDestinoId,
           tipo: "INGRESO",
           concepto: "TRANSFERENCIA",

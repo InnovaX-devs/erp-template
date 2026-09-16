@@ -21,7 +21,6 @@ export type ItemVentaParaReporte = {
   precioUnitarioUSD: number;
   tipoPrecio: "MINORISTA" | "MAYORISTA";
   costoUnitarioARS: number;
-  presentacion: "FRASCO" | "DECANT_5ML" | "DECANT_10ML";
   nombreProducto: string | null;
   fotoUrl: string | null;
 };
@@ -312,9 +311,8 @@ export function calcularIngresosPorDia(
 }
 
 /**
- * Ranking de productos por cantidad de unidades vendidas, agrupado por
- * (producto, presentación). Los ítems "Varios / Muestra" (sin productoId)
- * quedan afuera.
+ * Ranking de productos por cantidad de unidades vendidas. Los ítems
+ * "Varios / Muestra" (sin productoId) quedan afuera.
  */
 export function calcularTopProductos(ventas: VentaEnriquecida[], limite = 10): TopProductoItem[] {
   const acumulado = new Map<string, TopProductoItem>();
@@ -325,7 +323,7 @@ export function calcularTopProductos(ventas: VentaEnriquecida[], limite = 10): T
     for (const item of venta.items) {
       if (item.productoId == null) continue;
 
-      const clave = `${item.productoId}-${item.presentacion}`;
+      const clave = String(item.productoId);
       const montoListaItemARS = item.cantidad * item.precioUnitarioUSD * venta.cotizacionUsada;
       const montoItemARS = montoListaItemARS * factorDescuento * proporcionCobrada;
 
@@ -333,7 +331,6 @@ export function calcularTopProductos(ventas: VentaEnriquecida[], limite = 10): T
         productoId: item.productoId,
         nombre: item.nombreProducto ?? "(producto sin nombre)",
         fotoUrl: item.fotoUrl,
-        presentacion: item.presentacion,
         cantidad: 0,
         montoARS: 0,
       };

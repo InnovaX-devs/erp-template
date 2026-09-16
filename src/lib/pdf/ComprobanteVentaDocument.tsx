@@ -14,7 +14,6 @@ function formatCurrencyConCentavos(value: number) {
 
 export type ComprobanteItem = {
   nombre: string;
-  presentacion: "FRASCO" | "DECANT_5ML" | "DECANT_10ML";
   tipoPrecio: "MINORISTA" | "MAYORISTA";
   cantidad: number;
   precioUnitarioARS: number;
@@ -137,12 +136,6 @@ const LABEL_TIPO_CUENTA: Record<TipoCuenta, string> = {
   BANCO_USD: "Transferencia",
 };
 
-function labelPresentacion(presentacion: ComprobanteItem["presentacion"]): string | null {
-  if (presentacion === "DECANT_5ML") return "Decant 5ml";
-  if (presentacion === "DECANT_10ML") return "Decant 10ml";
-  return null;
-}
-
 export function ComprobanteVentaDocument({
   venta,
   configuracion,
@@ -203,7 +196,6 @@ export function ComprobanteVentaDocument({
         </View>
 
         {venta.items.map((item, i) => {
-          const presentacionTexto = labelPresentacion(item.presentacion);
           return (
             <View key={i} style={s.fila}>
               <View style={s.colProducto}>
@@ -211,7 +203,6 @@ export function ComprobanteVentaDocument({
                   <Text style={s.nombreProducto}>{item.nombre}</Text>
                   <Text style={s.pill}>{item.tipoPrecio === "MAYORISTA" ? "MAY" : "MIN"}</Text>
                 </View>
-                {presentacionTexto && <Text style={s.presentacionTexto}>{presentacionTexto}</Text>}
               </View>
               <Text style={[s.colCant, s.nombreProducto]}>{item.cantidad}</Text>
               <Text style={[s.colUnit, s.nombreProducto]}>{formatCurrencyConCentavos(item.precioUnitarioARS)}</Text>

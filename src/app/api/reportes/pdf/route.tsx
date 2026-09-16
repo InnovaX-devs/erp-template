@@ -3,7 +3,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { rangoParaTab, type TabReporte } from "@/lib/reportes";
 import { obtenerReporte } from "@/app/(dashboard)/reportes/queries";
 import { ReporteDocument } from "@/lib/pdf/ReporteDocument";
-import { prisma } from "@/lib/prisma";
+import { obtenerConfiguracion } from "@/lib/configuracion";
 
 const TABS_VALIDOS: TabReporte[] = ["diario", "semanal", "mensual", "periodo", "cuenta"];
 
@@ -16,6 +16,11 @@ const TITULOS: Record<TabReporte, string> = {
 };
 
 export async function GET(req: NextRequest) {
+  const configuracion = await obtenerConfiguracion();
+  if (!configuracion.habilitarReportesAvanzados) {
+    return NextResponse.json({ error: "Los reportes no están disponibles en tu plan actual." }, { status: 403 });
+  }
+
   const { searchParams } = new URL(req.url);
   const tabParam = searchParams.get("tab");
   const tab: TabReporte = TABS_VALIDOS.includes(tabParam as TabReporte)
@@ -26,13 +31,8 @@ export async function GET(req: NextRequest) {
 
   const rango = rangoParaTab(tab, desdeParam, hastaParam);
 
-  const [reporte, configuracion] = await Promise.all([
-    obtenerReporte(rango),
-    prisma.configuracion.findUniqueOrThrow({ where: { id: "singleton" } }),
-  ]);
-
   const buffer = await renderToBuffer(
-    <ReporteDocument reporte={reporte} configuracion={configuracion} titulo={TITULOS[tab]} />
+    <ReporteDocument reporte={await obtenerReporte(rango)} configuracion={configuracion} titulo={TITULOS[tab]} />
   );
 
   const nombreArchivo = `reporte-${tab}-${rango.desde.toISOString().slice(0, 10)}.pdf`;

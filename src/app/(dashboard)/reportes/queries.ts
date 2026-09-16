@@ -9,23 +9,21 @@ import {
   enriquecerVentas,
   type VentaParaReporte,
 } from "@/lib/reportes";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 import type { ReporteData } from "@/types/reporte";
 
 export type RangoFechas = { desde: Date; hasta: Date };
 
 const ESTADOS_EXCLUIDOS = ["ANULADA", "CANCELADA"] as const;
 
-const ML_POR_PRESENTACION: Record<"DECANT_5ML" | "DECANT_10ML", number> = {
-  DECANT_5ML: 5,
-  DECANT_10ML: 10,
-};
-
 export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
+  const empresaId = await obtenerEmpresaIdActual();
   const { desde, hasta } = rango;
 
   const [ventasRaw, config] = await Promise.all([
     prisma.venta.findMany({
       where: {
+        empresaId,
         fecha: { gte: desde, lt: hasta },
         estadoPago: { notIn: [...ESTADOS_EXCLUIDOS] },
       },
@@ -42,9 +40,8 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
             cantidad: true,
             precioUnitarioUSD: true,
             tipoPrecio: true,
-            presentacion: true,
             producto: {
-              select: { id: true, nombre: true, fotoUrl: true, precioCosto: true, monedaPrecio: true, contenidoMl: true },
+              select: { id: true, nombre: true, fotoUrl: true, precioCosto: true, monedaPrecio: true },
             },
           },
         },
@@ -53,7 +50,7 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
         },
       },
     }),
-    prisma.configuracion.findUnique({ where: { id: "singleton" } }),
+    prisma.configuracion.findUnique({ where: { empresaId } }),
   ]);
 
   const cotizacionActual = config?.cotizacionUSD ?? 1000;
@@ -66,13 +63,13 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
   const [historial, movimientosEgreso] = await Promise.all([
     productoIds.length
       ? prisma.historialPrecio.findMany({
-          where: { productoId: { in: productoIds }, campo: "COSTO" },
+          where: { productoId: { in: productoIds }, campo: "COSTO", empresaId },
           orderBy: { fecha: "asc" },
           select: { productoId: true, valorNuevo: true, fecha: true },
         })
       : Promise.resolve([]),
     prisma.movimientoCaja.findMany({
-      where: { tipo: "EGRESO", concepto: "GASTO", fecha: { gte: desde, lt: hasta } },
+      where: { empresaId, tipo: "EGRESO", concepto: "GASTO", fecha: { gte: desde, lt: hasta } },
       select: { monto: true, fecha: true, cuenta: { select: { tipo: true } } },
     }),
   ]);
@@ -100,19 +97,8 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
           item.producto.precioCosto,
           v.fecha
         );
-        const costoFrascoARS =
+        costoUnitarioARS =
           item.producto.monedaPrecio === "USD" ? costoBase * v.cotizacionUsada : costoBase;
-
-        const mlDecant =
-          item.presentacion === "DECANT_5ML" || item.presentacion === "DECANT_10ML"
-            ? ML_POR_PRESENTACION[item.presentacion]
-            : null;
-
-        if (mlDecant && item.producto.contenidoMl) {
-          costoUnitarioARS = (costoFrascoARS / item.producto.contenidoMl) * mlDecant;
-        } else {
-          costoUnitarioARS = costoFrascoARS;
-        }
       }
 
       return {
@@ -120,7 +106,6 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
         cantidad: item.cantidad,
         precioUnitarioUSD: item.precioUnitarioUSD,
         tipoPrecio: item.tipoPrecio,
-        presentacion: item.presentacion,
         nombreProducto: item.producto?.nombre ?? null,
         fotoUrl: item.producto?.fotoUrl ?? null,
         costoUnitarioARS,
@@ -165,11 +150,13 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
 // Versión liviana para el dashboard: mismos datos de venta que obtenerReporte,
 // pero sin calcular ingresosPorDia ni topProductos (no se usan ahí).
 export async function obtenerKpisDelDia(rango: RangoFechas): Promise<{ gananciaNetaARS: number; cantidadVentas: number }> {
+  const empresaId = await obtenerEmpresaIdActual();
   const { desde, hasta } = rango;
 
   const [ventasRaw, config] = await Promise.all([
     prisma.venta.findMany({
       where: {
+        empresaId,
         fecha: { gte: desde, lt: hasta },
         estadoPago: { notIn: [...ESTADOS_EXCLUIDOS] },
       },
@@ -186,9 +173,8 @@ export async function obtenerKpisDelDia(rango: RangoFechas): Promise<{ gananciaN
             cantidad: true,
             precioUnitarioUSD: true,
             tipoPrecio: true,
-            presentacion: true,
             producto: {
-              select: { id: true, precioCosto: true, monedaPrecio: true, contenidoMl: true },
+              select: { id: true, precioCosto: true, monedaPrecio: true },
             },
           },
         },
@@ -197,7 +183,7 @@ export async function obtenerKpisDelDia(rango: RangoFechas): Promise<{ gananciaN
         },
       },
     }),
-    prisma.configuracion.findUnique({ where: { id: "singleton" } }),
+    prisma.configuracion.findUnique({ where: { empresaId } }),
   ]);
 
   const cotizacionActual = config?.cotizacionUSD ?? 1000;
@@ -209,13 +195,13 @@ export async function obtenerKpisDelDia(rango: RangoFechas): Promise<{ gananciaN
   const [historial, movimientosEgreso] = await Promise.all([
     productoIds.length
       ? prisma.historialPrecio.findMany({
-          where: { productoId: { in: productoIds }, campo: "COSTO" },
+          where: { productoId: { in: productoIds }, campo: "COSTO", empresaId },
           orderBy: { fecha: "asc" },
           select: { productoId: true, valorNuevo: true, fecha: true },
         })
       : Promise.resolve([]),
     prisma.movimientoCaja.findMany({
-      where: { tipo: "EGRESO", concepto: "GASTO", fecha: { gte: desde, lt: hasta } },
+      where: { empresaId, tipo: "EGRESO", concepto: "GASTO", fecha: { gte: desde, lt: hasta } },
       select: { monto: true, cuenta: { select: { tipo: true } } },
     }),
   ]);
@@ -242,23 +228,14 @@ export async function obtenerKpisDelDia(rango: RangoFechas): Promise<{ gananciaN
           item.producto.precioCosto,
           v.fecha
         );
-        const costoFrascoARS =
-          item.producto.monedaPrecio === "USD" ? costoBase * v.cotizacionUsada : costoBase;
-        const mlDecant =
-          item.presentacion === "DECANT_5ML" || item.presentacion === "DECANT_10ML"
-            ? ML_POR_PRESENTACION[item.presentacion]
-            : null;
         costoUnitarioARS =
-          mlDecant && item.producto.contenidoMl
-            ? (costoFrascoARS / item.producto.contenidoMl) * mlDecant
-            : costoFrascoARS;
+          item.producto.monedaPrecio === "USD" ? costoBase * v.cotizacionUsada : costoBase;
       }
       return {
         productoId: item.productoId,
         cantidad: item.cantidad,
         precioUnitarioUSD: item.precioUnitarioUSD,
         tipoPrecio: item.tipoPrecio,
-        presentacion: item.presentacion,
         nombreProducto: null,
         fotoUrl: null,
         costoUnitarioARS,

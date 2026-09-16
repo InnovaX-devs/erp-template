@@ -35,7 +35,6 @@ export function ConfiguracionForm({ configuracion }: ConfiguracionFormProps) {
 
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
 
-
   function handleSeleccionarArchivo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -254,7 +253,7 @@ export function ConfiguracionForm({ configuracion }: ConfiguracionFormProps) {
                 defaultValue={configuracion.colorSecundario ?? "#0891B2"}
                 className="h-10 w-14 cursor-pointer rounded-md border border-[#c5c6d0] bg-white p-1"
               />
-              <span className="text-xs text-[#45464f]">Usado en catálogos de decants</span>
+              <span className="text-xs text-[#45464f]">Usado como color de acento</span>
             </div>
           </div>
         </div>
@@ -262,10 +261,15 @@ export function ConfiguracionForm({ configuracion }: ConfiguracionFormProps) {
           Se usan en catálogos, listas de precios, comprobantes y reportes generados en PDF.
         </p>
       </div>
+
+      {/* Cotización — solo se muestra si este negocio opera con dólares.
+          usaCotizacionUSD es un flag de instalación: no es editable desde
+          acá, lo carga el desarrollador directo en la base al configurar
+          el sistema para cada cliente. */}
       {configuracion.usaCotizacionUSD && (
-          <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6">
-            <h2 className="mb-4 text-base font-semibold text-[#191c1e]">Cotización</h2>
-              <div>
+        <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6">
+          <h2 className="mb-4 text-base font-semibold text-[#191c1e]">Cotización</h2>
+          <div>
             <label className="mb-1 block text-sm text-[#45464f]" htmlFor="cotizacionUSD">
               Cotización USD
             </label>
@@ -287,7 +291,7 @@ export function ConfiguracionForm({ configuracion }: ConfiguracionFormProps) {
             </p>
           </div>
         </div>
-        )}
+      )}
 
       {/* Datos del remitente */}
       <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6">

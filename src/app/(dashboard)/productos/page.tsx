@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
 import { ProductoFormModal, type ProductoFormData } from "@/components/productos/producto-form-modal";
-import { FormulaDecantModal } from "@/components/productos/formula-decant-modal";
 import { PdfGeneratorModal } from "@/components/productos/pdf-generator-modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FileText, Search, SlidersHorizontal } from "lucide-react";
@@ -12,6 +11,8 @@ import { Pencil, ImageIcon, Ban, CheckCircle, X } from "lucide-react";
 import { toArs, toUsd, formatCurrency } from "@/lib/currency";
 import Select from "@/components/ui/select";
 import { ProductoDetalleModal } from "@/components/productos/producto-detalle-modal";
+
+
 
 interface Producto {
   id: string;
@@ -31,9 +32,6 @@ interface Producto {
   precioMayorista?: number | null;
   precioOferta?: number | null;
   monedaPrecio: "USD" | "ARS";
-  overrideDecant5ml?: number | null;
-  overrideDecant10ml?: number | null;
-  seVendePorDecant?: boolean;
   activo: boolean;
 }
 
@@ -88,35 +86,23 @@ export default function ProductosPage() {
   // junto a los demás useState:
   const [productoDetalle, setProductoDetalle] = useState<Producto | null>(null);
 
-  // Estados para el Modal de Fórmula Decant
-  const [isFormulaDecantOpen, setIsFormulaDecantOpen] = useState(false);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [imagenPreview, setImagenPreview] = useState<string | null>(null);
   const [desactivandoId, setDesactivandoId] = useState<string | null>(null);
   const [productoADesactivar, setProductoADesactivar] = useState<Producto | null>(null);
-  const [configDecant, setConfigDecant] = useState({
-    costoEnvaseDecantARS: 1500,
-    multiplicadorInsumoDecant: 2.5,
-    divisorFrascoDecant: 9,
-    offsetDecant5mlARS: 200,
+  const [configProducto, setConfigProducto] = useState({
     cotizacionUSD: 1200,
-    moduloDecantHabilitado: false,
     usaCotizacionUSD: false,
   });
-  const cotizacion = configDecant.cotizacionUSD;
+  const cotizacion = configProducto.cotizacionUSD;
 
   useEffect(() => {
     fetch("/api/configuracion")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data) {
-          setConfigDecant({
-            costoEnvaseDecantARS: data.costoEnvaseDecantARS ?? 1500,
-            multiplicadorInsumoDecant: data.multiplicadorInsumoDecant ?? 2.5,
-            divisorFrascoDecant: data.divisorFrascoDecant ?? 9,
-            offsetDecant5mlARS: data.offsetDecant5mlARS ?? 200,
+          setConfigProducto({
             cotizacionUSD: data.cotizacionUSD ?? 1200,
-            moduloDecantHabilitado: data.moduloDecantHabilitado ?? false,
             usaCotizacionUSD: data.usaCotizacionUSD ?? false,
           });
           setMonedaVista(data.usaCotizacionUSD ? "USD" : "ARS");
@@ -284,9 +270,9 @@ export default function ProductosPage() {
 
     productosFiltrados.forEach((p) => {
       const costoEnUSD =
-        p.monedaPrecio === "USD" ? p.precioCosto : p.precioCosto / configDecant.cotizacionUSD;
+        p.monedaPrecio === "USD" ? p.precioCosto : p.precioCosto / configProducto.cotizacionUSD;
       const ventaEnUSD =
-        p.monedaPrecio === "USD" ? p.precioVenta : p.precioVenta / configDecant.cotizacionUSD;
+        p.monedaPrecio === "USD" ? p.precioVenta : p.precioVenta / configProducto.cotizacionUSD;
 
       costoTotalUSD += costoEnUSD * p.stockActual;
       ventaTotalUSD += ventaEnUSD * p.stockActual;
@@ -296,13 +282,13 @@ export default function ProductosPage() {
 
     return {
       costoUSD: costoTotalUSD,
-      costoARS: costoTotalUSD * configDecant.cotizacionUSD,
+      costoARS: costoTotalUSD * configProducto.cotizacionUSD,
       ventaUSD: ventaTotalUSD,
-      ventaARS: ventaTotalUSD * configDecant.cotizacionUSD,
+      ventaARS: ventaTotalUSD * configProducto.cotizacionUSD,
       gananciaUSD: gananciaTotalUSD,
-      gananciaARS: gananciaTotalUSD * configDecant.cotizacionUSD,
+      gananciaARS: gananciaTotalUSD * configProducto.cotizacionUSD,
     };
-  }, [productosFiltrados, configDecant.cotizacionUSD]);
+  }, [productosFiltrados, configProducto.cotizacionUSD]);
 
   // 4. Paginación
   const totalPaginas = Math.ceil(productosFiltrados.length / elementosPorPagina) || 1;
@@ -341,9 +327,6 @@ export default function ProductosPage() {
       precioVenta: producto.precioVenta ?? "",
       precioMayorista: producto.precioMayorista ?? "",
       precioOferta: producto.precioOferta ?? "",
-      esDecant: producto.seVendePorDecant ?? false,
-      overrideDecant5ml: producto.overrideDecant5ml ?? "",
-      overrideDecant10ml: producto.overrideDecant10ml ?? "",
       fotoUrl: producto.fotoUrl ?? "",
     };
   }
@@ -423,16 +406,6 @@ export default function ProductosPage() {
           </Link>
           <button
             type="button"
-            onClick={() => setIsFormulaDecantOpen(true)}
-            className={cn(
-              "inline-flex items-center justify-center rounded-lg bg-[#021541] px-4 py-2 text-sm font-medium text-white hover:opacity-90 cursor-pointer",
-              !configDecant.moduloDecantHabilitado && "hidden"
-            )}
-          >
-            Fórmula Decant
-          </button>
-          <button
-            type="button"
             onClick={handleAbrirCrear}
             className="inline-flex items-center justify-center rounded-lg bg-[#021541] px-4 py-2 text-sm font-medium text-white hover:opacity-90 cursor-pointer"
           >
@@ -450,7 +423,7 @@ export default function ProductosPage() {
           <p className="mt-1 truncate text-xl font-semibold text-[#191c1e] sm:text-2xl">
             {formatMoney(resumen.costoARS, "ARS")}
           </p>
-          {configDecant.usaCotizacionUSD && (
+          {configProducto.usaCotizacionUSD && (
             <p className="mt-1 truncate text-xs font-medium text-[#45464f]">
               {formatMoney(resumen.costoUSD, "USD")}
             </p>
@@ -464,7 +437,7 @@ export default function ProductosPage() {
           <p className="mt-1 truncate text-xl font-semibold text-[#191c1e] sm:text-2xl">
             {formatMoney(resumen.ventaARS, "ARS")}
           </p>
-          {configDecant.usaCotizacionUSD && (
+          {configProducto.usaCotizacionUSD && (
             <p className="mt-1 text-xs font-medium text-[#45464f]">
               {formatMoney(resumen.ventaUSD, "USD")}
             </p>
@@ -478,7 +451,7 @@ export default function ProductosPage() {
           <p className="mt-1 truncate text-xl font-semibold text-[#1e7d38] sm:text-2xl">
             {formatMoney(resumen.gananciaARS, "ARS")}
           </p>
-          {configDecant.usaCotizacionUSD && (
+          {configProducto.usaCotizacionUSD && (
             <p className="mt-1 truncate text-xs font-medium text-[#1e7d38] opacity-80">
               {formatMoney(resumen.gananciaUSD, "USD")}
             </p>
@@ -524,8 +497,8 @@ export default function ProductosPage() {
                 </span>
               )}
             </button>
-            
-            {configDecant.usaCotizacionUSD && (
+
+            {configProducto.usaCotizacionUSD && (
             <div className="flex overflow-hidden rounded-lg border border-[#c5c6d0] md:hidden">
               <button
                 type="button"
@@ -724,7 +697,7 @@ export default function ProductosPage() {
                 </thead>
                 <tbody>
                   {productosPaginados.map((p) => {
-                    const cotizacion = configDecant.cotizacionUSD;
+                    const cotizacion = configProducto.cotizacionUSD;
                     const costo = {
                       usd: toUsd(p.precioCosto, p.monedaPrecio, cotizacion),
                       ars: toArs(p.precioCosto, p.monedaPrecio, cotizacion),
@@ -766,7 +739,7 @@ export default function ProductosPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          {configDecant.usaCotizacionUSD ? (
+                          {configProducto.usaCotizacionUSD ? (
                             <>
                               <div className="font-semibold text-[#191c1e]">
                                 {formatCurrency(costo.usd, "USD")}{" "}
@@ -779,7 +752,7 @@ export default function ProductosPage() {
                           )}
                         </td>
                         <td className="bg-[#F0FDF4] px-4 py-3">
-                          {configDecant.usaCotizacionUSD ? (
+                          {configProducto.usaCotizacionUSD ? (
                             <>
                               <div className="font-bold text-[#15803D]">
                                 {formatCurrency(venta.usd, "USD")}{" "}
@@ -799,7 +772,7 @@ export default function ProductosPage() {
                         </td>
                         <td className="px-4 py-3">
                           {mayorista ? (
-                            configDecant.usaCotizacionUSD ? (
+                            configProducto.usaCotizacionUSD ? (
                               <>
                                 <div className="font-bold text-[#1D4ED8]">
                                   {formatCurrency(mayorista.usd, "USD")}{" "}
@@ -870,7 +843,7 @@ export default function ProductosPage() {
                     ? ((p.precioVenta - p.precioCosto) / p.precioCosto) * 100
                     : 0;
 
-                const cotizacion = configDecant.cotizacionUSD;
+                const cotizacion = configProducto.cotizacionUSD;
                 const convertir = (valor: number) =>
                   monedaVista === "USD"
                     ? toUsd(valor, p.monedaPrecio, cotizacion)
@@ -1020,25 +993,13 @@ export default function ProductosPage() {
         onClose={() => setIsModalOpen(false)}
         productoEditar={productoEditar}
         onSuccess={cargarProductos}
-        moduloDecantHabilitado={configDecant.moduloDecantHabilitado}
-        usaCotizacionUSD={configDecant.usaCotizacionUSD}
-      />
-
-      <FormulaDecantModal
-        isOpen={isFormulaDecantOpen}
-        onClose={() => setIsFormulaDecantOpen(false)}
-        costoEnvaseDecantARSInicial={configDecant.costoEnvaseDecantARS}
-        multiplicadorInsumoDecantInicial={configDecant.multiplicadorInsumoDecant}
-        divisorFrascoDecantInicial={configDecant.divisorFrascoDecant}
-        offsetDecant5mlARSInicial={configDecant.offsetDecant5mlARS}
-        cotizacionUSD={configDecant.cotizacionUSD}
+        usaCotizacionUSD={configProducto.usaCotizacionUSD}
       />
 
       <PdfGeneratorModal
         isOpen={isPdfModalOpen}
         onClose={() => setIsPdfModalOpen(false)}
-        moduloDecantHabilitado={configDecant.moduloDecantHabilitado}
-        usaCotizacionUSD={configDecant.usaCotizacionUSD}
+        usaCotizacionUSD={configProducto.usaCotizacionUSD}
       />
 
       <ConfirmDialog
@@ -1062,7 +1023,7 @@ export default function ProductosPage() {
       <ProductoDetalleModal
         isOpen={!!productoDetalle}
         producto={productoDetalle}
-        configDecant={configDecant}
+        configProducto={configProducto}
         onClose={() => setProductoDetalle(null)}
         onEditar={() => {
           if (productoDetalle) handleAbrirEditar(productoDetalle);

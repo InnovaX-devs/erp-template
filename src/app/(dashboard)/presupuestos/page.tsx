@@ -1,14 +1,19 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { obtenerPresupuestos } from "./queries";
 import PresupuestosFiltros from "../../../components/presupuestos/PresupuestosFiltros";
 import PresupuestosTable from "../../../components/presupuestos/PresupuestosTable";
 import type { EstadoPresupuesto } from "@/lib/presupuestos";
+import { obtenerConfiguracion } from "@/lib/configuracion";
 
 export default async function PresupuestosPage({
   searchParams,
 }: {
   searchParams: Promise<{ estado?: string; desde?: string; hasta?: string; clienteQuery?: string }>;
 }) {
+  const configuracion = await obtenerConfiguracion();
+  if (!configuracion.habilitarPresupuestos) notFound();
+
   const params = await searchParams;
 
   const presupuestos = await obtenerPresupuestos({

@@ -16,8 +16,6 @@ import type { ProductoBusquedaDTO } from "@/types/producto";
 import type { ItemCarrito, TipoPrecioLinea } from "@/types/item-carrito";
 import { SelectorCobro } from "@/components/ventas/selector-cobro";
 import { obtenerPresupuestoParaConvertir } from "@/app/(dashboard)/presupuestos/actions";
-import { ModalPresentacion } from "@/components/ventas/modal-presentacion";
-import type { Presentacion } from "@/types/decant";
 import { confirmarVenta, registrarPedido, descontarStockSinVenta, verificarStockDisponible, type StockDisponibilidad } from "./actions";
 import { ModalStockComprometido } from "@/components/ventas/modal-stock-comprometido";
 import { Tag, Gift } from "lucide-react";
@@ -46,15 +44,11 @@ function NuevaVentaContenido() {
   const [presupuestoIdOrigen, setPresupuestoIdOrigen] = useState<number | null>(null);
   const yaPrecargado = useRef(false);
 
-  const [modalPresentacionAbierto, setModalPresentacionAbierto] = useState(false);
-  const [productoParaPresentacion, setProductoParaPresentacion] = useState<ProductoBusquedaDTO | null>(null);
   const { tipoPrecio, cliente, setCliente, modoCobro, setModoCobro, pagos, setPagos, cotizacionUSD } = useVenta();
 
   const [advertenciaStock, setAdvertenciaStock] = useState<{
     producto: ProductoBusquedaDTO;
-    presentacion: Presentacion;
     precioUnitarioArs: number;
-    abrioFrascoCerrado: boolean;
     stock: StockDisponibilidad;
     unidadesQueriaVender: number;
   } | null>(null);
@@ -81,8 +75,6 @@ function NuevaVentaContenido() {
           tipoPrecio: item.tipoPrecio,
           cantidad: item.cantidad,
           precioUnitarioArs: item.precioUnitarioArs,
-          presentacion: "FRASCO",
-          abrioFrascoCerrado: false,
         }))
       );
       setCliente(data.cliente);
@@ -106,77 +98,39 @@ function NuevaVentaContenido() {
 
   const [procesando, setProcesando] = useState(false);
 
-  function unidadesFisicas(presentacion: Presentacion, abrioFrascoCerrado: boolean) {
-    if (presentacion === "FRASCO") return 1; // agregarAlCarrito siempre suma de a 1
-    return abrioFrascoCerrado ? 1 : 0; // decant sin abrir frasco no consume stock físico
-  }
-
-  async function intentarAgregar(
-    producto: ProductoBusquedaDTO,
-    presentacion: Presentacion,
-    precioUnitarioArs: number,
-    abrioFrascoCerrado: boolean
-  ) {
-    const unidadesNuevas = unidadesFisicas(presentacion, abrioFrascoCerrado);
-
-    if (unidadesNuevas === 0) {
-      agregarAlCarrito(producto, presentacion, precioUnitarioArs, abrioFrascoCerrado);
-      return;
-    }
-
+  async function intentarAgregar(producto: ProductoBusquedaDTO, precioUnitarioArs: number) {
     const yaEnCarrito = carrito
       .filter((it) => it.producto.id === producto.id)
-      .reduce((acc, it) => acc + unidadesFisicas(it.presentacion, it.abrioFrascoCerrado) * it.cantidad, 0);
+      .reduce((acc, it) => acc + it.cantidad, 0);
 
-    const stock = await verificarStockDisponible(producto.id, yaEnCarrito + unidadesNuevas);
+    const stock = await verificarStockDisponible(producto.id, yaEnCarrito + 1);
 
     if (stock.alcanza) {
-      agregarAlCarrito(producto, presentacion, precioUnitarioArs, abrioFrascoCerrado);
+      agregarAlCarrito(producto, precioUnitarioArs);
     } else {
-      setAdvertenciaStock({ producto, presentacion, precioUnitarioArs, abrioFrascoCerrado, stock, unidadesQueriaVender: yaEnCarrito + unidadesNuevas });
+      setAdvertenciaStock({ producto, precioUnitarioArs, stock, unidadesQueriaVender: yaEnCarrito + 1 });
     }
   }
 
-  function agregarAlCarrito(
-    producto: ProductoBusquedaDTO,
-    presentacion: Presentacion,
-    precioUnitarioArs: number,
-    abrioFrascoCerrado: boolean
-  ) {
+  function agregarAlCarrito(producto: ProductoBusquedaDTO, precioUnitarioArs: number) {
     const nuevoItem: ItemCarrito = {
       id: `${producto.id}-${Date.now()}`,
       producto,
       tipoPrecio,
       cantidad: 1,
       precioUnitarioArs,
-      presentacion,
-      abrioFrascoCerrado,
     };
 
     setCarrito((prev) => [...prev, nuevoItem]);
-    const etiqueta = presentacion === "FRASCO" ? "" : presentacion === "DECANT_5ML" ? " (Decant 5ml)" : " (Decant 10ml)";
-    toast.success(`${producto.nombre}${etiqueta} agregado (${tipoPrecio === "MAYORISTA" ? "May" : "Min"})`);
+    toast.success(`${producto.nombre} agregado (${tipoPrecio === "MAYORISTA" ? "May" : "Min"})`);
   }
 
   function agregarProducto(producto: ProductoBusquedaDTO) {
-    if (producto.seVendePorDecant) {
-      setProductoParaPresentacion(producto);
-      setModalPresentacionAbierto(true);
-      return;
-    }
-
     const precioBaseOriginal =
       tipoPrecio === "MAYORISTA" && producto.precioMayorista != null ? producto.precioMayorista : producto.precioVenta;
     const precioUnitarioArs = toArs(precioBaseOriginal, producto.monedaPrecio, cotizacionUSD);
 
-    intentarAgregar(producto, "FRASCO", precioUnitarioArs, false);
-  }
-
-  function handleElegirPresentacion(presentacion: Presentacion, precioArs: number, abrioFrascoCerrado: boolean) {
-    if (!productoParaPresentacion) return;
-    intentarAgregar(productoParaPresentacion, presentacion, precioArs, abrioFrascoCerrado);
-    setModalPresentacionAbierto(false);
-    setProductoParaPresentacion(null);
+    intentarAgregar(producto, precioUnitarioArs);
   }
 
   function cambiarCantidad(id: string, cantidad: number) {
@@ -225,8 +179,6 @@ function NuevaVentaContenido() {
         cantidad: it.cantidad,
         precioUnitarioArs: it.precioUnitarioArs,
         tipoPrecio: it.tipoPrecio,
-        presentacion: it.presentacion,
-        abrioFrascoCerrado: it.abrioFrascoCerrado,
       })),
       pagos: pagos.map((p) => ({ cuentaId: p.cuentaId as number, monto: p.monto })),
       descuentoMonto: descuento?.tipo === "MONTO" ? descuento.valor : null,
@@ -256,8 +208,6 @@ function NuevaVentaContenido() {
       carrito.map((it) => ({
         productoId: it.producto.id,
         cantidad: it.cantidad,
-        presentacion: it.presentacion,
-        abrioFrascoCerrado: it.abrioFrascoCerrado,
       }))
     );
     setProcesando(false);
@@ -397,16 +347,6 @@ function NuevaVentaContenido() {
           </div>
         </div>
       )}
-      {modalPresentacionAbierto && productoParaPresentacion && (
-        <ModalPresentacion
-          producto={productoParaPresentacion}
-          onElegir={handleElegirPresentacion}
-          onClose={() => {
-            setModalPresentacionAbierto(false);
-            setProductoParaPresentacion(null);
-          }}
-        />
-      )}
       {modalPrecioAbierto && <ModalConsultarPrecio onClose={() => setModalPrecioAbierto(false)} />}
       {modalDescuentoAbierto && (
         <ModalDescuento
@@ -422,12 +362,7 @@ function NuevaVentaContenido() {
           unidadesQueriaVender={advertenciaStock.unidadesQueriaVender}
           onCancelar={() => setAdvertenciaStock(null)}
           onVenderIgual={() => {
-            agregarAlCarrito(
-              advertenciaStock.producto,
-              advertenciaStock.presentacion,
-              advertenciaStock.precioUnitarioArs,
-              advertenciaStock.abrioFrascoCerrado
-            );
+            agregarAlCarrito(advertenciaStock.producto, advertenciaStock.precioUnitarioArs);
             setAdvertenciaStock(null);
           }}
         />

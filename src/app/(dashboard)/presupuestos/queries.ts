@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { calcularEstadoEfectivo, type EstadoPresupuesto } from "@/lib/presupuestos";
 import { inicioDiaAR } from "@/lib/timezone";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 export type PresupuestoListado = {
   id: number;
@@ -21,7 +22,8 @@ export type FiltrosPresupuesto = {
 export async function obtenerPresupuestos(
   filtros: FiltrosPresupuesto
 ): Promise<PresupuestoListado[]> {
-  const where: Record<string, unknown> = {};
+  const empresaId = await obtenerEmpresaIdActual();
+  const where: Record<string, unknown> = { empresaId };
 
   if (filtros.desde || filtros.hasta) {
     where.fecha = {
@@ -77,8 +79,9 @@ export async function obtenerPresupuestos(
 }
 
 export async function obtenerPresupuestoPorId(id: number) {
-  return prisma.presupuesto.findUnique({
-    where: { id },
+  const empresaId = await obtenerEmpresaIdActual();
+  return prisma.presupuesto.findFirst({
+    where: { id, empresaId },
     include: {
       cliente: { select: { id: true, nombre: true, apellido: true, esMayorista: true } },
       items: true,

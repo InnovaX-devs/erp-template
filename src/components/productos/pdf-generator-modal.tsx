@@ -14,7 +14,6 @@ interface Categoria { id: string; nombre: string; }
 interface PdfGeneratorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  moduloDecantHabilitado?: boolean;
   usaCotizacionUSD?: boolean;
 }
 
@@ -24,11 +23,6 @@ const DOCUMENTO_OPTIONS_BASE: { value: TipoDocumentoPdf; label: string }[] = [
   { value: "CATALOGO", label: "Catálogo (Minorista)" },
   { value: "CATALOGO_MAYORISTA", label: "Catálogo (Mayorista)" },
 ];
-
-const DOCUMENTO_OPTION_DECANTS: { value: TipoDocumentoPdf; label: string } = {
-  value: "CATALOGO_DECANTS",
-  label: "Catálogo de decants",
-};
 
 function ToggleGroup<T extends string>({
   value,
@@ -64,7 +58,6 @@ function ToggleGroup<T extends string>({
 export function PdfGeneratorModal({
   isOpen,
   onClose,
-  moduloDecantHabilitado = false,
   usaCotizacionUSD = false,
 }: PdfGeneratorModalProps) {
   const [filtros, setFiltros] = useState<PdfFiltros>(FILTROS_INICIALES);
@@ -72,9 +65,7 @@ export function PdfGeneratorModal({
   const [generando, setGenerando] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const DOCUMENTO_OPTIONS = moduloDecantHabilitado
-    ? [...DOCUMENTO_OPTIONS_BASE, DOCUMENTO_OPTION_DECANTS]
-    : DOCUMENTO_OPTIONS_BASE;
+  const DOCUMENTO_OPTIONS = DOCUMENTO_OPTIONS_BASE;
 
   const fetchAuxiliares = useCallback(async () => {
     try {
@@ -161,8 +152,6 @@ export function PdfGeneratorModal({
     }
   }
 
-  const esDecants = filtros.tipoDocumento === "CATALOGO_DECANTS";
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm overflow-y-auto">
       <div className="w-full max-w-lg rounded-2xl border border-border bg-surface p-6 shadow-2xl my-8">
@@ -195,11 +184,6 @@ export function PdfGeneratorModal({
               options={DOCUMENTO_OPTIONS}
               columns={1}
             />
-            {esDecants && (
-              <p className="mt-1 text-xs text-text-dim">
-                Se muestra el precio de decant (5ml y 10ml) en vez del precio de botella completa.
-              </p>
-            )}
           </div>
 
           {usaCotizacionUSD && (

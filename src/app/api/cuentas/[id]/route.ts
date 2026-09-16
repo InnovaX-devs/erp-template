@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const { id } = await params;
     const cuentaId = Number(id);
     if (Number.isNaN(cuentaId)) {
@@ -13,7 +15,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const body = await request.json();
 
-    const cuentaExistente = await prisma.cuenta.findUnique({ where: { id: cuentaId } });
+    const cuentaExistente = await prisma.cuenta.findFirst({ where: { id: cuentaId, empresaId } });
     if (!cuentaExistente) {
       return NextResponse.json({ error: "Cuenta no encontrada" }, { status: 404 });
     }
@@ -53,6 +55,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const { id } = await params;
     const cuentaId = Number(id);
     if (Number.isNaN(cuentaId)) {
@@ -63,6 +66,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     if (typeof body.activa !== "boolean") {
       return NextResponse.json({ error: "Falta el campo 'activa'" }, { status: 400 });
+    }
+
+    const cuentaExistente = await prisma.cuenta.findFirst({ where: { id: cuentaId, empresaId } });
+    if (!cuentaExistente) {
+      return NextResponse.json({ error: "Cuenta no encontrada" }, { status: 404 });
     }
 
     const cuenta = await prisma.cuenta.update({
@@ -79,10 +87,16 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const { id } = await params;
     const cuentaId = Number(id);
     if (Number.isNaN(cuentaId)) {
       return NextResponse.json({ error: "ID de cuenta inválido" }, { status: 400 });
+    }
+
+    const cuentaExistente = await prisma.cuenta.findFirst({ where: { id: cuentaId, empresaId } });
+    if (!cuentaExistente) {
+      return NextResponse.json({ error: "Cuenta no encontrada" }, { status: 404 });
     }
 
     const [movimientos, pagos] = await Promise.all([

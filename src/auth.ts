@@ -21,9 +21,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const usuario = await prisma.usuario.findUnique({
           where: { email: credentials.email as string },
+          include: { empresa: true },
         });
 
         if (!usuario || !usuario.activo) {
+          return null;
+        }
+
+        if (!usuario.empresa.activa) {
           return null;
         }
 
@@ -40,6 +45,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           id: String(usuario.id),
           email: usuario.email,
           name: usuario.nombre,
+          empresaId: usuario.empresaId,
         };
       },
     }),
@@ -48,12 +54,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.empresaId = user.empresaId;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
+        session.user.empresaId = token.empresaId as number;
       }
       return session;
     },

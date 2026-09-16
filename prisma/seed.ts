@@ -3,16 +3,12 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-// Convierte "true"/"1" en true; cualquier otra cosa (incluido undefined) en
-// false. Así el default de cada flag de módulo queda explícitamente false
-// si no se define nada en el .env.
-function envBool(value: string | undefined): boolean {
-  return value === "true" || value === "1";
-}
-
+// Este seed crea UNA empresa de ejemplo (útil para desarrollo local o para
+// el primer cliente). Sistema multi-tenant: para dar de alta un cliente
+// nuevo después de este, no se vuelve a correr este script — se crea la
+// Empresa (+ Usuario + Configuracion) directo en la base, igual que ya
+// hacíamos con los flags de licencia por instalación.
 async function main() {
-  // Permite parametrizar el alta de un cliente nuevo por variables de
-  // entorno, en vez de tener que cargar todo a mano desde Prisma Studio.
   const email = process.env.ADMIN_EMAIL ?? "admin@example.com";
   const password = process.env.ADMIN_PASSWORD ?? "changeme123";
   const nombreNegocio = process.env.NOMBRE_NEGOCIO ?? "Mi negocio";
@@ -24,13 +20,14 @@ async function main() {
     ? Number(process.env.COTIZACION_USD)
     : 1000;
 
-  // Flags de módulos opcionales por cliente. Se arma como objeto para poder
-  // sumar más flags a futuro sin tocar la firma de la función.
-  const flagsModulos = {
-    moduloDecantHabilitado: envBool(process.env.MODULO_DECANT_HABILITADO),
-  };
+  const licencia = process.env.LICENCIA === "PREMIUM" ? "PREMIUM" : "BASICO";
 
   const passwordHash = await bcrypt.hash(password, 10);
+
+  let empresa = await prisma.empresa.findFirst({ where: { nombre: nombreNegocio } });
+  if (!empresa) {
+    empresa = await prisma.empresa.create({ data: { nombre: nombreNegocio } });
+  }
 
   const admin = await prisma.usuario.upsert({
     where: { email },
@@ -40,22 +37,24 @@ async function main() {
       email,
       passwordHash,
       activo: true,
+      empresaId: empresa.id,
     },
   });
 
   await prisma.configuracion.upsert({
-    where: { id: "singleton" },
+    where: { empresaId: empresa.id },
     update: {},
     create: {
-      id: "singleton",
+      empresaId: empresa.id,
       nombreNegocio,
       cotizacionUSD,
-      ...flagsModulos,
+      licencia,
     },
   });
 
+  console.log("Empresa creada/verificada:", empresa.nombre, `(id ${empresa.id})`);
   console.log("Usuario admin creado/verificado:", admin.email);
-  console.log("Configuración inicial:", { nombreNegocio, cotizacionUSD, ...flagsModulos });
+  console.log("Configuración inicial:", { nombreNegocio, cotizacionUSD, licencia });
 
   if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
     console.warn(

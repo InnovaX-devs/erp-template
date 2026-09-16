@@ -20,6 +20,7 @@ interface ConfiguracionFormProps {
     costoPromedioPonderado: boolean;
     colorPrimario: string | null;
     colorSecundario: string | null;
+    licencia: "BASICO" | "PREMIUM";
   };
 }
 
@@ -34,6 +35,8 @@ export function ConfiguracionForm({ configuracion }: ConfiguracionFormProps) {
   const [guardadoOk, setGuardadoOk] = useState(false);
 
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [usaCotizacionUSD, setUsaCotizacionUSD] = useState(configuracion.usaCotizacionUSD);
+  const esPremium = configuracion.licencia === "PREMIUM";
 
   function handleSeleccionarArchivo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -262,34 +265,55 @@ export function ConfiguracionForm({ configuracion }: ConfiguracionFormProps) {
         </p>
       </div>
 
-      {/* Cotización — solo se muestra si este negocio opera con dólares.
-          usaCotizacionUSD es un flag de instalación: no es editable desde
-          acá, lo carga el desarrollador directo en la base al configurar
-          el sistema para cada cliente. */}
-      {configuracion.usaCotizacionUSD && (
+      {/* Precios en dólares — solo disponible con licencia Premium. El
+          checkbox habilita/deshabilita el flag; con licencia Básico esta
+          sección ni se muestra (ver lib/configuracion.ts, el piso duro
+          fuerza usaCotizacionUSD a false sin importar lo que haya acá). */}
+      {esPremium && (
         <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6">
-          <h2 className="mb-4 text-base font-semibold text-[#191c1e]">Cotización</h2>
-          <div>
-            <label className="mb-1 block text-sm text-[#45464f]" htmlFor="cotizacionUSD">
-              Cotización USD
-            </label>
-            <div className="relative max-w-xs">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#45464f]">$</span>
-              <input
-                id="cotizacionUSD"
-                type="number"
-                name="cotizacionUSD"
-                defaultValue={configuracion.cotizacionUSD}
-                step="0.01"
-                min="0"
-                required
-                className="w-full rounded-md border border-[#c5c6d0] bg-white px-3 py-2 pl-7 text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
-              />
+          <h2 className="mb-4 text-base font-semibold text-[#191c1e]">Precios en dólares</h2>
+          <label className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              name="usaCotizacionUSD"
+              checked={usaCotizacionUSD}
+              onChange={(e) => setUsaCotizacionUSD(e.target.checked)}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span>
+              <span className="text-sm font-medium text-[#191c1e]">
+                Trabajo con precios en dólares
+              </span>
+              <p className="text-xs text-[#45464f]">
+                Activá esto si el negocio necesita cargar productos en USD y convertirlos a ARS
+                con una cotización.
+              </p>
+            </span>
+          </label>
+
+          {usaCotizacionUSD && (
+            <div className="mt-4">
+              <label className="mb-1 block text-sm text-[#45464f]" htmlFor="cotizacionUSD">
+                Cotización USD
+              </label>
+              <div className="relative max-w-xs">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#45464f]">$</span>
+                <input
+                  id="cotizacionUSD"
+                  type="number"
+                  name="cotizacionUSD"
+                  defaultValue={configuracion.cotizacionUSD}
+                  step="0.01"
+                  min="0"
+                  required
+                  className="w-full rounded-md border border-[#c5c6d0] bg-white px-3 py-2 pl-7 text-[#191c1e] focus:outline-none focus:ring-1 focus:ring-[#021541]"
+                />
+              </div>
+              <p className="mt-1 text-xs text-[#45464f]">
+                Usada para convertir precios en USD a ARS en todo el sistema.
+              </p>
             </div>
-            <p className="mt-1 text-xs text-[#45464f]">
-              Usada para convertir precios en USD a ARS en todo el sistema.
-            </p>
-          </div>
+          )}
         </div>
       )}
 

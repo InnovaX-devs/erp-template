@@ -36,23 +36,29 @@ export function Sidebar({
   logoUrl,
   nombreNegocio,
   eslogan,
+  premium,
 }: {
   logoUrl: string | null;
   nombreNegocio: string;
   eslogan?: string | null;
+  premium: boolean;
 }) {
   const pathname = usePathname();
   const { isOpen, close } = useSidebar();
 
+  const navItems = NAV_ITEMS.filter((item) => esGrupo(item) || !item.premium || premium).map((item) =>
+    esGrupo(item) ? { ...item, children: item.children.filter((c) => !c.premium || premium) } : item
+  );
+
   const [grupoAbierto, setGrupoAbierto] = useState<string | null>(() => {
-    const activo = NAV_ITEMS.find(
+    const activo = navItems.find(
       (item) => esGrupo(item) && grupoTieneRutaActiva(item, pathname)
     );
     return activo ? activo.label : null;
   });
 
   useEffect(() => {
-    const activo = NAV_ITEMS.find(
+    const activo = navItems.find(
       (item) => esGrupo(item) && grupoTieneRutaActiva(item, pathname)
     );
     setGrupoAbierto(activo ? activo.label : null);
@@ -142,7 +148,7 @@ export function Sidebar({
           </Link>
 
           {/* RESTO DEL MENÚ */}
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             if (esGrupo(item)) {
               const Icon = item.icon;
               const abierto = grupoAbierto === item.label;

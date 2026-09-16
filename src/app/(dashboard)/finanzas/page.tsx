@@ -52,7 +52,6 @@ export default function FinanzasPage() {
       setCuentas(dataCuentas.items ?? []);
       setCotizacionUSD(dataConfig.cotizacionUSD ?? 0);
       setUsaCotizacionUSD(dataConfig.usaCotizacionUSD ?? false);
-      
     } catch {
       toast.error("No se pudieron cargar las cuentas");
     } finally {
@@ -348,7 +347,6 @@ export default function FinanzasPage() {
         cuentaEditar={cuentaEditar}
         onSuccess={cargarDatos}
         usaCotizacionUSD={usaCotizacionUSD}
-        
       />
       <TransferenciaModal
         isOpen={modalTransferenciaAbierto}

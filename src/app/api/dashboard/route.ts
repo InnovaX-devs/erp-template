@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { obtenerKpisDelDia } from "../../(dashboard)/reportes/queries";
 import { rangoParaTab } from "@/lib/reportes";
 import { formatHoraAR, inicioFinHoyAR } from "@/lib/timezone";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 export const dynamic = "force-dynamic";
 
@@ -31,20 +32,21 @@ function descripcionMovimiento(m: {
 }
 
 export async function GET() {
+  const empresaId = await obtenerEmpresaIdActual();
   const { inicio: inicioHoy, fin: finHoy } = inicioFinHoyAR();
 
   // Todo esto es independiente entre sí -> se pide junto, no en fila
   const [configuracion, cuentas, movimientosHoy, [porArmar, armados], reporteHoy] = await Promise.all([
     prisma.configuracion.findUnique({
-      where: { id: "singleton" },
+      where: { empresaId },
       select: { cotizacionUSD: true },
     }),
     prisma.cuenta.findMany({
-      where: { activa: true },
+      where: { activa: true, empresaId },
       orderBy: [{ favorita: "desc" }, { saldoActual: "desc" }],
     }),
     prisma.movimientoCaja.findMany({
-      where: { fecha: { gte: inicioHoy, lt: finHoy } },
+      where: { empresaId, fecha: { gte: inicioHoy, lt: finHoy } },
       include: {
         gasto: { select: { concepto: true } },
         cuenta: { select: { tipo: true } },
@@ -53,10 +55,10 @@ export async function GET() {
     }),
     Promise.all([
       prisma.venta.count({
-        where: { armado: false, estadoPago: { notIn: ["ANULADA", "CANCELADA"] } },
+        where: { empresaId, armado: false, estadoPago: { notIn: ["ANULADA", "CANCELADA"] } },
       }),
       prisma.venta.count({
-        where: { armado: true, retirado: false, estadoPago: { notIn: ["ANULADA", "CANCELADA"] } },
+        where: { empresaId, armado: true, retirado: false, estadoPago: { notIn: ["ANULADA", "CANCELADA"] } },
       }),
     ]),
     obtenerKpisDelDia(rangoParaTab("diario")),

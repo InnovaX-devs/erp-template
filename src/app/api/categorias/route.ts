@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 // FIX: evita que Next.js cachee este GET como estático.
 // Sin esto, /api/categorias puede devolver siempre la misma
@@ -9,7 +10,9 @@ export const dynamic = "force-dynamic";
 // GET /api/categorias - Obtener todas las categorías con conteo de productos
 export async function GET() {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const categorias = await prisma.categoria.findMany({
+      where: { empresaId },
       include: {
         _count: {
           select: { productos: true },
@@ -36,6 +39,7 @@ export async function GET() {
 // POST /api/categorias - Crear una nueva categoría
 export async function POST(request: NextRequest) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const { nombre } = await request.json();
 
     if (!nombre || !nombre.trim()) {
@@ -47,6 +51,7 @@ export async function POST(request: NextRequest) {
 
     const nuevaCategoria = await prisma.categoria.create({
       data: {
+        empresaId,
         nombre: nombre.trim(),
         activa: true,
       },

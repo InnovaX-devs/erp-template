@@ -15,6 +15,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           logoUrl={configuracion.logoUrl ?? null}
           nombreNegocio={configuracion.nombreNegocio}
           eslogan={configuracion.eslogan}
+          premium={configuracion.licencia === "PREMIUM"}
         />
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar

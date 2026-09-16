@@ -1,14 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
+import { obtenerConfiguracion } from "@/lib/configuracion";
 
 export async function GET(request: NextRequest) {
+  const configuracion = await obtenerConfiguracion();
+  if (!configuracion.habilitarGastosFlujoCaja) {
+    return NextResponse.json({ error: "Los gastos no están disponibles en tu plan actual." }, { status: 403 });
+  }
+
+  const empresaId = await obtenerEmpresaIdActual();
   const searchParams = request.nextUrl.searchParams;
   const q = searchParams.get("q")?.trim().toLowerCase() ?? "";
   const estado = searchParams.get("estado") ?? "todos"; // todos | pendiente | pagado
   const categoriaId = searchParams.get("categoriaId");
 
   const gastos = await prisma.gasto.findMany({
+    where: { empresaId },
     orderBy: { fecha: "desc" },
     include: {
       categoria: { select: { id: true, nombre: true } },
@@ -21,15 +30,12 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  const [cuentasActivas, configuracion] = await Promise.all([
-    prisma.cuenta.findMany({
-      where: { activa: true },
-      select: { tipo: true, saldoActual: true },
-    }),
-    prisma.configuracion.findUnique({ where: { id: "singleton" } }),
-  ]);
+  const cuentasActivas = await prisma.cuenta.findMany({
+    where: { activa: true, empresaId },
+    select: { tipo: true, saldoActual: true },
+  });
 
-  const cotizacionUSD = configuracion?.cotizacionUSD ?? 0;
+  const cotizacionUSD = configuracion.cotizacionUSD ?? 0;
 
   const totalARS = cuentasActivas
     .filter((c) => c.tipo === "EFECTIVO_ARS" || c.tipo === "BANCO_ARS")
@@ -68,6 +74,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const configuracion = await obtenerConfiguracion();
+    if (!configuracion.habilitarGastosFlujoCaja) {
+      return NextResponse.json({ error: "Los gastos no están disponibles en tu plan actual." }, { status: 403 });
+    }
+
+    const empresaId = await obtenerEmpresaIdActual();
     const body = await request.json();
 
     const monto = Number(body.monto);
@@ -83,7 +95,25 @@ export async function POST(request: NextRequest) {
 
     const cuentaId = Number(body.cuentaId);
 
+    if (body.categoriaId) {
+      const categoria = await prisma.categoriaGasto.findFirst({
+        where: { id: Number(body.categoriaId), empresaId },
+      });
+      if (!categoria) {
+        return NextResponse.json({ error: "La categoría seleccionada no existe" }, { status: 400 });
+      }
+    }
+    if (body.proveedorId) {
+      const proveedor = await prisma.proveedor.findFirst({
+        where: { id: Number(body.proveedorId), empresaId },
+      });
+      if (!proveedor) {
+        return NextResponse.json({ error: "El proveedor seleccionado no existe" }, { status: 400 });
+      }
+    }
+
     const dataBase: Prisma.GastoCreateInput = {
+      empresa: { connect: { id: empresaId } },
       monto,
       concepto: body.concepto.trim(),
       observaciones: body.observaciones?.trim() || null,
@@ -93,14 +123,14 @@ export async function POST(request: NextRequest) {
     };
 
     const resultado = await prisma.$transaction(async (tx) => {
-      const cuenta = await tx.cuenta.findUnique({ where: { id: cuentaId } });
+      const cuenta = await tx.cuenta.findFirst({ where: { id: cuentaId, empresaId } });
       if (!cuenta) throw new Error("CUENTA_NO_ENCONTRADA");
 
       const esCuentaUSD = cuenta.tipo === "EFECTIVO_USD" || cuenta.tipo === "BANCO_USD";
 
       let montoADescontar = monto;
       if (esCuentaUSD) {
-        const config = await tx.configuracion.findUnique({ where: { id: "singleton" } });
+        const config = await tx.configuracion.findUnique({ where: { empresaId } });
         const cotizacion = config?.cotizacionUSD ?? 0;
         if (!cotizacion) throw new Error("SIN_COTIZACION");
         montoADescontar = monto / cotizacion;
@@ -116,6 +146,7 @@ export async function POST(request: NextRequest) {
 
       await tx.movimientoCaja.create({
         data: {
+          empresaId,
           cuentaId,
           tipo: "EGRESO",
           concepto: "GASTO",

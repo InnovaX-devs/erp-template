@@ -18,12 +18,6 @@ const LABEL_TIPO_PRECIO: Record<"MINORISTA" | "MAYORISTA", string> = {
   MAYORISTA: "Mayorista",
 };
 
-const LABEL_PRESENTACION: Record<"FRASCO" | "DECANT_5ML" | "DECANT_10ML", string> = {
-  FRASCO: "Unidad",
-  DECANT_5ML: "Decant 5ml",
-  DECANT_10ML: "Decant 10ml",
-};
-
 function getStyles(brand: PdfBrand) {
   return StyleSheet.create({
   rangoTexto: { fontSize: 9, color: brand.textDim, marginBottom: 16 },
@@ -258,7 +252,7 @@ export function ReporteDocument({
           )}
           {topProductos.length > 0 &&
             topProductos.slice(0, 1).map((p, i) => (
-              <View key={`${p.productoId}-${p.presentacion}`} style={s.topFila} wrap={false}>
+              <View key={p.productoId} style={s.topFila} wrap={false}>
                 <Text style={s.topRank}>{i + 1}</Text>
                 <View style={s.topNombreWrap}>
                   <View style={s.topImagenBox}>
@@ -270,9 +264,6 @@ export function ReporteDocument({
                   </View>
                   <View style={s.topNombreCol}>
                     <Text style={{ fontSize: 9 }}>{p.nombre}</Text>
-                    <Text style={{ fontSize: 6.5, color: brand.textDim, marginTop: 1 }}>
-                      {LABEL_PRESENTACION[p.presentacion]}
-                    </Text>
                   </View>
                 </View>
                 <Text style={s.topCant}>{p.cantidad}</Text>
@@ -281,7 +272,7 @@ export function ReporteDocument({
             ))}
         </View>
         {topProductos.slice(1).map((p, i) => (
-          <View key={`${p.productoId}-${p.presentacion}`} style={s.topFila} wrap={false}>
+          <View key={p.productoId} style={s.topFila} wrap={false}>
             <Text style={s.topRank}>{i + 2}</Text>
             <View style={s.topNombreWrap}>
               <View style={s.topImagenBox}>
@@ -293,9 +284,6 @@ export function ReporteDocument({
               </View>
               <View style={s.topNombreCol}>
                 <Text style={{ fontSize: 9 }}>{p.nombre}</Text>
-                <Text style={{ fontSize: 6.5, color: brand.textDim, marginTop: 1 }}>
-                  {LABEL_PRESENTACION[p.presentacion]}
-                </Text>
               </View>
             </View>
             <Text style={s.topCant}>{p.cantidad}</Text>

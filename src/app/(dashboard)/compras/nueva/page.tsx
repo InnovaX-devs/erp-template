@@ -130,9 +130,9 @@ export default function NuevaCompraPage() {
     (producto: ProductoBusqueda) => {
       const costoUnitarioUSD = !usaCotizacionUSD
         ? producto.precioCosto
-          : producto.monedaPrecio === "ARS"
-          ? Number((producto.precioCosto / cotizacion).toFixed(2))
-          : producto.precioCosto;
+        : producto.monedaPrecio === "ARS"
+        ? Number((producto.precioCosto / cotizacion).toFixed(2))
+        : producto.precioCosto;
 
       setCarrito((prev) => {
         const existente = prev.find((it) => it.productoId === producto.id);

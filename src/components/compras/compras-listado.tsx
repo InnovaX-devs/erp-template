@@ -53,7 +53,6 @@ export function ComprasListado() {
   const [error, setError] = useState<string | null>(null);
   const [accionandoId, setAccionandoId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
-
   const [usaCotizacionUSD, setUsaCotizacionUSD] = useState(false);
 
   useEffect(() => {

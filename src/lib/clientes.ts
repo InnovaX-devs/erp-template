@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 export type ClienteConDeuda = {
   id: number;
@@ -50,17 +51,18 @@ const ORDEN_NOMBRE_MAP: Record<string, Prisma.ClienteOrderByWithRelationInput> =
 };
 
 export async function getClientesData(filtros: ClientesFiltros = {}) {
+  const empresaId = await obtenerEmpresaIdActual();
   const orden = filtros.orden ?? "nombre-asc";
   const paginaSolicitada = filtros.pagina ?? 1;
 
   // 1) Deuda agregada por cliente: UNA fila por cliente con ventas A_CUENTA,
   //    en vez de traer cada venta pendiente individual con `include`.
-  const deudaPorCliente = await getDeudaPorCliente();
+  const deudaPorCliente = await getDeudaPorCliente(empresaId);
 
   // 2) Resumen global (independiente de los filtros aplicados).
   const [totalClientes, totalMayoristas] = await Promise.all([
-    prisma.cliente.count(),
-    prisma.cliente.count({ where: { esMayorista: true } }),
+    prisma.cliente.count({ where: { empresaId } }),
+    prisma.cliente.count({ where: { empresaId, esMayorista: true } }),
   ]);
   const deudaTotal = Array.from(deudaPorCliente.values()).reduce((sum, d) => sum + d, 0);
   const resumen = {
@@ -70,7 +72,7 @@ export async function getClientesData(filtros: ClientesFiltros = {}) {
   };
 
   // 3) Where clause de Prisma para lo que SÍ vive en columnas reales.
-  const where: Prisma.ClienteWhereInput = {};
+  const where: Prisma.ClienteWhereInput = { empresaId };
   if (filtros.busqueda) {
     where.OR = [
       { nombre: { contains: filtros.busqueda, mode: "insensitive" } },
@@ -156,7 +158,7 @@ export async function getClientesData(filtros: ClientesFiltros = {}) {
   return { clientes: clientesPagina, resumen, umbralAlDia: UMBRAL_AL_DIA, paginacion };
 }
 
-async function getDeudaPorCliente(): Promise<Map<number, number>> {
+async function getDeudaPorCliente(empresaId: number): Promise<Map<number, number>> {
   // Traemos sólo columnas escalares de Venta (sin include de Cliente ni de
   // arrays anidados) para clampear la deuda POR VENTA antes de sumar, igual
   // que hacía el código original. Un groupBy con _sum no sirve acá: sumaría
@@ -165,7 +167,7 @@ async function getDeudaPorCliente(): Promise<Map<number, number>> {
   // mismo matemáticamente y con montos de plata de por medio no vale la pena
   // el atajo.
   const ventasPendientes = await prisma.venta.findMany({
-    where: { estadoPago: "A_CUENTA", clienteId: { not: null } },
+    where: { empresaId, estadoPago: "A_CUENTA", clienteId: { not: null } },
     select: { clienteId: true, totalARS: true, montoPagado: true },
   });
 
@@ -183,8 +185,9 @@ function redondear(n: number) {
 }
 
 export async function getCuentasActivas() {
+  const empresaId = await obtenerEmpresaIdActual();
   return prisma.cuenta.findMany({
-    where: { activa: true },
+    where: { activa: true, empresaId },
     orderBy: [{ favorita: "desc" }, { nombre: "asc" }],
     select: { id: true, nombre: true, tipo: true, saldoActual: true },
   });
@@ -211,9 +214,11 @@ function labelMedioPago(tipoCuenta: string) {
 }
 
 export async function getHistorialDeuda(clienteId: number): Promise<EventoHistorialDeuda[]> {
+  const empresaId = await obtenerEmpresaIdActual();
   const ventas = await prisma.venta.findMany({
     where: {
       clienteId,
+      empresaId,
       OR: [{ estadoPago: "A_CUENTA" }, { pagos: { some: {} } }],
     },
     include: {

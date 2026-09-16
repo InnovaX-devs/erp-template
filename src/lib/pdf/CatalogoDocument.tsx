@@ -2,7 +2,6 @@ import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/render
 import { BusinessHeader } from "./BusinessHeader";
 import { getPdfStyles } from "./styles";
 import { formatCurrency } from "@/lib/currency";
-import { calcularPrecioDecant } from "@/lib/calculos/decant-pricing";
 import { getPdfBrand, type PdfBrand } from "./brand";
 import type { Configuracion } from "@prisma/client";
 
@@ -17,8 +16,6 @@ type ProductoCatalogo = {
   precioCosto: number;
   monedaPrecio: "ARS" | "USD";
   contenidoMl: number | null;
-  overrideDecant5ml: number | null;
-  overrideDecant10ml: number | null;
 };
 
 // Cantidad fija de cards por fila. Si en algún momento cambian el tamaño
@@ -111,17 +108,14 @@ export function CatalogoDocument({
   configuracion,
   tipoPrecio,
   moneda,
-  modoDecant,
 }: {
   productos: ProductoCatalogo[];
   configuracion: Configuracion;
   tipoPrecio: "MINORISTA" | "MAYORISTA" | "AMBOS";
   moneda: "ARS" | "USD";
-  modoDecant: boolean;
 }) {
-  const titulo = modoDecant
-    ? "Catálogo de Decants"
-    : tipoPrecio === "MINORISTA"
+  const titulo =
+    tipoPrecio === "MINORISTA"
     ? "Catálogo de Productos"
     : tipoPrecio === "MAYORISTA"
     ? "Catálogo Mayorista"
@@ -131,35 +125,12 @@ export function CatalogoDocument({
   const pdfStyles = getPdfStyles(brand);
   const cardStyles = getCardStyles(brand);
 
-  const accent = modoDecant ? brand.accent : brand.primary;
+  const accent = brand.primary;
 
   const conStock = productos.filter((p) => p.stockActual > 0);
   const sinStock = productos.filter((p) => p.stockActual <= 0);
 
   function renderPrecios(p: ProductoCatalogo, colorAccent: string) {
-    if (modoDecant) {
-      const { precio5ml, precio10ml } = calcularPrecioDecant(p, configuracion);
-      const p5 = precio5ml !== null ? convertir(precio5ml, "ARS", moneda, configuracion.cotizacionUSD) : null;
-      const p10 = precio10ml !== null ? convertir(precio10ml, "ARS", moneda, configuracion.cotizacionUSD) : null;
-      return (
-        <>
-          <Text style={cardStyles.precioLinea}>
-            5ml{" "}
-            <Text style={[cardStyles.precioValor, { color: colorAccent }]}>
-              {p5 !== null ? formatCurrency(p5, moneda) : "N/D"}
-            </Text>
-          </Text>
-          <Text style={cardStyles.precioLinea}>
-            10ml{" "}
-            <Text style={[cardStyles.precioValor, { color: colorAccent }]}>
-              {p10 !== null ? formatCurrency(p10, moneda) : "N/D"}
-            </Text>
-          </Text>
-          {p.contenidoMl && <Text style={cardStyles.frasco}>Frasco {p.contenidoMl}ml</Text>}
-        </>
-      );
-    }
-
     if (tipoPrecio === "AMBOS") {
       return (
         <>

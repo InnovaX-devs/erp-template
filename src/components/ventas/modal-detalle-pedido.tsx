@@ -24,12 +24,6 @@ const ESTADO_LABEL: Record<EstadoPago, string> = {
   CANCELADA: "Cancelada",
 };
 
-const PRESENTACION_LABEL: Record<string, string> = {
-  FRASCO: "Unidad",
-  DECANT_5ML: "Decant 5ml",
-  DECANT_10ML: "Decant 10ml",
-};
-
 const TIPO_CUENTA_LABEL: Record<string, string> = {
   EFECTIVO_ARS: "Efectivo",
   EFECTIVO_USD: "Efectivo USD",
@@ -219,7 +213,6 @@ export function ModalDetallePedido({ pedidoId, onClose, onCambio }: Props) {
                       <tr key={item.id} className="border-t border-[#E2E8F0]">
                         <td className="px-3 py-2.5">
                           <p className="font-medium text-[#191c1e]">{item.productoNombre}</p>
-                          <span className="text-xs text-[#45464f]">{PRESENTACION_LABEL[item.presentacion]}</span>
                         </td>
                         <td className="px-3 py-2.5 text-right text-[#191c1e]">{item.cantidad}</td>
                         <td className="px-3 py-2.5 text-right">

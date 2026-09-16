@@ -43,7 +43,6 @@ export interface TopProductoItem {
   productoId: number;
   nombre: string;
   fotoUrl: string | null;
-  presentacion: "FRASCO" | "DECANT_5ML" | "DECANT_10ML";
   cantidad: number;
   montoARS: number; // cobrado, prorrateado igual que el resto del reporte
 }

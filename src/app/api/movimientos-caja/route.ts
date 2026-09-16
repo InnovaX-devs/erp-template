@@ -2,8 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { inicioDiaAR } from "@/lib/timezone";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
+import { obtenerConfiguracion } from "@/lib/configuracion";
 
 export async function GET(request: NextRequest) {
+  const configuracion = await obtenerConfiguracion();
+  if (!configuracion.habilitarGastosFlujoCaja) {
+    return NextResponse.json({ error: "El flujo de caja no está disponible en tu plan actual." }, { status: 403 });
+  }
+
+  const empresaId = await obtenerEmpresaIdActual();
   const sp = request.nextUrl.searchParams;
   const desde = sp.get("desde");
   const hasta = sp.get("hasta");
@@ -12,6 +20,7 @@ export async function GET(request: NextRequest) {
   const concepto = sp.get("concepto");
 
   const where: Prisma.MovimientoCajaWhereInput = {
+    empresaId,
     ...(desde || hasta
           ? {
               fecha: {
@@ -47,11 +56,7 @@ export async function GET(request: NextRequest) {
     select: { tipo: true, monto: true,concepto: true, cuenta: { select: { tipo: true } } },
   });
 
-  const configuracion = await prisma.configuracion.findUnique({
-    where: { id: "singleton" },
-    select: { cotizacionUSD: true },
-  });
-  const cotizacion = configuracion?.cotizacionUSD ?? 1000;
+  const cotizacion = configuracion.cotizacionUSD ?? 1000;
 
   // Ingresos/Egresos/Neto: sí dependen del período filtrado.
   let ingresos = 0;
@@ -68,6 +73,7 @@ export async function GET(request: NextRequest) {
   // de cuenta específica cuando el usuario elige una.
   const cuentasActivas = await prisma.cuenta.findMany({
     where: {
+      empresaId,
       activa: true,
       ...(cuentaId ? { id: Number(cuentaId) } : {}),
     },

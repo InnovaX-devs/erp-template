@@ -1,12 +1,6 @@
 import { formatCurrency } from "@/lib/currency";
 import type { TopProductoItem } from "@/types/reporte";
 
-const LABELS_PRESENTACION: Record<TopProductoItem["presentacion"], string> = {
-  FRASCO: "Unidad",
-  DECANT_5ML: "Decant 5ml",
-  DECANT_10ML: "Decant 10ml",
-};
-
 export function TopProductos({ items }: { items: TopProductoItem[] }) {
   if (items.length === 0) {
     return (
@@ -22,7 +16,7 @@ export function TopProductos({ items }: { items: TopProductoItem[] }) {
       <h2 className="mb-3 text-sm font-semibold text-text">Top productos</h2>
       <ol className="space-y-3">
         {items.map((item, i) => (
-          <li key={`${item.productoId}-${item.presentacion}`} className="flex items-center gap-3">
+          <li key={item.productoId} className="flex items-center gap-3">
             <span className="w-4 shrink-0 text-xs font-medium text-text-dim">{i + 1}</span>
             <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md border border-border bg-bg">
               {item.fotoUrl ? (
@@ -36,9 +30,7 @@ export function TopProductos({ items }: { items: TopProductoItem[] }) {
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-text">{item.nombre}</p>
-              <p className="text-xs text-text-dim">
-                {LABELS_PRESENTACION[item.presentacion]} · {item.cantidad} vendidos
-              </p>
+              <p className="text-xs text-text-dim">{item.cantidad} vendidos</p>
             </div>
             <span className="shrink-0 text-sm font-semibold text-text">{formatCurrency(item.montoARS, "ARS")}</span>
           </li>

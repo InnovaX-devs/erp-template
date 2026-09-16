@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 const WHERE_COMPRA_REAL = {
   confirmada: true,
@@ -8,11 +9,13 @@ const WHERE_COMPRA_REAL = {
 } satisfies Prisma.CompraWhereInput;
 
 export async function GET(request: NextRequest) {
+  const empresaId = await obtenerEmpresaIdActual();
   const searchParams = request.nextUrl.searchParams;
   const q = searchParams.get("q")?.trim().toLowerCase() ?? "";
   const estado = searchParams.get("estado") ?? "todos";
 
   const proveedores = await prisma.proveedor.findMany({
+    where: { empresaId },
     orderBy: { nombre: "asc" },
     select: {
       id: true,
@@ -32,7 +35,7 @@ export async function GET(request: NextRequest) {
 
   // Compras confirmadas y no canceladas que NO tienen proveedor asignado
   const comprasSinProveedor = await prisma.compra.findMany({
-    where: { ...WHERE_COMPRA_REAL, proveedorId: null },
+    where: { ...WHERE_COMPRA_REAL, proveedorId: null, empresaId },
     select: { totalUSD: true, totalARS: true, pagada: true },
   });
 
@@ -126,6 +129,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const body = await request.json();
 
     if (!body.nombre?.trim()) {
@@ -134,6 +138,7 @@ export async function POST(request: NextRequest) {
 
     const nuevoProveedor = await prisma.proveedor.create({
       data: {
+        empresaId,
         nombre: body.nombre.trim(),
         personaContacto: body.personaContacto?.trim() || null,
         telefono: body.telefono?.trim() || null,

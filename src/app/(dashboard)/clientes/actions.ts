@@ -3,9 +3,16 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getHistorialDeuda } from "@/lib/clientes";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
+import { obtenerConfiguracion } from "@/lib/configuracion";
 
 export async function eliminarCliente(clienteId: number) { // antes: string
   try {
+    const empresaId = await obtenerEmpresaIdActual();
+    const cliente = await prisma.cliente.findFirst({ where: { id: clienteId, empresaId } });
+    if (!cliente) {
+      return { success: false as const, error: "Cliente no encontrado." };
+    }
     await prisma.cliente.delete({ where: { id: clienteId } });
     revalidatePath("/clientes");
     return { success: true as const };
@@ -42,8 +49,10 @@ export async function crearCliente(data: ClienteInput) {
   }
 
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const cliente = await prisma.cliente.create({
       data: {
+        empresaId,
         nombre: data.nombre.trim(),
         apellido: data.apellido?.trim() || null,
         telefono: data.telefono?.trim() || null,
@@ -68,6 +77,12 @@ export async function actualizarCliente(id: number, data: ClienteInput) { // ant
   }
 
   try {
+    const empresaId = await obtenerEmpresaIdActual();
+    const existente = await prisma.cliente.findFirst({ where: { id, empresaId } });
+    if (!existente) {
+      return { success: false as const, error: "Cliente no encontrado." };
+    }
+
     const cliente = await prisma.cliente.update({
       where: { id },
       data: {
@@ -102,9 +117,14 @@ export async function cobrarDeuda(clienteId: number, pagos: PagoInput[]) {
   }
 
   try {
+    const empresaId = await obtenerEmpresaIdActual();
+
     await prisma.$transaction(async (tx) => {
+      const cliente = await tx.cliente.findFirst({ where: { id: clienteId, empresaId } });
+      if (!cliente) throw new Error("CLIENTE_NO_ENCONTRADO");
+
       const ventasPendientes = await tx.venta.findMany({
-        where: { clienteId, estadoPago: "A_CUENTA" },
+        where: { clienteId, empresaId, estadoPago: "A_CUENTA" },
         orderBy: { fecha: "asc" },
       });
 
@@ -113,6 +133,9 @@ export async function cobrarDeuda(clienteId: number, pagos: PagoInput[]) {
       );
 
       for (const pago of pagosValidos) {
+        const cuentaValida = await tx.cuenta.findFirst({ where: { id: pago.cuentaId, empresaId } });
+        if (!cuentaValida) throw new Error("CUENTA_NO_ENCONTRADA");
+
         let restante = pago.monto;
         const ventasTocadas: number[] = [];
 
@@ -150,6 +173,7 @@ export async function cobrarDeuda(clienteId: number, pagos: PagoInput[]) {
 
           await tx.movimientoCaja.create({
             data: {
+              empresaId,
               cuentaId: pago.cuentaId,
               tipo: "INGRESO",
               concepto: "PAGO_DEUDA_CLIENTE",
@@ -191,18 +215,25 @@ export async function ajustarDeudaManual(input: AjusteDeudaInput) {
     return { success: false as const, error: "Ingresá un monto mayor a $0." };
   }
 
+  const empresaId = await obtenerEmpresaIdActual();
+
+  const cliente = await prisma.cliente.findFirst({ where: { id: clienteId, empresaId } });
+  if (!cliente) {
+    return { success: false as const, error: "Cliente no encontrado." };
+  }
+
   if (tipo === "aumentar") {
     try {
-      const config = await prisma.configuracion.findUnique({
-        where: { id: "singleton" },
-        select: { cotizacionUSD: true, usaCotizacionUSD: true },
-      });
-
-      const cotizacionRaw = config?.usaCotizacionUSD ? config.cotizacionUSD : 1;
+      const config = await obtenerConfiguracion();
+      // Mismo criterio que en ventas/actions.ts: si el negocio no opera con
+      // dólares, la cotización usada es siempre 1 (totalUSD queda espejando
+      // a totalARS), sin importar qué haya cargado en Configuración.
+      const cotizacionRaw = config.usaCotizacionUSD ? config.cotizacionUSD : 1;
       const cotizacion = cotizacionRaw > 0 ? cotizacionRaw : 1;
 
       await prisma.venta.create({
         data: {
+          empresaId,
           clienteId,
           fecha: new Date(),
           cotizacionUsada: cotizacion,
@@ -238,11 +269,16 @@ export async function ajustarDeudaManual(input: AjusteDeudaInput) {
   }
 
   try {
+    const cuentaValida = await prisma.cuenta.findFirst({ where: { id: cuentaId, empresaId } });
+    if (!cuentaValida) {
+      return { success: false as const, error: "La cuenta seleccionada no existe." };
+    }
+
     let aplicadoTotal = 0;
 
     await prisma.$transaction(async (tx) => {
       const ventasPendientes = await tx.venta.findMany({
-        where: { clienteId, estadoPago: "A_CUENTA" },
+        where: { clienteId, empresaId, estadoPago: "A_CUENTA" },
         orderBy: { fecha: "asc" },
       });
 
@@ -286,6 +322,7 @@ export async function ajustarDeudaManual(input: AjusteDeudaInput) {
 
       await tx.movimientoCaja.create({
         data: {
+          empresaId,
           cuentaId,
           tipo: "INGRESO",
           concepto: "OTRO",

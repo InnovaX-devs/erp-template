@@ -6,11 +6,14 @@ import { calcularFechaVencimiento, calcularTotalPresupuesto, calcularEstadoEfect
 import type { ProductoBusqueda, ClienteBusqueda, ItemPresupuestoLocal } from "../../../types/presupuesto";
 import type { ProductoBusquedaDTO } from "@/types/producto";
 import type { ClienteBusquedaResult } from "@/lib/clientes-busqueda";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
+import { obtenerConfiguracion } from "@/lib/configuracion";
 
 export async function buscarClientes(query: string): Promise<ClienteBusqueda[]> {
   if (!query.trim()) return [];
+  const empresaId = await obtenerEmpresaIdActual();
   return prisma.cliente.findMany({
-    where: { nombre: { contains: query, mode: "insensitive" } },
+    where: { empresaId, nombre: { contains: query, mode: "insensitive" } },
     select: { id: true, nombre: true, apellido: true, esMayorista: true },
     take: 10,
     orderBy: { nombre: "asc" },
@@ -33,6 +36,30 @@ export async function crearPresupuesto(
     return { success: false, error: "Agregá al menos un ítem al presupuesto." };
   }
 
+  const configuracion = await obtenerConfiguracion();
+  if (!configuracion.habilitarPresupuestos) {
+    return { success: false, error: "Los presupuestos no están disponibles en tu plan actual." };
+  }
+
+  const empresaId = await obtenerEmpresaIdActual();
+
+  if (input.clienteId != null) {
+    const cliente = await prisma.cliente.findFirst({ where: { id: input.clienteId, empresaId } });
+    if (!cliente) return { success: false, error: "El cliente seleccionado no existe." };
+  }
+
+  const productoIds = [
+    ...new Set(input.items.map((i) => i.productoId).filter((id): id is number => id != null)),
+  ];
+  if (productoIds.length > 0) {
+    const cantidadValida = await prisma.producto.count({
+      where: { id: { in: productoIds }, empresaId },
+    });
+    if (cantidadValida !== productoIds.length) {
+      return { success: false, error: "Uno o más productos del presupuesto no son válidos." };
+    }
+  }
+
   const fecha = new Date();
   const fechaVencimiento = calcularFechaVencimiento(fecha, input.vigenciaDias);
   const total = calcularTotalPresupuesto(
@@ -43,6 +70,7 @@ export async function crearPresupuesto(
 
   const presupuesto = await prisma.presupuesto.create({
     data: {
+      empresaId,
       clienteId: input.clienteId,
       fecha,
       vigenciaDias: input.vigenciaDias,
@@ -56,7 +84,6 @@ export async function crearPresupuesto(
         create: input.items.map((item) => ({
           productoId: item.productoId,
           descripcion: item.descripcion,
-          presentacion: item.presentacion,
           tipoPrecio: item.tipoPrecio,
           cantidad: item.cantidad,
           precioUnitario: item.precioUnitario,
@@ -92,8 +119,9 @@ type ResultadoConversion =
   | { success: false; error: string };
 
 export async function obtenerPresupuestoParaConvertir(id: number): Promise<ResultadoConversion> {
-  const presupuesto = await prisma.presupuesto.findUnique({
-    where: { id },
+  const empresaId = await obtenerEmpresaIdActual();
+  const presupuesto = await prisma.presupuesto.findFirst({
+    where: { id, empresaId },
     include: {
       items: true,
       cliente: {
@@ -126,7 +154,7 @@ export async function obtenerPresupuestoParaConvertir(id: number): Promise<Resul
 
   const productoIds = presupuesto.items.map((item) => item.productoId as number);
     const productos = await prisma.producto.findMany({
-    where: { id: { in: productoIds } },
+    where: { id: { in: productoIds }, empresaId },
     select: {
       id: true,
       nombre: true,
@@ -136,10 +164,7 @@ export async function obtenerPresupuestoParaConvertir(id: number): Promise<Resul
       precioCosto: true,
       precioVenta: true,
       precioMayorista: true,
-      seVendePorDecant: true,
       contenidoMl: true,
-      overrideDecant5ml: true,
-      overrideDecant10ml: true,
       marca: { select: { nombre: true } },
     },
   });
@@ -207,8 +232,9 @@ type ResultadoDetalle =
   | { success: false; error: string };
 
 export async function obtenerDetallePresupuesto(id: number): Promise<ResultadoDetalle> {
-  const presupuesto = await prisma.presupuesto.findUnique({
-    where: { id },
+  const empresaId = await obtenerEmpresaIdActual();
+  const presupuesto = await prisma.presupuesto.findFirst({
+    where: { id, empresaId },
     include: {
       cliente: { select: { nombre: true, apellido: true } },
       items: true,

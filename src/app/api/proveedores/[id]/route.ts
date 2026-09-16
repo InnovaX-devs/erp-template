@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const { id } = await params;
     const proveedorId = Number(id);
 
@@ -25,8 +27,8 @@ export async function PUT(
       );
     }
 
-    const proveedorExistente = await prisma.proveedor.findUnique({
-      where: { id: proveedorId },
+    const proveedorExistente = await prisma.proveedor.findFirst({
+      where: { id: proveedorId, empresaId },
     });
 
     if (!proveedorExistente) {
@@ -66,6 +68,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const { id } = await params;
     const proveedorId = Number(id);
 
@@ -76,8 +79,15 @@ export async function DELETE(
       );
     }
 
+    const proveedorExistente = await prisma.proveedor.findFirst({
+      where: { id: proveedorId, empresaId },
+    });
+    if (!proveedorExistente) {
+      return NextResponse.json({ error: "Proveedor no encontrado" }, { status: 404 });
+    }
+
     const cantidadCompras = await prisma.compra.count({
-      where: { proveedorId },
+      where: { proveedorId, empresaId },
     });
 
     if (cantidadCompras > 0) {

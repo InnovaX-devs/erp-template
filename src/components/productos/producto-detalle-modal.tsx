@@ -2,67 +2,6 @@
 
 import { Pencil, Ban, X, CheckCircle, ImageIcon } from "lucide-react";
 import { toArs, toUsd, formatCurrency } from "@/lib/currency";
-import { calcularPreciosDecant } from "@/lib/calculos/decants";
-import { cn } from "@/lib/cn";
-
-
-function resolverPrecioDecant(
-  producto: {
-    precioCosto: number;
-    monedaPrecio: "USD" | "ARS";
-    overrideDecant5ml?: number | null;
-    overrideDecant10ml?: number | null;
-  },
-  configuracion: ConfigDecant
-): { precio5ml: number | null; precio10ml: number | null } {
-  let precio5ml = producto.overrideDecant5ml ?? null;
-  let precio10ml = producto.overrideDecant10ml ?? null;
-
-  if (precio5ml !== null && precio10ml !== null) {
-    return { precio5ml, precio10ml };
-  }
-
-  const {
-    cotizacionUSD,
-    costoEnvaseDecantARS,
-    multiplicadorInsumoDecant,
-    divisorFrascoDecant,
-    offsetDecant5mlARS,
-  } = configuracion;
-
-  const puedeCalcular =
-    costoEnvaseDecantARS != null &&
-    multiplicadorInsumoDecant != null &&
-    divisorFrascoDecant != null &&
-    offsetDecant5mlARS != null &&
-    cotizacionUSD > 0 &&
-    producto.precioCosto > 0;
-
-  if (puedeCalcular) {
-    const costoFrascoUSD =
-      producto.monedaPrecio === "USD"
-        ? producto.precioCosto
-        : producto.precioCosto / cotizacionUSD;
-
-    try {
-      const resultado = calcularPreciosDecant({
-        costoFrascoUSD,
-        cotizacionUSD,
-        costoEnvaseDecantARS,
-        multiplicadorInsumoDecant,
-        divisorFrascoDecant,
-        offsetDecant5mlARS,
-      });
-
-      if (precio5ml === null) precio5ml = resultado.decant5ml;
-      if (precio10ml === null) precio10ml = resultado.decant10ml;
-    } catch {
-      // divisorFrascoDecant inválido: queda null ("N/D")
-    }
-  }
-
-  return { precio5ml, precio10ml };
-}
 
 interface ProductoDetalle {
   id: string | number;
@@ -77,26 +16,18 @@ interface ProductoDetalle {
   precioVenta: number;
   precioMayorista?: number | null;
   monedaPrecio: "USD" | "ARS";
-  overrideDecant5ml?: number | null;
-  overrideDecant10ml?: number | null;
-  seVendePorDecant?: boolean;
   activo: boolean;
 }
 
-interface ConfigDecant {
+interface ConfigProducto {
   cotizacionUSD: number;
-  costoEnvaseDecantARS: number;
-  multiplicadorInsumoDecant: number;
-  divisorFrascoDecant: number;
-  offsetDecant5mlARS: number;
-  moduloDecantHabilitado?: boolean;
   usaCotizacionUSD?: boolean;
 }
 
 interface ProductoDetalleModalProps {
   isOpen: boolean;
   producto: ProductoDetalle | null;
-  configDecant: ConfigDecant;
+  configProducto: ConfigProducto;
   onClose: () => void;
   onEditar: () => void;
   onDesactivar: () => void;
@@ -105,14 +36,14 @@ interface ProductoDetalleModalProps {
 export function ProductoDetalleModal({
   isOpen,
   producto,
-  configDecant,
+  configProducto,
   onClose,
   onEditar,
   onDesactivar,
 }: ProductoDetalleModalProps) {
   if (!isOpen || !producto) return null;
 
-  const cotizacion = configDecant.cotizacionUSD;
+  const cotizacion = configProducto.cotizacionUSD;
 
   const costo = {
     usd: toUsd(producto.precioCosto, producto.monedaPrecio, cotizacion),
@@ -138,15 +69,6 @@ export function ProductoDetalleModal({
     mayorista && producto.precioCosto > 0
       ? ((producto.precioMayorista! - producto.precioCosto) / producto.precioCosto) * 100
       : null;
-
-  const { precio5ml, precio10ml } = resolverPrecioDecant(producto, configDecant);
-
-  const formatARS = (valor: number) =>
-    valor.toLocaleString("es-AR", {
-      style: "currency",
-      currency: "ARS",
-      maximumFractionDigits: 0,
-    });
 
   return (
     <div
@@ -192,7 +114,7 @@ export function ProductoDetalleModal({
                     {producto.categoria.nombre}
                   </span>
                 )}
-                {configDecant.usaCotizacionUSD && (
+                {configProducto.usaCotizacionUSD && (
                   <span className="rounded-full bg-[#1e7d38] px-2 py-0.5 text-[11px] font-semibold">
                     {producto.monedaPrecio}
                   </span>
@@ -204,7 +126,7 @@ export function ProductoDetalleModal({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-5">
-          <div className={cn("grid gap-2", configDecant.moduloDecantHabilitado ? "grid-cols-3" : "grid-cols-2")}>
+          <div className="grid grid-cols-3 gap-2">
             <div className="rounded-xl bg-[#F0FDF4] p-3 text-center">
               <p className="text-[10px] uppercase tracking-wide text-[#45464f]">
                 Stock actual
@@ -221,30 +143,28 @@ export function ProductoDetalleModal({
                 {producto.stockMinimo ?? 0}
               </p>
             </div>
-            {configDecant.moduloDecantHabilitado && (
-              <div className="rounded-xl bg-[#F8FAFC] p-3 text-center">
-                <p className="text-[10px] uppercase tracking-wide text-[#45464f]">
-                  Volumen
-                </p>
-                <p className="mt-1 text-lg font-bold text-[#191c1e]">
-                  {producto.contenidoMl ? `${producto.contenidoMl}ml` : "-"}
-                </p>
-              </div>
-            )}
+            <div className="rounded-xl bg-[#F8FAFC] p-3 text-center">
+              <p className="text-[10px] uppercase tracking-wide text-[#45464f]">
+                Volumen
+              </p>
+              <p className="mt-1 text-lg font-bold text-[#191c1e]">
+                {producto.contenidoMl ? `${producto.contenidoMl}ml` : "-"}
+              </p>
+            </div>
           </div>
 
           <div className="mt-4 overflow-hidden rounded-xl border border-[#E2E8F0]">
             <div className="bg-[#021541] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white">
-              {configDecant.usaCotizacionUSD ? `Precios · ${producto.monedaPrecio}` : "Precios"}
+              {configProducto.usaCotizacionUSD ? `Precios · ${producto.monedaPrecio}` : "Precios"}
             </div>
 
             <div className="flex items-center justify-between border-t border-[#E2E8F0] px-4 py-3">
               <span className="text-sm text-[#45464f]">Costo</span>
               <div className="text-right">
                 <p className="font-semibold text-[#191c1e]">
-                  {formatCurrency(configDecant.usaCotizacionUSD ? costo.usd : costo.ars, configDecant.usaCotizacionUSD ? "USD" : "ARS")}
+                  {formatCurrency(configProducto.usaCotizacionUSD ? costo.usd : costo.ars, configProducto.usaCotizacionUSD ? "USD" : "ARS")}
                 </p>
-                {configDecant.usaCotizacionUSD && (
+                {configProducto.usaCotizacionUSD && (
                   <p className="text-xs text-[#a3aab5]">{formatCurrency(costo.ars, "ARS")}</p>
                 )}
               </div>
@@ -254,9 +174,9 @@ export function ProductoDetalleModal({
               <span className="text-sm font-medium text-[#021541]">Venta</span>
               <div className="text-right">
                 <p className="font-bold text-[#021541]">
-                  {formatCurrency(configDecant.usaCotizacionUSD ? venta.usd : venta.ars, configDecant.usaCotizacionUSD ? "USD" : "ARS")}
+                  {formatCurrency(configProducto.usaCotizacionUSD ? venta.usd : venta.ars, configProducto.usaCotizacionUSD ? "USD" : "ARS")}
                 </p>
-                {configDecant.usaCotizacionUSD && (
+                {configProducto.usaCotizacionUSD && (
                   <p className="text-xs text-[#5b6472]">{formatCurrency(venta.ars, "ARS")}</p>
                 )}
               </div>
@@ -272,9 +192,9 @@ export function ProductoDetalleModal({
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-[#1D4ED8]">
-                    {formatCurrency(configDecant.usaCotizacionUSD ? mayorista.usd : mayorista.ars, configDecant.usaCotizacionUSD ? "USD" : "ARS")}
+                    {formatCurrency(configProducto.usaCotizacionUSD ? mayorista.usd : mayorista.ars, configProducto.usaCotizacionUSD ? "USD" : "ARS")}
                   </p>
-                  {configDecant.usaCotizacionUSD && (
+                  {configProducto.usaCotizacionUSD && (
                     <p className="text-xs text-[#93B4F5]">{formatCurrency(mayorista.ars, "ARS")}</p>
                   )}
                   {margenMayorista !== null && (
@@ -293,36 +213,6 @@ export function ProductoDetalleModal({
               </span>
             </div>
           </div>
-
-          {producto.seVendePorDecant && (
-            <div className="mt-4 overflow-hidden rounded-xl border border-[#E2E8F0]">
-              <div className="bg-[#5B21B6] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white">
-                Decants
-              </div>
-              <div className="flex items-center justify-between border-t border-[#E2E8F0] px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#EDE9FE] text-xs font-bold text-[#5B21B6]">
-                    5
-                  </span>
-                  <span className="text-sm text-[#191c1e]">Decant 5ml</span>
-                </div>
-                <span className="font-semibold text-[#5B21B6]">
-                  {precio5ml !== null ? formatARS(precio5ml) : "N/D"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between border-t border-[#E2E8F0] px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#EDE9FE] text-xs font-bold text-[#5B21B6]">
-                    10
-                  </span>
-                  <span className="text-sm text-[#191c1e]">Decant 10ml</span>
-                </div>
-                <span className="font-semibold text-[#5B21B6]">
-                  {precio10ml !== null ? formatARS(precio10ml) : "N/D"}
-                </span>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Footer */}

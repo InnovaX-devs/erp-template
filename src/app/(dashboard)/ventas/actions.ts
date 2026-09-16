@@ -1,12 +1,12 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
 import { obtenerConfiguracion } from "@/lib/configuracion";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
+import { revalidatePath } from "next/cache";
 import type { EstadoPago, TipoPrecioVenta } from "@prisma/client";
 import { redondearARS } from "@/lib/currency";
 import { Prisma } from "@prisma/client";
-import { unstable_cache } from "next/cache";
 import { inicioDiaAR } from "@/lib/timezone";
 import type {
   FiltrosVentas,
@@ -24,8 +24,6 @@ type ItemInput = {
   cantidad: number;
   precioUnitarioArs: number;
   tipoPrecio: TipoPrecioVenta;
-  presentacion: "FRASCO" | "DECANT_5ML" | "DECANT_10ML";
-  abrioFrascoCerrado: boolean;
 };
 
 type PagoInput = {
@@ -51,8 +49,6 @@ type ResultadoVenta =
   type DescontarStockItemInput = {
   productoId: number;
   cantidad: number;
-  presentacion: "FRASCO" | "DECANT_5ML" | "DECANT_10ML";
-  abrioFrascoCerrado: boolean;
 };
 
 type ResultadoDetallePedido =
@@ -71,16 +67,16 @@ export async function descontarStockSinVenta(
   }
 
   try {
+    const empresaId = await obtenerEmpresaIdActual();
+
     await prisma.$transaction(async (tx) => {
-      // 1. Validar stock (misma regla que ventas: FRASCO descuenta cantidad completa,
-      //    DECANT solo si se abrió un frasco cerrado)
+      // 1. Validar stock
       for (const item of items) {
-        const unidades =
-          item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
+        const unidades = item.cantidad;
         if (unidades === 0) continue;
 
-        const producto = await tx.producto.findUnique({
-          where: { id: item.productoId },
+        const producto = await tx.producto.findFirst({
+          where: { id: item.productoId, empresaId },
           select: { stockActual: true, nombre: true },
         });
         if (!producto || producto.stockActual < unidades) {
@@ -92,8 +88,7 @@ export async function descontarStockSinVenta(
 
       // 2. Descontar. Nada más: no se crea venta, ni pedido, ni movimiento de caja.
       for (const item of items) {
-        const unidades =
-          item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
+        const unidades = item.cantidad;
         if (unidades === 0) continue;
 
         await tx.producto.update({
@@ -117,6 +112,12 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
     return { success: false, error: "El carrito está vacío." };
   }
 
+  const empresaId = await obtenerEmpresaIdActual();
+
+  // Blindaje: sin importar qué pantalla llame a esta función, el total
+  // siempre se redondea acá, en el backend. Así "lo que se ve" y "lo que se
+  // compara" son siempre el mismo número, sin decimales invisibles de la
+  // conversión USD -> ARS.
   const totalARS = redondearARS(input.totalARS);
 
   const pagosValidos = input.pagos.filter((p) => p.cuentaId != null && p.monto > 0);
@@ -136,6 +137,10 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
     estadoPago = "A_CUENTA";
   }
 
+  // Blindaje: la cotización que se guarda en la venta la decide el server,
+  // no el cliente. Si el negocio no opera con dólares (usaCotizacionUSD
+  // apagado), cotizacionUsada siempre es 1, sin importar qué haya quedado
+  // cargado en el campo cotizacionUSD de Configuración.
   const configuracionActual = await obtenerConfiguracion();
   const cotizacionUSDInput = configuracionActual.usaCotizacionUSD ? input.cotizacionUSD : 1;
   const cotizacionUsada = cotizacionUSDInput > 0 ? cotizacionUSDInput : 1;
@@ -147,8 +152,8 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
       //    (nadie lo convirtió en otra pestaña, y no venció mientras el
       //    usuario armaba el cobro).
       if (input.presupuestoId != null) {
-        const presupuesto = await tx.presupuesto.findUnique({
-          where: { id: input.presupuestoId },
+        const presupuesto = await tx.presupuesto.findFirst({
+          where: { id: input.presupuestoId, empresaId },
           select: { estado: true, fechaVencimiento: true },
         });
 
@@ -163,13 +168,28 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
         }
       }
 
+      // 0.5 Todo productoId del carrito tiene que ser de esta empresa —
+      //     sin esto, un id de producto de otra empresa podría colarse en
+      //     un ItemVenta (grave: filtración de datos entre negocios).
+      const productoIdsDelCarrito = [
+        ...new Set(input.items.map((i) => i.productoId).filter((id): id is number => id != null)),
+      ];
+      if (productoIdsDelCarrito.length > 0) {
+        const productosValidos = await tx.producto.count({
+          where: { id: { in: productoIdsDelCarrito }, empresaId },
+        });
+        if (productosValidos !== productoIdsDelCarrito.length) {
+          throw new Error("Uno o más productos del carrito no son válidos.");
+        }
+      }
+
       if (armado) {
         for (const item of input.items) {
-          const unidadesADescontar = item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
+          const unidadesADescontar = item.cantidad;
           if (unidadesADescontar === 0) continue;
 
-          const producto = await tx.producto.findUnique({
-            where: { id: item.productoId },
+          const producto = await tx.producto.findFirst({
+            where: { id: item.productoId, empresaId },
             select: { stockActual: true, nombre: true },
           });
           if (!producto || producto.stockActual < unidadesADescontar) {
@@ -180,7 +200,7 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
         }
 
         for (const item of input.items) {
-          const unidadesADescontar = item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
+          const unidadesADescontar = item.cantidad;
           if (unidadesADescontar === 0) continue;
 
           await tx.producto.update({
@@ -190,9 +210,16 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
         }
       }
 
+      // 1.5 Si viene con cliente, validar que sea de esta empresa.
+      if (input.clienteId != null) {
+        const cliente = await tx.cliente.findFirst({ where: { id: input.clienteId, empresaId } });
+        if (!cliente) throw new Error("El cliente seleccionado no existe");
+      }
+
       // 2. Crear la venta + ítems
             const venta = await tx.venta.create({
         data: {
+          empresaId,
           clienteId: input.clienteId,
           presupuestoId: input.presupuestoId ?? null,
           cotizacionUsada,
@@ -209,8 +236,6 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
               cantidad: item.cantidad,
               precioUnitarioUSD: item.precioUnitarioArs / cotizacionUsada,
               tipoPrecio: item.tipoPrecio,
-              presentacion: item.presentacion,
-              abrioFrascoCerrado: item.abrioFrascoCerrado,
             })),
           },
         },
@@ -218,8 +243,8 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
 
             // 3. Registrar pagos + movimientos de caja
       for (const pago of pagosValidos) {
-        const cuentaInfo = await tx.cuenta.findUnique({
-          where: { id: pago.cuentaId },
+        const cuentaInfo = await tx.cuenta.findFirst({
+          where: { id: pago.cuentaId, empresaId },
           select: { tipo: true },
         });
         if (!cuentaInfo) throw new Error("La cuenta seleccionada no existe");
@@ -240,6 +265,7 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
 
         await tx.movimientoCaja.create({
           data: {
+            empresaId,
             cuentaId: pago.cuentaId,
             tipo: "INGRESO",
             concepto: "VENTA_COBRADA",
@@ -255,7 +281,7 @@ async function crearVentaInterna(input: VentaInput, armado: boolean): Promise<Re
       //    doble conversión en carrera (dos pestañas confirmando a la vez).
       if (input.presupuestoId != null) {
         const actualizado = await tx.presupuesto.updateMany({
-          where: { id: input.presupuestoId, estado: "BORRADOR" },
+          where: { id: input.presupuestoId, empresaId, estado: "BORRADOR" },
           data: { estado: "CONVERTIDO" },
         });
         if (actualizado.count === 0) {
@@ -284,16 +310,12 @@ export async function registrarPedido(input: VentaInput): Promise<ResultadoVenta
   return crearVentaInterna(input, false);
 }
 
-const getConfiguracionCacheada = unstable_cache(
-  async () => prisma.configuracion.findUnique({ where: { id: "singleton" } }),
-  ["configuracion-singleton"],
-  { revalidate: 300 } // se refresca cada 5 min
-);
-
 export async function listarVentas(filtros: FiltrosVentas): Promise<ResultadoListadoVentas> {
+  const empresaId = await obtenerEmpresaIdActual();
   const { estado, clienteTexto, fechaDesde, fechaHasta, orden, page, pageSize } = filtros;
 
   const condicionesBase: Prisma.VentaWhereInput[] = [
+    { empresaId },
     {
       OR: [
         { retirado: true },
@@ -345,7 +367,7 @@ export async function listarVentas(filtros: FiltrosVentas): Promise<ResultadoLis
     }
   }
 
-  const [ventas, totalRegistros, configuracion] = await Promise.all([
+  const [ventas, totalRegistros] = await Promise.all([
     prisma.venta.findMany({
       where,
       orderBy: { fecha: orden === "MAS_NUEVO" ? "desc" : "asc" },
@@ -355,16 +377,13 @@ export async function listarVentas(filtros: FiltrosVentas): Promise<ResultadoLis
         cliente: { select: { nombre: true, apellido: true } },
         items: {
           include: {
-            producto: { select: { precioCosto: true, monedaPrecio: true, contenidoMl: true } },
+            producto: { select: { precioCosto: true, monedaPrecio: true } },
           },
         },
       },
     }),
     prisma.venta.count({ where }),
-    getConfiguracionCacheada(),
   ]);
-
-  const costoEnvaseDecantARS = configuracion?.costoEnvaseDecantARS ?? 0;
 
   const ventasFormateadas: VentaListItem[] = ventas.map((venta) => {
     const costoTotalARS = venta.items.reduce((acc, item) => {
@@ -375,33 +394,7 @@ export async function listarVentas(filtros: FiltrosVentas): Promise<ResultadoLis
           ? item.producto.precioCosto * venta.cotizacionUsada
           : item.producto.precioCosto;
 
-      let costoItemARS: number;
-
-      switch (item.presentacion) {
-        case "FRASCO":
-          costoItemARS = costoProductoARS * item.cantidad;
-          break;
-
-        case "DECANT_5ML":
-        case "DECANT_10ML": {
-          if (!item.producto.contenidoMl || item.producto.contenidoMl <= 0) {
-            // Sin contenidoMl no se puede calcular el costo proporcional real.
-            // No sumamos nada, pero esto puede inflar la ganancia mostrada
-            // (queda documentado, ideal a futuro: marcar la venta como "costo incompleto").
-            return acc;
-          }
-
-          const ml = item.presentacion === "DECANT_5ML" ? 5 : 10;
-          const costoPerfumeARS = (costoProductoARS / item.producto.contenidoMl) * ml;
-          costoItemARS = (costoPerfumeARS + costoEnvaseDecantARS) * item.cantidad;
-          break;
-        }
-
-        default:
-          costoItemARS = 0;
-      }
-
-      return acc + costoItemARS;
+      return acc + costoProductoARS * item.cantidad;
     }, 0);
 
     const gananciaARS = venta.totalARS - costoTotalARS;
@@ -434,32 +427,29 @@ export async function verificarStockDisponible(
   productoId: number,
   unidadesRequeridas: number
 ): Promise<StockDisponibilidad> {
-  const producto = await prisma.producto.findUnique({
-    where: { id: productoId },
+  const empresaId = await obtenerEmpresaIdActual();
+
+  const producto = await prisma.producto.findFirst({
+    where: { id: productoId, empresaId },
     select: { stockActual: true },
   });
   const stockFisico = producto?.stockActual ?? 0;
 
   // Reservado = suma de unidades comprometidas en pedidos sin armar (armado=false)
-  // que siguen activos (ni cancelados ni anulados). Usa la misma regla que
-  // el descuento real: FRASCO cuenta la cantidad completa; DECANT solo
-  // cuenta si abrió un frasco cerrado (abrioFrascoCerrado=true).
+  // que siguen activos (ni cancelados ni anulados).
   const itemsPendientes = await prisma.itemVenta.findMany({
     where: {
       productoId,
       venta: {
+        empresaId,
         armado: false,
         estadoPago: { notIn: ["CANCELADA", "ANULADA"] },
       },
     },
-    select: { cantidad: true, presentacion: true, abrioFrascoCerrado: true },
+    select: { cantidad: true },
   });
 
-  const reservado = itemsPendientes.reduce((acc, item) => {
-    const unidades =
-      item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
-    return acc + unidades;
-  }, 0);
+  const reservado = itemsPendientes.reduce((acc, item) => acc + item.cantidad, 0);
 
   const disponible = stockFisico - reservado;
 
@@ -472,9 +462,11 @@ export async function verificarStockDisponible(
 }
 
 export async function listarPedidos(filtros: FiltrosPedidos): Promise<ResultadoListadoPedidos> {
+  const empresaId = await obtenerEmpresaIdActual();
   const { clienteTexto, fechaDesde, fechaHasta, orden, sinCobrar, sinArmar, sinEnviar, sinRetirar } = filtros;
 
   const where: Prisma.VentaWhereInput = {
+    empresaId,
     retirado: false,
     estadoPago: { notIn: ["CANCELADA", "ANULADA"] },
   };
@@ -547,23 +539,21 @@ type ResultadoAccionPedido = { success: true } | { success: false; error: string
 
 export async function marcarArmado(ventaId: number): Promise<ResultadoAccionPedido> {
   try {
-    const venta = await prisma.venta.findUnique({
-      where: { id: ventaId },
+    const empresaId = await obtenerEmpresaIdActual();
+    const venta = await prisma.venta.findFirst({
+      where: { id: ventaId, empresaId },
       include: { items: true },
     });
     if (!venta) return { success: false, error: "El pedido no existe" };
     if (venta.armado) return { success: false, error: "El pedido ya está armado" };
 
     await prisma.$transaction(async (tx) => {
-      // Misma regla de descuento que crearVentaInterna: FRASCO descuenta
-      // cantidad completa; DECANT solo si abrió un frasco cerrado.
       for (const item of venta.items) {
-        const unidadesADescontar =
-          item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
+        const unidadesADescontar = item.cantidad;
         if (unidadesADescontar === 0) continue;
 
-        const producto = await tx.producto.findUnique({
-          where: { id: item.productoId! },
+        const producto = await tx.producto.findFirst({
+          where: { id: item.productoId!, empresaId },
           select: { stockActual: true, nombre: true },
         });
         if (!producto || producto.stockActual < unidadesADescontar) {
@@ -574,8 +564,7 @@ export async function marcarArmado(ventaId: number): Promise<ResultadoAccionPedi
       }
 
       for (const item of venta.items) {
-        const unidadesADescontar =
-          item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
+        const unidadesADescontar = item.cantidad;
         if (unidadesADescontar === 0) continue;
 
         await tx.producto.update({
@@ -597,7 +586,8 @@ export async function marcarArmado(ventaId: number): Promise<ResultadoAccionPedi
 
 export async function marcarEnviado(ventaId: number): Promise<ResultadoAccionPedido> {
   try {
-    const venta = await prisma.venta.findUnique({ where: { id: ventaId } });
+    const empresaId = await obtenerEmpresaIdActual();
+    const venta = await prisma.venta.findFirst({ where: { id: ventaId, empresaId } });
     if (!venta) return { success: false, error: "El pedido no existe" };
     if (!venta.armado) return { success: false, error: "El pedido todavía no fue armado" };
 
@@ -612,35 +602,30 @@ export async function marcarEnviado(ventaId: number): Promise<ResultadoAccionPed
 
 export async function obtenerDetallePedido(ventaId: number): Promise<ResultadoDetallePedido> {
   try {
-    const [venta, configuracion] = await Promise.all([
-      prisma.venta.findUnique({
-        where: { id: ventaId },
-        include: {
-          cliente: { select: { nombre: true, apellido: true } },
-          items: {
-            include: {
-              producto: {
-                select: { nombre: true, precioCosto: true, monedaPrecio: true, contenidoMl: true },
-              },
-            },
-          },
-          pagos: {
-            include: {
-              cuenta: { select: { tipo: true } },
+    const empresaId = await obtenerEmpresaIdActual();
+    const venta = await prisma.venta.findFirst({
+      where: { id: ventaId, empresaId },
+      include: {
+        cliente: { select: { nombre: true, apellido: true } },
+        items: {
+          include: {
+            producto: {
+              select: { nombre: true, precioCosto: true, monedaPrecio: true },
             },
           },
         },
-      }),
-      getConfiguracionCacheada(),
-    ]);
+        pagos: {
+          include: {
+            cuenta: { select: { tipo: true } },
+          },
+        },
+      },
+    });
 
     if (!venta) {
       return { success: false, error: "El pedido no existe" };
     }
 
-    const costoEnvaseDecantARS = configuracion?.costoEnvaseDecantARS ?? 0;
-
-    // Misma lógica que listarVentas: costo real por ítem según presentación.
     const costoTotalARS = venta.items.reduce((acc, item) => {
       if (!item.producto) return acc;
 
@@ -649,29 +634,7 @@ export async function obtenerDetallePedido(ventaId: number): Promise<ResultadoDe
           ? item.producto.precioCosto * venta.cotizacionUsada
           : item.producto.precioCosto;
 
-      let costoItemARS: number;
-
-      switch (item.presentacion) {
-        case "FRASCO":
-          costoItemARS = costoProductoARS * item.cantidad;
-          break;
-
-        case "DECANT_5ML":
-        case "DECANT_10ML": {
-          if (!item.producto.contenidoMl || item.producto.contenidoMl <= 0) {
-            return acc;
-          }
-          const ml = item.presentacion === "DECANT_5ML" ? 5 : 10;
-          const costoPerfumeARS = (costoProductoARS / item.producto.contenidoMl) * ml;
-          costoItemARS = (costoPerfumeARS + costoEnvaseDecantARS) * item.cantidad;
-          break;
-        }
-
-        default:
-          costoItemARS = 0;
-      }
-
-      return acc + costoItemARS;
+      return acc + costoProductoARS * item.cantidad;
     }, 0);
 
     const gananciaARS = venta.totalARS - costoTotalARS;
@@ -702,7 +665,6 @@ export async function obtenerDetallePedido(ventaId: number): Promise<ResultadoDe
         id: item.id,
         productoNombre: item.producto?.nombre ?? item.descripcionLibre ?? "Producto",
         cantidad: item.cantidad,
-        presentacion: item.presentacion,
         precioUnitarioUSD: item.precioUnitarioUSD,
         precioUnitarioARS: item.precioUnitarioUSD * venta.cotizacionUsada,
         subtotalARS: item.precioUnitarioUSD * venta.cotizacionUsada * item.cantidad,
@@ -718,7 +680,8 @@ export async function obtenerDetallePedido(ventaId: number): Promise<ResultadoDe
 
 export async function marcarRetirado(ventaId: number): Promise<ResultadoAccionPedido> {
   try {
-    const venta = await prisma.venta.findUnique({ where: { id: ventaId } });
+    const empresaId = await obtenerEmpresaIdActual();
+    const venta = await prisma.venta.findFirst({ where: { id: ventaId, empresaId } });
     if (!venta) return { success: false, error: "El pedido no existe" };
     if (!venta.armado) return { success: false, error: "El pedido todavía no fue armado" };
 
@@ -741,8 +704,10 @@ export async function registrarCobroPedido(
   }
 
   try {
+    const empresaId = await obtenerEmpresaIdActual();
+
     await prisma.$transaction(async (tx) => {
-      const venta = await tx.venta.findUnique({ where: { id: ventaId } });
+      const venta = await tx.venta.findFirst({ where: { id: ventaId, empresaId } });
       if (!venta) throw new Error("El pedido no existe");
       if (venta.estadoPago === "PAGADA") throw new Error("El pedido ya está pagado");
 
@@ -751,7 +716,7 @@ export async function registrarCobroPedido(
       // normalizamos acá antes de comparar.
       const totalARS = redondearARS(venta.totalARS);
 
-      const configuracion = await tx.configuracion.findUnique({ where: { id: "singleton" } });
+      const configuracion = await tx.configuracion.findUnique({ where: { empresaId } });
       const cotizacion = configuracion?.cotizacionUSD && configuracion.cotizacionUSD > 0
         ? configuracion.cotizacionUSD
         : 1;
@@ -766,8 +731,8 @@ export async function registrarCobroPedido(
       }
 
       for (const pago of pagosValidos) {
-        const cuentaInfo = await tx.cuenta.findUnique({
-          where: { id: pago.cuentaId },
+        const cuentaInfo = await tx.cuenta.findFirst({
+          where: { id: pago.cuentaId, empresaId },
           select: { tipo: true },
         });
         if (!cuentaInfo) throw new Error("La cuenta seleccionada no existe");
@@ -786,6 +751,7 @@ export async function registrarCobroPedido(
 
         await tx.movimientoCaja.create({
           data: {
+            empresaId,
             cuentaId: pago.cuentaId,
             tipo: "INGRESO",
             concepto: "VENTA_COBRADA",
@@ -819,8 +785,9 @@ export async function registrarCobroPedido(
 
 export async function anularVenta(ventaId: number): Promise<ResultadoAccionPedido> {
   try {
-    const venta = await prisma.venta.findUnique({
-      where: { id: ventaId },
+    const empresaId = await obtenerEmpresaIdActual();
+    const venta = await prisma.venta.findFirst({
+      where: { id: ventaId, empresaId },
       include: { items: true, pagos: true },
     });
     if (!venta) return { success: false, error: "La venta no existe" };
@@ -834,7 +801,7 @@ export async function anularVenta(ventaId: number): Promise<ResultadoAccionPedid
       // este punto (doble click, dos pestañas, otro usuario), este update
       // afecta 0 filas y abortamos sin tocar stock ni caja.
       const marcada = await tx.venta.updateMany({
-        where: { id: ventaId, estadoPago: venta.estadoPago },
+        where: { id: ventaId, empresaId, estadoPago: venta.estadoPago },
         data: { estadoPago: "ANULADA" },
       });
       if (marcada.count === 0) {
@@ -844,8 +811,7 @@ export async function anularVenta(ventaId: number): Promise<ResultadoAccionPedid
       // 1. Devolver stock si ya se había descontado (armado=true)
       if (venta.armado) {
         for (const item of venta.items) {
-          const unidadesADevolver =
-            item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
+          const unidadesADevolver = item.cantidad;
           if (unidadesADevolver === 0) continue;
 
           await tx.producto.update({
@@ -864,6 +830,7 @@ export async function anularVenta(ventaId: number): Promise<ResultadoAccionPedid
 
         await tx.movimientoCaja.create({
           data: {
+            empresaId,
             cuentaId: pago.cuentaId,
             tipo: "EGRESO",
             concepto: "AJUSTE_SALDO",
@@ -887,8 +854,9 @@ export async function anularVenta(ventaId: number): Promise<ResultadoAccionPedid
 
 export async function cancelarPedido(ventaId: number): Promise<ResultadoAccionPedido> {
   try {
-    const venta = await prisma.venta.findUnique({
-      where: { id: ventaId },
+    const empresaId = await obtenerEmpresaIdActual();
+    const venta = await prisma.venta.findFirst({
+      where: { id: ventaId, empresaId },
       include: { items: true, pagos: true },
     });
     if (!venta) return { success: false, error: "El pedido no existe" };
@@ -900,7 +868,7 @@ export async function cancelarPedido(ventaId: number): Promise<ResultadoAccionPe
     await prisma.$transaction(async (tx) => {
       // Guard atómico, mismo motivo que en anularVenta.
       const marcado = await tx.venta.updateMany({
-        where: { id: ventaId, estadoPago: venta.estadoPago },
+        where: { id: ventaId, empresaId, estadoPago: venta.estadoPago },
         data: { estadoPago: "CANCELADA" },
       });
       if (marcado.count === 0) {
@@ -909,8 +877,7 @@ export async function cancelarPedido(ventaId: number): Promise<ResultadoAccionPe
 
       if (venta.armado) {
         for (const item of venta.items) {
-          const unidadesADevolver =
-            item.presentacion === "FRASCO" ? item.cantidad : item.abrioFrascoCerrado ? 1 : 0;
+          const unidadesADevolver = item.cantidad;
           if (unidadesADevolver === 0) continue;
 
           await tx.producto.update({
@@ -929,6 +896,7 @@ export async function cancelarPedido(ventaId: number): Promise<ResultadoAccionPe
 
         await tx.movimientoCaja.create({
           data: {
+            empresaId,
             cuentaId: pago.cuentaId,
             tipo: "EGRESO",
             concepto: "AJUSTE_SALDO",

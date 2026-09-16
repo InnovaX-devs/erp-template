@@ -156,10 +156,9 @@ export function ModalConsultarPrecio({ onClose }: Props) {
                         </span>
                         {mayoristaUsd != null ? (
                           <>
-                            <p className="text-sm font-semibold text-primary">{formatCurrency(mayoristaUsd, "USD")}</p> 
                             <p className="text-sm font-semibold text-primary">
                               {formatCurrency(usaCotizacionUSD ? mayoristaUsd : mayoristaArs!, usaCotizacionUSD ? "USD" : "ARS")}
-                             </p>
+                            </p>
                             {usaCotizacionUSD && (
                               <p className="text-xs text-text-dim">
                                 {cotizacionUSD > 0

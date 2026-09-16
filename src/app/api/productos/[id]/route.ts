@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const { id } = await params;
     const productoId = Number(id);
 
@@ -19,8 +21,8 @@ export async function PUT(
 
     const body = await request.json();
 
-    const productoAnterior = await prisma.producto.findUnique({
-      where: { id: productoId },
+    const productoAnterior = await prisma.producto.findFirst({
+      where: { id: productoId, empresaId },
     });
 
     if (!productoAnterior) {
@@ -57,30 +59,13 @@ export async function PUT(
         ? Number(body.precioOferta)
         : null;
 
-    // Overrides manuales de precio de decant
-    const nuevoOverride5ml =
-      body.overrideDecant5ml !== undefined &&
-      body.overrideDecant5ml !== "" &&
-      body.overrideDecant5ml !== null &&
-      !isNaN(Number(body.overrideDecant5ml))
-        ? Number(body.overrideDecant5ml)
-        : null;
-
-    const nuevoOverride10ml =
-      body.overrideDecant10ml !== undefined &&
-      body.overrideDecant10ml !== "" &&
-      body.overrideDecant10ml !== null &&
-      !isNaN(Number(body.overrideDecant10ml))
-        ? Number(body.overrideDecant10ml)
-        : null;
-
     // Ubicación en depósito
     const ubicacionDeposito =
       body.ubicacion && String(body.ubicacion).trim() !== ""
         ? String(body.ubicacion).trim()
         : null;
 
-    // Contenido en ml de la botella (usado en el cálculo de precio de decant)
+    // Contenido en ml de la botella
     const contenidoMl =
       body.contenidoMl !== undefined &&
       body.contenidoMl !== "" &&
@@ -122,6 +107,7 @@ export async function PUT(
     if (Number(productoAnterior.precioCosto) !== nuevoCosto) {
       registrosHistorial.push({
         productoId,
+        empresaId,
         campo: "COSTO",
         valorAnterior: Number(productoAnterior.precioCosto),
         valorNuevo: nuevoCosto,
@@ -133,6 +119,7 @@ export async function PUT(
     if (Number(productoAnterior.precioVenta) !== nuevoVenta) {
       registrosHistorial.push({
         productoId,
+        empresaId,
         campo: "MINORISTA",
         valorAnterior: Number(productoAnterior.precioVenta),
         valorNuevo: nuevoVenta,
@@ -148,6 +135,7 @@ export async function PUT(
     if (mayoristaAnterior !== nuevoMayorista && nuevoMayorista !== null) {
       registrosHistorial.push({
         productoId,
+        empresaId,
         campo: "MAYORISTA",
         valorAnterior: mayoristaAnterior,
         valorNuevo: nuevoMayorista,
@@ -155,37 +143,23 @@ export async function PUT(
       });
     }
 
-    // Cambio en override de decant 5ml
-    const override5mlAnterior = productoAnterior.overrideDecant5ml
-      ? Number(productoAnterior.overrideDecant5ml)
-      : null;
-
-    if (override5mlAnterior !== nuevoOverride5ml && nuevoOverride5ml !== null) {
-      registrosHistorial.push({
-        productoId,
-        campo: "OVERRIDE_5ML",
-        valorAnterior: override5mlAnterior,
-        valorNuevo: nuevoOverride5ml,
-        origen: "MANUAL",
-      });
+    if (marcaId) {
+      const marca = await prisma.marca.findFirst({ where: { id: marcaId, empresaId } });
+      if (!marca) {
+        return NextResponse.json({ error: "La marca seleccionada no existe" }, { status: 400 });
+      }
     }
-
-    // Cambio en override de decant 10ml
-    const override10mlAnterior = productoAnterior.overrideDecant10ml
-      ? Number(productoAnterior.overrideDecant10ml)
-      : null;
-
-    if (override10mlAnterior !== nuevoOverride10ml && nuevoOverride10ml !== null) {
-      registrosHistorial.push({
-        productoId,
-        campo: "OVERRIDE_10ML",
-        valorAnterior: override10mlAnterior,
-        valorNuevo: nuevoOverride10ml,
-        origen: "MANUAL",
-      });
+    if (categoriaId) {
+      const categoria = await prisma.categoria.findFirst({ where: { id: categoriaId, empresaId } });
+      if (!categoria) {
+        return NextResponse.json({ error: "La categoría seleccionada no existe" }, { status: 400 });
+      }
     }
 
     // Update del producto e inserción del historial en una misma transacción.
+    // El where solo usa "id" porque la pertenencia a la empresa ya se validó
+    // arriba (productoAnterior); Prisma.update no acepta un where compuesto
+    // sobre una FK no-única.
     const [productoActualizado] = await prisma.$transaction([
       prisma.producto.update({
         where: { id: productoId },
@@ -204,9 +178,6 @@ export async function PUT(
           precioVenta: nuevoVenta,
           precioMayorista: nuevoMayorista,
           precioOferta: nuevoOferta,
-          overrideDecant5ml: nuevoOverride5ml,
-          overrideDecant10ml: nuevoOverride10ml,
-          seVendePorDecant: Boolean(body.esDecant),
           fotoUrl: body.fotoUrl !== undefined ? body.fotoUrl : undefined,
         },
       }),

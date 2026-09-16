@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 // PUT: Editar nombre o cambiar estado (activa: true/false)
 export async function PUT(
@@ -7,11 +8,17 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const { id } = await params;
     const marcaId = Number(id);
 
     if (isNaN(marcaId)) {
       return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+    }
+
+    const existe = await prisma.marca.findFirst({ where: { id: marcaId, empresaId } });
+    if (!existe) {
+      return NextResponse.json({ error: "Marca no encontrada" }, { status: 404 });
     }
 
     const body = await request.json();
@@ -45,6 +52,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const { id } = await params;
     const marcaId = Number(id);
 
@@ -52,9 +60,14 @@ export async function DELETE(
       return NextResponse.json({ error: "ID inválido" }, { status: 400 });
     }
 
+    const existe = await prisma.marca.findFirst({ where: { id: marcaId, empresaId } });
+    if (!existe) {
+      return NextResponse.json({ error: "Marca no encontrada" }, { status: 404 });
+    }
+
     // Verificar si tiene productos asociados
     const productosCount = await prisma.producto.count({
-      where: { marcaId },
+      where: { marcaId, empresaId },
     });
 
     if (productosCount > 0) {

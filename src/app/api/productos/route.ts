@@ -3,11 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { toArs } from "@/lib/currency";
 import type { Prisma } from "@prisma/client";
 import { obtenerConfiguracion } from "@/lib/configuracion";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const searchParams = request.nextUrl.searchParams;
     const q = searchParams.get("q")?.trim() ?? "";
     const fetchAll = searchParams.get("all") === "true";
@@ -15,6 +17,7 @@ export async function GET(request: NextRequest) {
     const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize") ?? 50)));
 
     const where: Prisma.ProductoWhereInput = {
+      empresaId,
       ...(q ? { nombre: { contains: q, mode: "insensitive" } } : {}),
     };
 
@@ -33,9 +36,6 @@ export async function GET(request: NextRequest) {
       precioVenta: true,
       precioMayorista: true,
       precioOferta: true,
-      overrideDecant5ml: true,
-      overrideDecant10ml: true,
-      seVendePorDecant: true,
       activo: true,
       marcaId: true,
       categoriaId: true,
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       }),
       prisma.producto.count({ where }),
       prisma.producto.findMany({
-        where: { activo: true },
+        where: { empresaId, activo: true },
         select: {
           stockActual: true,
           precioCosto: true,
@@ -111,6 +111,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const body = await request.json();
 
     if (
@@ -163,19 +164,12 @@ export async function POST(request: NextRequest) {
       ? Number(body.precioOferta) 
       : null;
 
-    const overrideDecant5ml = body.overrideDecant5ml !== undefined && body.overrideDecant5ml !== "" && body.overrideDecant5ml !== null
-      ? Number(body.overrideDecant5ml)
-      : null;
-
-    const overrideDecant10ml = body.overrideDecant10ml !== undefined && body.overrideDecant10ml !== "" && body.overrideDecant10ml !== null
-      ? Number(body.overrideDecant10ml)
-      : null;
-
     // Evitar duplicados por nombre (insensible a mayúsculas), solo entre
     // productos activos — un producto desactivado con el mismo nombre no bloquea el alta.
     const nombreNormalizado = body.nombre.trim();
     const productoExistente = await prisma.producto.findFirst({
       where: {
+        empresaId,
         nombre: { equals: nombreNormalizado, mode: "insensitive" },
       },
       select: { id: true, nombre: true, activo: true },
@@ -193,7 +187,7 @@ export async function POST(request: NextRequest) {
   
     if (codigoBarras) {
       const productoConMismoCodigo = await prisma.producto.findFirst({
-        where: { codigoBarras },
+        where: { empresaId, codigoBarras },
         select: { id: true, nombre: true, codigoBarras: true, activo: true },
       });
 
@@ -216,8 +210,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (marcaId) {
+      const marca = await prisma.marca.findFirst({ where: { id: marcaId, empresaId } });
+      if (!marca) {
+        return NextResponse.json({ error: "La marca seleccionada no existe" }, { status: 400 });
+      }
+    }
+    if (categoriaId) {
+      const categoria = await prisma.categoria.findFirst({ where: { id: categoriaId, empresaId } });
+      if (!categoria) {
+        return NextResponse.json({ error: "La categoría seleccionada no existe" }, { status: 400 });
+      }
+    }
+
     const nuevoProducto = await prisma.producto.create({
       data: {
+        empresaId,
         nombre: body.nombre.trim(),
         codigoBarras,
         ubicacionDeposito,
@@ -232,36 +240,10 @@ export async function POST(request: NextRequest) {
         precioVenta,
         precioMayorista,
         precioOferta,
-        overrideDecant5ml,
-        overrideDecant10ml,
-        seVendePorDecant: Boolean(body.esDecant),
         fotoUrl: body.fotoUrl || null,
         activo: true,
       },
     });
-
-    const historialAlCrear = [];
-    if (overrideDecant5ml !== null) {
-      historialAlCrear.push({
-        productoId: nuevoProducto.id,
-        campo: "OVERRIDE_5ML" as const,
-        valorAnterior: null,
-        valorNuevo: overrideDecant5ml,
-        origen: "MANUAL" as const,
-      });
-    }
-    if (overrideDecant10ml !== null) {
-      historialAlCrear.push({
-        productoId: nuevoProducto.id,
-        campo: "OVERRIDE_10ML" as const,
-        valorAnterior: null,
-        valorNuevo: overrideDecant10ml,
-        origen: "MANUAL" as const,
-      });
-    }
-    if (historialAlCrear.length > 0) {
-      await prisma.historialPrecio.createMany({ data: historialAlCrear });
-    }
 
     return NextResponse.json(nuevoProducto, { status: 201 });
   } catch (error: any) {

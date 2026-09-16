@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const { id } = await params;
     const compraId = Number(id);
 
@@ -16,8 +18,8 @@ export async function POST(
       );
     }
 
-    const compra = await prisma.compra.findUnique({
-      where: { id: compraId },
+    const compra = await prisma.compra.findFirst({
+      where: { id: compraId, empresaId },
     });
 
     if (!compra) {

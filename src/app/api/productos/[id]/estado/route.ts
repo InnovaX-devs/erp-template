@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const empresaId = await obtenerEmpresaIdActual();
     const { id } = await params;
     const productoId = Number(id);
 
@@ -23,6 +25,11 @@ export async function PATCH(
         { error: "El campo 'activo' debe ser true o false" },
         { status: 400 }
       );
+    }
+
+    const existe = await prisma.producto.findFirst({ where: { id: productoId, empresaId } });
+    if (!existe) {
+      return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
     }
 
     const producto = await prisma.producto.update({

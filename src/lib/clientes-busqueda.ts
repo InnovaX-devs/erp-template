@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { obtenerEmpresaIdActual } from "@/lib/empresa";
 
 export type ClienteBusquedaResult = {
   id: number;
@@ -14,8 +15,11 @@ export async function buscarClientesRapido(query: string): Promise<ClienteBusque
   const q = query.trim();
   if (!q) return [];
 
+  const empresaId = await obtenerEmpresaIdActual();
+
   const clientes = await prisma.cliente.findMany({
     where: {
+      empresaId,
       OR: [
         { nombre: { contains: q, mode: "insensitive" } },
         { apellido: { contains: q, mode: "insensitive" } },

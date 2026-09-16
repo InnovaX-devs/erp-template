@@ -2,8 +2,7 @@ export type TipoDocumentoPdf =
   | "LISTA_GENERAL"
   | "LISTA_MAYORISTA"
   | "CATALOGO"
-  | "CATALOGO_MAYORISTA"
-  | "CATALOGO_DECANTS";
+  | "CATALOGO_MAYORISTA";
 
 export type Moneda = "ARS" | "USD";
 

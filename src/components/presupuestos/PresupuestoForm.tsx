@@ -59,7 +59,6 @@ export default function PresupuestoForm() {
         key: crypto.randomUUID(),
         productoId: producto.id,
         descripcion: producto.nombre,
-        presentacion: "FRASCO",
         tipoPrecio,
         cantidad: 1,
         precioUnitario,

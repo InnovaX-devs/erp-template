@@ -4,7 +4,8 @@ import { NextResponse } from "next/server";
 const RUTAS_PUBLICAS = ["/login", "/api/auth"];
 
 export default auth((req) => {
-  const isLoggedIn = !!req.auth;
+
+  const isLoggedIn = !!req.auth?.user?.empresaId;
   const esRutaPublica = RUTAS_PUBLICAS.some((ruta) =>
     req.nextUrl.pathname.startsWith(ruta)
   );

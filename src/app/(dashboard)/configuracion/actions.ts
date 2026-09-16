@@ -22,19 +22,26 @@ export async function guardarConfiguracion(formData: FormData) {
   const logoFile = formData.get("logo") as File | null;
   const removerLogo = formData.get("removerLogo") === "true";
 
-  // usaCotizacionUSD ya no se setea desde este formulario: es un flag de
-  // instalación que se carga directo en
-  // la base antes de poner el sistema en marcha para ese cliente.
+  // usaCotizacionUSD ahora sí es editable desde acá, pero SOLO tiene efecto
+  // si la licencia es PREMIUM (ver lib/configuracion.ts: con licencia
+  // BASICO, el piso duro lo fuerza a false sin importar este valor). Con
+  // BASICO ni siquiera se guarda, para no dejar un valor "true" dando
+  // vueltas en la base a la espera de un upgrade de licencia.
   const configuracionActual = await obtenerConfiguracion();
 
+  let usaCotizacionUSD: boolean | undefined;
   let cotizacionUSD: number | undefined;
 
-  if (configuracionActual.usaCotizacionUSD) {
-    const cotizacionUSDRaw = formData.get("cotizacionUSD") as string;
-    cotizacionUSD = Number(cotizacionUSDRaw);
+  if (configuracionActual.licencia === "PREMIUM") {
+    usaCotizacionUSD = formData.get("usaCotizacionUSD") === "on";
 
-    if (!cotizacionUSDRaw || Number.isNaN(cotizacionUSD) || cotizacionUSD <= 0) {
-      throw new Error("Cotización USD inválida");
+    if (usaCotizacionUSD) {
+      const cotizacionUSDRaw = formData.get("cotizacionUSD") as string;
+      cotizacionUSD = Number(cotizacionUSDRaw);
+
+      if (!cotizacionUSDRaw || Number.isNaN(cotizacionUSD) || cotizacionUSD <= 0) {
+        throw new Error("Cotización USD inválida");
+      }
     }
   }
 
@@ -63,6 +70,7 @@ export async function guardarConfiguracion(formData: FormData) {
     colorPrimario,
     colorSecundario,
     costoPromedioPonderado,
+    ...(usaCotizacionUSD !== undefined ? { usaCotizacionUSD } : {}),
     ...(cotizacionUSD !== undefined ? { cotizacionUSD } : {}),
     ...(logoUrl !== undefined ? { logoUrl } : {}),
   });

@@ -47,6 +47,13 @@ export interface TopProductoItem {
   montoARS: number; // cobrado, prorrateado igual que el resto del reporte
 }
 
+export interface TopClienteItem {
+  clienteId: number;
+  nombre: string;
+  cantidadVentas: number;
+  montoARS: number; // cobrado, prorrateado igual que el resto del reporte
+}
+
 export interface ReporteData {
   fechaInicio: string;
   fechaFin: string;
@@ -55,4 +62,5 @@ export interface ReporteData {
   desgloseMetodoCobro: DesgloseMetodoCobroItem[];
   ingresosPorDia: IngresoPorDia[]; 
   topProductos: TopProductoItem[]; 
+  topClientes: TopClienteItem[];
 }

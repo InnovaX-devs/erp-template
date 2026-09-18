@@ -4,6 +4,7 @@ import {
   calcularReporte,
   calcularIngresosPorDia,
   calcularTopProductos,
+  calcularTopClientes,
   claveFecha,
   costoHistoricoDelProducto,
   enriquecerVentas,
@@ -34,6 +35,7 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
         montoPagado: true,
         cotizacionUsada: true,
         fecha: true,
+        cliente: { select: { id: true, nombre: true, apellido: true } },
         items: {
           select: {
             productoId: true,
@@ -88,6 +90,8 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
     totalUSD: v.totalUSD,
     montoPagado: v.montoPagado,
     cotizacionUsada: v.cotizacionUsada,
+    clienteId: v.cliente?.id ?? null,
+    clienteNombre: v.cliente ? `${v.cliente.nombre} ${v.cliente.apellido ?? ""}`.trim() : null,
     items: v.items.map((item) => {
       let costoUnitarioARS = 0;
 
@@ -135,6 +139,7 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
   const { kpis, desgloseTipoPrecio, desgloseMetodoCobro } = calcularReporte(ventasEnriquecidas, egresosGastosARS);
   const ingresosPorDia = calcularIngresosPorDia(ventasEnriquecidas, egresosGastosPorDiaARS, desde, hasta);
   const topProductos = calcularTopProductos(ventasEnriquecidas);
+  const topClientes = calcularTopClientes(ventasEnriquecidas);
 
   return {
     fechaInicio: desde.toISOString(),
@@ -144,6 +149,7 @@ export async function obtenerReporte(rango: RangoFechas): Promise<ReporteData> {
     desgloseMetodoCobro,
     ingresosPorDia,
     topProductos,
+    topClientes,
   };
 }
 
@@ -220,6 +226,8 @@ export async function obtenerKpisDelDia(rango: RangoFechas): Promise<{ gananciaN
     totalUSD: v.totalUSD,
     montoPagado: v.montoPagado,
     cotizacionUsada: v.cotizacionUsada,
+    clienteId: null,
+    clienteNombre: null,
     items: v.items.map((item) => {
       let costoUnitarioARS = 0;
       if (item.producto) {

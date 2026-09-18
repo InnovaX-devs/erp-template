@@ -7,9 +7,8 @@ import { DesgloseMetodoCobro } from "@/components/reportes/desglose-metodo-cobro
 import { BotonExportarPdf } from "../../../components/reportes/BotonExportarPdf";
 import { IngresosPorDia } from "@/components/reportes/ingresos-por-dia";
 import { TopProductos } from "@/components/reportes/top-productos";
+import { TopClientes } from "@/components/reportes/top-clientes";
 import { formatFechaAR } from "@/lib/timezone";
-import { notFound } from "next/navigation";
-import { obtenerConfiguracion } from "@/lib/configuracion";
 
 type SearchParams = {
   tab?: string;
@@ -25,9 +24,6 @@ export default async function ReportesPage({
   // Next.js 16: searchParams es una Promise, hay que await-earla.
   searchParams: Promise<SearchParams>;
 }) {
-  const configuracion = await obtenerConfiguracion();
-  if (!configuracion.habilitarReportesAvanzados) notFound();
-
   const params = await searchParams;
   const tab: TabReporte = TABS_VALIDOS.includes(params.tab as TabReporte) ? (params.tab as TabReporte) : "diario";
 
@@ -41,12 +37,9 @@ export default async function ReportesPage({
     : `${formatFechaAR(rango.desde)} — ${formatFechaAR(hastaVisible)}`;
 
   return (
-    <div className="space-y-4 p-4 print:p-0">
+    <div className="space-y-4 print:p-0">
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
-        <div>
-          <h1 className="text-xl font-semibold text-[#191c1e] sm:text-2xl">Reportes</h1>
-          <p className="text-sm text-[#45464f]">{rangoTexto}</p>
-        </div>
+        <p className="text-sm text-[#45464f]">{rangoTexto}</p>
         <div className="flex items-center gap-2">
           <BotonExportarPdf tab={tab} desde={params.desde} hasta={params.hasta} />
         </div>
@@ -76,6 +69,7 @@ async function ReportePeriodoSection({ rango }: { rango: { desde: Date; hasta: D
         <IngresosPorDia datos={reporte.ingresosPorDia} />
         <TopProductos items={reporte.topProductos} />
       </div>
+      <TopClientes items={reporte.topClientes} />
     </div>
   );
 }

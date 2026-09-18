@@ -32,8 +32,17 @@ export type VentaParaReporte = {
   totalUSD: number;
   montoPagado: number;
   cotizacionUsada: number;
+  clienteId: number | null;
+  clienteNombre: string | null;
   items: ItemVentaParaReporte[];
   pagos: PagoParaReporte[];
+};
+
+export type TopClienteItem = {
+  clienteId: number;
+  nombre: string;
+  cantidadVentas: number;
+  montoARS: number;
 };
 
 export type PagoParaReporte = {
@@ -342,6 +351,34 @@ export function calcularTopProductos(ventas: VentaEnriquecida[], limite = 10): T
 
   return Array.from(acumulado.values())
     .sort((a, b) => b.cantidad - a.cantidad)
+    .slice(0, limite);
+}
+
+/**
+ * Ranking de clientes por monto cobrado. Las ventas sin cliente asociado
+ * ("consumidor final") quedan afuera.
+ */
+export function calcularTopClientes(ventas: VentaEnriquecida[], limite = 10): TopClienteItem[] {
+  const acumulado = new Map<number, TopClienteItem>();
+
+  for (const venta of ventas) {
+    if (venta.clienteId == null) continue;
+
+    const montoVentaARS = venta.totalARS * venta.proporcionCobrada;
+
+    const actual = acumulado.get(venta.clienteId) ?? {
+      clienteId: venta.clienteId,
+      nombre: venta.clienteNombre ?? "(cliente sin nombre)",
+      cantidadVentas: 0,
+      montoARS: 0,
+    };
+    actual.cantidadVentas += 1;
+    actual.montoARS += montoVentaARS;
+    acumulado.set(venta.clienteId, actual);
+  }
+
+  return Array.from(acumulado.values())
+    .sort((a, b) => b.montoARS - a.montoARS)
     .slice(0, limite);
 }
 

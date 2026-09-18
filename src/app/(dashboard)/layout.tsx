@@ -10,7 +10,10 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   return (
     <SidebarProvider>
-      <div className="flex h-dvh overflow-hidden bg-ivory">
+      {/* Antes: bg-ivory. Como --ivory ahora es el blanco que usa el texto del
+          sidebar oscuro, el fondo de la app pasa a bg-bg, que sí cambia con el
+          modo oscuro. */}
+      <div className="flex h-dvh overflow-hidden bg-bg">
         <Sidebar
           logoUrl={configuracion.logoUrl ?? null}
           nombreNegocio={configuracion.nombreNegocio}

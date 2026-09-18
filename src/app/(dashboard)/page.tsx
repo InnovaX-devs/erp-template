@@ -96,13 +96,13 @@ export default function DashboardPage() {
         <button
           type="button"
           onClick={() => setModalPrecioAbierto(true)}
-          className="flex items-center gap-1.5 cursor-pointer rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-text-dim hover:bg-surface-hover"
+          className="flex cursor-pointer items-center gap-1.5 rounded-full border border-border px-4 py-2.5 text-sm font-medium text-text-dim transition-colors hover:border-primary/50 hover:bg-surface-hover hover:text-text"
         >
           <Tag size={14} /> Consultar precio
         </button>
         <Link
           href="/ventas"
-          className="rounded-lg bg-[#021541] cursor-pointer px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+          className="bg-grad cursor-pointer rounded-full px-5 py-2.5 text-sm font-semibold text-[#050507] shadow-[0_6px_20px_rgba(34,197,94,0.22)] transition-transform hover:-translate-y-0.5"
         >
           + Nueva Venta
         </Link>
@@ -111,12 +111,17 @@ export default function DashboardPage() {
       {/* Saldo total + Hoy */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Saldo total */}
-        <div className="rounded-2xl bg-ink p-6 text-ivory">
+        <div className="cta-glow relative overflow-hidden rounded-2xl bg-ink p-6 text-ivory">
           {/* Parte de arriba: label + ojito + monto -> va a /finanzas */}
-          <Link href="/finanzas" className="block rounded-xl -m-1 p-1 transition-opacity hover:opacity-95">
+          <Link
+            href="/finanzas"
+            className="relative block -m-1 rounded-xl p-1 transition-opacity hover:opacity-95"
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <p className="text-xs uppercase tracking-widest text-ivory/50">Saldo Total</p>
+                <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-white/45">
+                  Saldo Total
+                </p>
                 <button
                   type="button"
                   onClick={(e) => {
@@ -124,7 +129,7 @@ export default function DashboardPage() {
                     e.stopPropagation();
                     setMostrarSaldos((prev) => !prev);
                   }}
-                  className="cursor-pointer rounded p-0.5 text-ivory/40 hover:text-ivory/70"
+                  className="cursor-pointer rounded p-0.5 text-white/40 hover:text-white/70"
                   title={mostrarSaldos ? "Ocultar saldos" : "Mostrar saldos"}
                 >
                   {mostrarSaldos ? <Eye size={13} /> : <EyeOff size={13} />}
@@ -132,18 +137,23 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <p className="mt-1 font-display text-3xl font-semibold">
-              {cargando ? "..." : mostrarSaldos ? formatCurrency(datos?.cuentas.saldoTotal ?? 0, "ARS") : OCULTO}
+            {/* NÚMERO GRANDE EN BLANCO */}
+            <p className="mt-1.5 font-display text-4xl font-bold tracking-[-0.025em] text-white">
+              {cargando
+                ? "..."
+                : mostrarSaldos
+                  ? formatCurrency(datos?.cuentas.saldoTotal ?? 0, "ARS")
+                  : OCULTO}
             </p>
           </Link>
 
           {/* Parte de abajo: grid de cuentas (no clickeable) + "Ver todas" -> abre el modal */}
-          <div>
+          <div className="relative">
             {!cargando && datos && datos.cuentas.principales.length > 0 && (
               <div className="mt-6 grid grid-cols-2 gap-4 border-t border-white/10 pt-4 sm:grid-cols-5">
                 {datos.cuentas.principales.slice(0, 5).map((c) => (
                   <div key={c.id} className="min-w-0">
-                    <p className="flex items-center gap-1.5 truncate text-[11px] uppercase tracking-wide text-primary/60">
+                    <p className="flex items-center gap-1.5 truncate font-mono text-[10px] uppercase tracking-[0.1em] text-white/45">
                       {c.color && (
                         <span
                           className="h-2 w-2 shrink-0 rounded-full"
@@ -153,7 +163,9 @@ export default function DashboardPage() {
                       {c.nombre}
                     </p>
                     <p className="truncate text-sm font-semibold text-white">
-                      {mostrarSaldos ? formatCurrency(c.saldoActual, c.tipo.endsWith("USD") ? "USD" : "ARS") : OCULTO}
+                      {mostrarSaldos
+                        ? formatCurrency(c.saldoActual, c.tipo.endsWith("USD") ? "USD" : "ARS")
+                        : OCULTO}
                     </p>
                   </div>
                 ))}
@@ -163,7 +175,7 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => setModalCuentasAbierto(true)}
-              className="mt-4 cursor-pointer text-xs font-medium text-amber hover:underline"
+              className="mt-4 cursor-pointer text-xs font-medium text-primary-soft hover:underline"
             >
               Ver todas ({datos?.cuentas.totalCantidad ?? 0}) →
             </button>
@@ -173,23 +185,27 @@ export default function DashboardPage() {
         {/* Hoy */}
         <div className="rounded-2xl border border-border bg-surface p-6">
           <div className="flex items-center justify-between">
-            <p className="text-xs uppercase tracking-wide text-text-dim">Hoy</p>
+            <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-text-dim">Hoy</p>
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-success/10 text-success">
               <TrendingUp size={14} />
             </span>
           </div>
-          <p className="mt-1 text-3xl font-bold text-text">
+          <p className="mt-1.5 font-display text-4xl font-bold tracking-[-0.025em] text-text">
             {cargando ? "..." : formatCurrency(datos?.hoy.ingresosARS ?? 0, "ARS")}
           </p>
           <div className="mt-6 flex items-center gap-10 border-t border-border pt-4">
             <div>
-              <p className="text-[11px] uppercase tracking-wide text-text-dim">Ganancia</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-dim">
+                Ganancia
+              </p>
               <p className="text-lg font-semibold text-success">
                 {cargando ? "..." : formatCurrency(datos?.hoy.gananciaARS ?? 0, "ARS")}
               </p>
             </div>
             <div>
-              <p className="text-[11px] uppercase tracking-wide text-text-dim">Ventas</p>
+              <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-dim">
+                Ventas
+              </p>
               <p className="text-lg font-semibold text-text">
                 {cargando ? "..." : datos?.hoy.cantidadVentas ?? 0}
               </p>
@@ -204,7 +220,7 @@ export default function DashboardPage() {
           <Link
             key={a.href}
             href={a.href}
-            className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface p-4 text-center text-sm font-medium text-text-dim transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary"
+            className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface p-4 text-center text-sm font-medium text-text-dim transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
           >
             <a.icon size={20} />
             {a.label}
@@ -215,18 +231,21 @@ export default function DashboardPage() {
       {/* Movimientos de hoy + Pedidos */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Movimientos de hoy */}
-        <div className="rounded-xl border border-border bg-surface p-4">
+        <div className="rounded-2xl border border-border bg-surface p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Zap size={16} className="text-primary" />
               <h2 className="font-medium text-text">Movimientos de hoy</h2>
               {!!datos?.movimientos.length && (
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-white">
+                <span className="bg-grad flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold text-[#050507]">
                   {datos.movimientos.length}
                 </span>
               )}
             </div>
-            <Link href="/finanzas/flujo-caja" className="text-xs font-medium text-primary hover:underline">
+            <Link
+              href="/finanzas/flujo-caja"
+              className="text-xs font-medium text-primary hover:underline"
+            >
               Ver todo →
             </Link>
           </div>
@@ -254,7 +273,7 @@ export default function DashboardPage() {
                     m.tipo === "ingreso" ? "bg-success" : "bg-danger"
                   }`}
                 />
-                <span className="w-16 shrink-0 text-xs text-text-dim">{m.hora}</span>
+                <span className="w-16 shrink-0 font-mono text-xs text-text-dim">{m.hora}</span>
                 <span className="flex-1 truncate text-sm text-text">{m.descripcion}</span>
                 <span
                   className={`text-sm font-semibold ${
@@ -273,13 +292,16 @@ export default function DashboardPage() {
         </div>
 
         {/* Pedidos */}
-        <div className="rounded-xl border border-border bg-surface p-4">
+        <div className="rounded-2xl border border-border bg-surface p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Package size={16} className="text-warning" />
               <h2 className="font-medium text-text">Pedidos</h2>
             </div>
-            <Link href="/ventas/pedidos" className="text-xs font-medium text-primary hover:underline">
+            <Link
+              href="/ventas/pedidos"
+              className="text-xs font-medium text-primary hover:underline"
+            >
               Ver todos →
             </Link>
           </div>
